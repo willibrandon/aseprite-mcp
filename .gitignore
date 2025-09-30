@@ -37,3 +37,7 @@ Thumbs.db
 # Config
 config.json
 .env
+
+# CI build artifacts
+/aseprite/
+/skia/
