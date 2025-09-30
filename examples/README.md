@@ -42,8 +42,8 @@ ASEPRITE_MCP_PATH=/path/to/aseprite-mcp go run main.go
 ### Output
 
 The example creates:
-- `examples/sprites/animated-example.gif` - 4-frame animation with growing colored circles
-- `examples/sprites/frame2-example.png` - Single frame export (frame 2)
+- `../sprites/animated-example.gif` - 4-frame animation with growing colored circles
+- `../sprites/frame2-example.png` - Single frame export (frame 2)
 
 ## Example Output
 
@@ -89,10 +89,10 @@ Step 6: Getting sprite metadata...
   Info: {"width":64,"height":64,"color_mode":"RGB","frame_count":4,"layer_count":2,"layers":["Background","Layer 1"]}
 
 Step 7: Exporting as GIF...
-  Exported: examples/sprites/animated-example.gif
+  Exported: ../sprites/animated-example.gif
 
 Step 8: Exporting frame 2 as PNG...
-  Exported: examples/sprites/frame2-example.png
+  Exported: ../sprites/frame2-example.png
 
 Example completed successfully!
 ```
