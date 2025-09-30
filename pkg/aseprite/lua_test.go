@@ -105,18 +105,18 @@ func TestFormatRectangle(t *testing.T) {
 func TestLuaGenerator_CreateCanvas(t *testing.T) {
 	gen := NewLuaGenerator()
 
-	script := gen.CreateCanvas(800, 600, ColorModeRGB)
+	script := gen.CreateCanvas(800, 600, ColorModeRGB, "test.aseprite")
 
 	// Verify script contains expected elements
 	if !strings.Contains(script, "Sprite(800, 600, ColorMode.RGB)") {
 		t.Error("script missing Sprite constructor call")
 	}
 
-	if !strings.Contains(script, "spr:saveAs(filename)") {
+	if !strings.Contains(script, `spr:saveAs("test.aseprite")`) {
 		t.Error("script missing saveAs call")
 	}
 
-	if !strings.Contains(script, "print(filename)") {
+	if !strings.Contains(script, `print("test.aseprite")`) {
 		t.Error("script missing print statement")
 	}
 }
@@ -150,9 +150,13 @@ func TestLuaGenerator_DrawPixels(t *testing.T) {
 
 	script := gen.DrawPixels("Layer 1", 1, pixels)
 
-	// Verify script contains expected elements
-	if !strings.Contains(script, `findLayerByName("Layer 1")`) {
-		t.Error("script missing layer lookup")
+	// Verify script contains expected elements (using loop-based layer lookup)
+	if !strings.Contains(script, `lyr.name == "Layer 1"`) {
+		t.Error("script missing layer name check")
+	}
+
+	if !strings.Contains(script, "for i, lyr in ipairs(spr.layers)") {
+		t.Error("script missing layer iteration")
 	}
 
 	if !strings.Contains(script, "img:putPixel(0, 0, Color(255, 0, 0, 255))") {

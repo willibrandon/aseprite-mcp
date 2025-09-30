@@ -53,11 +53,12 @@ end)`, code)
 }
 
 // CreateCanvas generates a Lua script to create a new sprite.
-func (g *LuaGenerator) CreateCanvas(width, height int, colorMode ColorMode) string {
+// The filename parameter should be the full path where the sprite should be saved.
+func (g *LuaGenerator) CreateCanvas(width, height int, colorMode ColorMode, filename string) string {
+	escapedFilename := EscapeString(filename)
 	return fmt.Sprintf(`local spr = Sprite(%d, %d, %s)
-local filename = os.tmpname() .. ".aseprite"
-spr:saveAs(filename)
-print(filename)`, width, height, colorMode.ToLua())
+spr:saveAs("%s")
+print("%s")`, width, height, colorMode.ToLua(), escapedFilename, escapedFilename)
 }
 
 // GetSpriteInfo generates a Lua script to retrieve sprite metadata.
@@ -138,7 +139,15 @@ if not spr then
 	error("No active sprite")
 end
 
-local layer = spr:findLayerByName("%s")
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
 if not layer then
 	error("Layer not found: %s")
 end
@@ -178,7 +187,15 @@ if not spr then
 	error("No active sprite")
 end
 
-local layer = spr:findLayerByName("%s")
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
 if not layer then
 	error("Layer not found: %s")
 end

@@ -53,10 +53,10 @@ func (c *Client) ExecuteCommand(ctx context.Context, args []string) (string, err
 
 		// Include stderr in error message
 		if stderr.Len() > 0 {
-			return "", fmt.Errorf("aseprite command failed: %w\nstderr: %s", err, stderr.String())
+			return "", fmt.Errorf("aseprite command failed: %w\nstderr: %s\nstdout: %s", err, stderr.String(), stdout.String())
 		}
 
-		return "", fmt.Errorf("aseprite command failed: %w", err)
+		return "", fmt.Errorf("aseprite command failed: %w\nstdout: %s", err, stdout.String())
 	}
 
 	return stdout.String(), nil
