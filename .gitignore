@@ -9,7 +9,6 @@
 *.dll
 *.so
 *.dylib
-aseprite-mcp
 
 # Test files
 *.test

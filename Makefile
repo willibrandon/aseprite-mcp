@@ -4,8 +4,8 @@
 BINARY_NAME=aseprite-mcp
 
 # Build variables
-VERSION?=$(shell git describe --tags --always --dirty)
-BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
+VERSION:=$(shell git describe --tags --always --dirty || echo dev)
+BUILD_TIME:=$(shell date -u '+%Y-%m-%d_%H:%M:%S' || echo unknown)
 LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 
 all: lint test build
@@ -25,8 +25,12 @@ lint:
 	go fmt ./...
 
 clean:
-	rm -rf bin/ dist/ coverage.txt coverage.html
 	go clean
+ifeq ($(OS),Windows_NT)
+	-@powershell -NoProfile -Command "if (Test-Path bin) { Remove-Item bin -Recurse -Force }; if (Test-Path dist) { Remove-Item dist -Recurse -Force }; if (Test-Path coverage.txt) { Remove-Item coverage.txt -Force }; if (Test-Path coverage.html) { Remove-Item coverage.html -Force }"
+else
+	-@rm -rf bin dist coverage.txt coverage.html
+endif
 
 install:
 	go install $(LDFLAGS) ./cmd/aseprite-mcp
