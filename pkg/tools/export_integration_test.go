@@ -214,3 +214,90 @@ func TestIntegration_ExportSprite_JPG(t *testing.T) {
 
 	t.Logf("✓ Exported to JPG successfully (%d bytes)", fileInfo.Size())
 }
+
+func TestIntegration_ExportSprite_SpecificFrameWithContent(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a 16x16 canvas
+	spritePath := testutil.TempSpritePath(t, "test-export-content.aseprite")
+	createScript := gen.CreateCanvas(16, 16, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw a filled red rectangle covering the entire canvas
+	drawScript := gen.DrawRectangle("Layer 1", 1, 0, 0, 16, 16, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true)
+	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to draw rectangle: %v", err)
+	}
+
+	// Export frame 1 to PNG
+	outputPath := filepath.Join(t.TempDir(), "red_square.png")
+	exportScript := gen.ExportSprite(outputPath, 1)
+	output, err := client.ExecuteLua(ctx, exportScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(ExportSprite) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Exported successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	// Verify file was created
+	fileInfo, err := os.Stat(outputPath)
+	if err != nil {
+		t.Fatalf("Exported file not found: %v", err)
+	}
+
+	// A 16x16 red PNG should be at least 95 bytes
+	// Blank/nearly empty PNGs are typically 88-92 bytes
+	minExpectedSize := int64(95)
+	if fileInfo.Size() < minExpectedSize {
+		t.Errorf("Exported PNG is too small (%d bytes), expected at least %d bytes. This indicates the export produced a blank image.", fileInfo.Size(), minExpectedSize)
+	}
+
+	// Verify the PNG can be decoded and has correct dimensions
+	file, err := os.Open(outputPath)
+	if err != nil {
+		t.Fatalf("Failed to open exported PNG: %v", err)
+	}
+	defer file.Close()
+
+	img, format, err := testutil.DecodeImage(file)
+	if err != nil {
+		t.Fatalf("Failed to decode exported PNG: %v", err)
+	}
+
+	if format != "png" {
+		t.Errorf("Expected PNG format, got: %s", format)
+	}
+
+	bounds := img.Bounds()
+	if bounds.Dx() != 16 || bounds.Dy() != 16 {
+		t.Errorf("Expected 16x16 dimensions, got: %dx%d", bounds.Dx(), bounds.Dy())
+	}
+
+	// Verify at least some pixels are red (not all transparent/black)
+	redPixels := 0
+	for y := 0; y < 16; y++ {
+		for x := 0; x < 16; x++ {
+			r, g, b, a := img.At(x, y).RGBA()
+			// RGBA returns values in range 0-65535, so red would be (65535, 0, 0, 65535)
+			if r > 50000 && g < 10000 && b < 10000 && a > 50000 {
+				redPixels++
+			}
+		}
+	}
+
+	if redPixels < 200 { // Expect most of the 256 pixels to be red
+		t.Errorf("Expected red pixels in exported image, found only %d red pixels out of 256", redPixels)
+	}
+
+	t.Logf("✓ Exported frame with content successfully (%d bytes, %d red pixels)", fileInfo.Size(), redPixels)
+}

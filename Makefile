@@ -8,7 +8,11 @@ endif
 
 # Build variables
 VERSION:=$(shell git describe --tags --always --dirty || echo dev)
-BUILD_TIME:=$(shell date -u '+%Y-%m-%d_%H:%M:%S' || echo unknown)
+ifeq ($(OS),Windows_NT)
+	BUILD_TIME:=$(shell powershell -NoProfile -Command "[System.DateTime]::UtcNow.ToString('yyyy-MM-dd_HH:mm:ss')" || echo unknown)
+else
+	BUILD_TIME:=$(shell date -u '+%Y-%m-%d_%H:%M:%S' || echo unknown)
+endif
 LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 
 all: lint test build

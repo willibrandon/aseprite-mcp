@@ -392,7 +392,8 @@ func (g *LuaGenerator) ExportSprite(outputPath string, frameNumber int) string {
 	escapedPath := EscapeString(outputPath)
 
 	if frameNumber > 0 {
-		// Export specific frame using app.command.SaveFileCopyAs with fromFrame/toFrame
+		// Export specific frame by temporarily setting the active frame and using saveCopyAs
+		// Note: app.command.SaveFileCopyAs produces blank PNGs, so we use this approach instead
 		return fmt.Sprintf(`local spr = app.activeSprite
 if not spr then
 	error("No active sprite")
@@ -402,13 +403,19 @@ if #spr.frames < %d then
 	error("Frame not found: %d")
 end
 
-app.command.SaveFileCopyAs{
-	filename = "%s",
-	fromFrame = %d,
-	toFrame = %d
-}
+-- Save the current active frame
+local originalFrame = app.activeFrame
 
-print("Exported successfully")`, frameNumber, frameNumber, escapedPath, frameNumber, frameNumber)
+-- Set the target frame as active
+app.activeFrame = spr.frames[%d]
+
+-- Export using saveCopyAs (which respects the active frame)
+spr:saveCopyAs("%s")
+
+-- Restore the original active frame
+app.activeFrame = originalFrame
+
+print("Exported successfully")`, frameNumber, frameNumber, frameNumber, escapedPath)
 	}
 
 	// Export all frames
