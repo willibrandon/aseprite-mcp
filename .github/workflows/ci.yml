@@ -64,7 +64,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: aseprite/aseprite
-          ref: v1.3.10
+          ref: v1.3.15.3
           submodules: recursive
           path: aseprite
 
