@@ -1,26 +1,38 @@
-# Aseprite MCP Server (Go)
+# Aseprite MCP Server
 
-A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and animation capabilities to AI assistants and other MCP clients.
+> **AI-Powered Pixel Art Creation** - Connect Aseprite to AI assistants like Claude for natural language sprite creation and manipulation.
 
-## Status
+A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and animation capabilities to AI assistants, enabling you to create and edit sprites using natural language.
 
-**MVP Feature Complete** - Core functionality implemented, testing in progress
+## Why Use This?
 
-### What Works
+**For Pixel Artists & Game Designers:**
+- Rapidly prototype sprite concepts by describing them to your AI assistant
+- Automate repetitive tasks like creating animation frames or color variations
+- Generate placeholder art for game development
+- Experiment with pixel art ideas without manual pixel pushing
 
-- Canvas creation (RGB, Grayscale, Indexed color modes)
-- Layer and frame management
-- Drawing primitives (pixels, lines, rectangles, circles, fill)
-- Sprite export (PNG, GIF, JPG, BMP)
+**For Game Developers:**
+- Integrate sprite generation into your game development workflow
+- Automate asset creation pipelines
+- Quickly iterate on visual concepts during prototyping
+- Generate test assets and mockups
+
+**For AI Assistant Users:**
+- Use Claude Desktop or other MCP clients to create pixel art through conversation
+- No need to learn Aseprite's UI - just describe what you want
+- Perfect for non-artists who need simple sprites and animations
+
+## Features
+
+- Canvas creation with RGB, Grayscale, and Indexed color modes
+- Layer and frame management for complex compositions
+- Drawing primitives: pixels, lines, rectangles, circles, flood fill
+- Sprite export to PNG, GIF, JPG, and BMP formats
 - Sprite metadata retrieval
-- Full integration test suite
-- Performance benchmarks (all PRD targets exceeded)
-
-### What's Next
-
-- Example client implementation
-- Documentation and usage guides
-- CI/CD pipeline setup
+- Cross-platform support: Windows, macOS, Linux
+- Batch pixel operations for performance
+- Integration with Claude Desktop and other MCP clients
 
 ## Requirements
 
@@ -125,18 +137,12 @@ make test-coverage
 
 ## Performance
 
-All operations meet or exceed PRD performance targets:
-
-- Canvas creation: ~94ms (target: <500ms)
-- Drawing primitives: ~93-96ms (target: <300ms)
-- 10K pixel batch: ~109ms (target: <2s)
+- Canvas creation: ~94ms
+- Drawing primitives: ~93-96ms
+- 10K pixel batch: ~109ms
 - Complete workflows: ~280-840ms
 
-See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for detailed results.
-
-## Documentation
-
-- [BENCHMARKS.md](docs/BENCHMARKS.md) - Performance benchmark results
+See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for detailed benchmark results.
 
 ## License
 

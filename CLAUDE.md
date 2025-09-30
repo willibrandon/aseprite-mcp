@@ -111,20 +111,16 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
 
 ## Implementation Status
 
-**MVP Feature Complete** - Core functionality implemented and tested.
-
-Completed features:
+Core functionality implemented and tested:
 - Canvas creation and management (RGB, Grayscale, Indexed)
 - Layer and frame operations
 - Drawing primitives (pixels, lines, rectangles, circles, fill)
 - Sprite export (PNG, GIF, JPG, BMP)
 - Metadata retrieval
+- Example client implementation (examples/client/main.go)
 - Integration test suite with real Aseprite
 - Performance benchmarks (all targets exceeded)
-
-Remaining work:
-- Example client implementation
-- CI/CD pipeline setup
+- Cross-platform CI with GitHub Actions
 
 ## Code Style Guidelines
 
