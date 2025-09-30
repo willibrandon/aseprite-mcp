@@ -1119,7 +1119,7 @@ Example Claude Desktop config:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0 | 2025-01-29 | Initial PRD |
+| 1.0 | 2025-09-29 | Initial PRD |
 
 ---
 
