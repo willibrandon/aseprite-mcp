@@ -209,8 +209,7 @@ app.transaction(function()
 	app.activeLayer = layer
 	app.activeFrame = frame
 
-	local brush = Brush()
-	brush.size = %d
+	local brush = Brush(%d)
 
 	app.useTool{
 		tool = "line",
@@ -225,6 +224,116 @@ print("Line drawn successfully")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber,
 		thickness,
+		FormatColor(color),
+		FormatPoint(Point{X: x1, Y: y1}),
+		FormatPoint(Point{X: x2, Y: y2}))
+}
+
+// DrawRectangle generates a Lua script to draw a rectangle.
+func (g *LuaGenerator) DrawRectangle(layerName string, frameNumber int, x, y, width, height int, color Color, filled bool) string {
+	escapedName := EscapeString(layerName)
+	tool := "rectangle"
+	if filled {
+		tool = "filled_rectangle"
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+app.transaction(function()
+	app.activeLayer = layer
+	app.activeFrame = frame
+
+	app.useTool{
+		tool = "%s",
+		color = %s,
+		points = {%s, %s}
+	}
+end)
+
+spr:saveAs(spr.filename)
+print("Rectangle drawn successfully")`,
+		escapedName, escapedName,
+		frameNumber, frameNumber,
+		tool,
+		FormatColor(color),
+		FormatPoint(Point{X: x, Y: y}),
+		FormatPoint(Point{X: x + width - 1, Y: y + height - 1}))
+}
+
+// DrawCircle generates a Lua script to draw a circle (ellipse).
+func (g *LuaGenerator) DrawCircle(layerName string, frameNumber int, centerX, centerY, radius int, color Color, filled bool) string {
+	escapedName := EscapeString(layerName)
+	tool := "ellipse"
+	if filled {
+		tool = "filled_ellipse"
+	}
+
+	// Calculate bounding rectangle for circle
+	x1 := centerX - radius
+	y1 := centerY - radius
+	x2 := centerX + radius
+	y2 := centerY + radius
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+app.transaction(function()
+	app.activeLayer = layer
+	app.activeFrame = frame
+
+	app.useTool{
+		tool = "%s",
+		color = %s,
+		points = {%s, %s}
+	}
+end)
+
+spr:saveAs(spr.filename)
+print("Circle drawn successfully")`,
+		escapedName, escapedName,
+		frameNumber, frameNumber,
+		tool,
 		FormatColor(color),
 		FormatPoint(Point{X: x1, Y: y1}),
 		FormatPoint(Point{X: x2, Y: y2}))

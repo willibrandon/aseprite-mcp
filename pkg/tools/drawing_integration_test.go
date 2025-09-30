@@ -212,3 +212,148 @@ func TestIntegration_DrawPixels_OnCustomLayer(t *testing.T) {
 
 	t.Logf("✓ Drew pixels on custom layer '%s'", layerName)
 }
+
+func TestIntegration_DrawLine(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-draw-line.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw a diagonal line
+	drawScript := gen.DrawLine("Layer 1", 1, 10, 10, 50, 50, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, 2)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawLine) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Line drawn successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Drew line successfully")
+}
+
+func TestIntegration_DrawRectangle_Outline(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-draw-rect-outline.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw rectangle outline
+	drawScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 40, 30, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, false)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawRectangle) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Rectangle drawn successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Drew rectangle outline successfully")
+}
+
+func TestIntegration_DrawRectangle_Filled(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-draw-rect-filled.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw filled rectangle
+	drawScript := gen.DrawRectangle("Layer 1", 1, 20, 20, 30, 20, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, true)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawRectangle) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Rectangle drawn successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Drew filled rectangle successfully")
+}
+
+func TestIntegration_DrawCircle_Outline(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-draw-circle-outline.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw circle outline
+	drawScript := gen.DrawCircle("Layer 1", 1, 50, 50, 20, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, false)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawCircle) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Circle drawn successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Drew circle outline successfully")
+}
+
+func TestIntegration_DrawCircle_Filled(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-draw-circle-filled.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw filled circle
+	drawScript := gen.DrawCircle("Layer 1", 1, 30, 30, 15, aseprite.Color{R: 255, G: 0, B: 255, A: 255}, true)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawCircle) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Circle drawn successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Drew filled circle successfully")
+}

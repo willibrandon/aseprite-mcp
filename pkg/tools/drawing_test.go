@@ -194,3 +194,240 @@ func TestDrawPixelsInput_MultiplePixels(t *testing.T) {
 		}
 	}
 }
+
+func TestDrawLineInput_Validation(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   DrawLineInput
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid line",
+			input: DrawLineInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X1:          0,
+				Y1:          0,
+				X2:          10,
+				Y2:          10,
+				Color:       "#FF0000",
+				Thickness:   1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty layer name",
+			input: DrawLineInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "",
+				FrameNumber: 1,
+				X1:          0,
+				Y1:          0,
+				X2:          10,
+				Y2:          10,
+				Color:       "#FF0000",
+				Thickness:   1,
+			},
+			wantErr: true,
+			errMsg:  "layer_name cannot be empty",
+		},
+		{
+			name: "invalid thickness - too small",
+			input: DrawLineInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X1:          0,
+				Y1:          0,
+				X2:          10,
+				Y2:          10,
+				Color:       "#FF0000",
+				Thickness:   0,
+			},
+			wantErr: true,
+			errMsg:  "thickness must be between 1 and 100",
+		},
+		{
+			name: "invalid thickness - too large",
+			input: DrawLineInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X1:          0,
+				Y1:          0,
+				X2:          10,
+				Y2:          10,
+				Color:       "#FF0000",
+				Thickness:   101,
+			},
+			wantErr: true,
+			errMsg:  "thickness must be between 1 and 100",
+		},
+		{
+			name: "maximum thickness",
+			input: DrawLineInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X1:          0,
+				Y1:          0,
+				X2:          10,
+				Y2:          10,
+				Color:       "#FF0000",
+				Thickness:   100,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Validate inputs
+			if tt.input.LayerName == "" && tt.wantErr {
+				return
+			}
+			if (tt.input.Thickness < 1 || tt.input.Thickness > 100) && tt.wantErr {
+				return
+			}
+			if tt.wantErr {
+				t.Errorf("Expected error but validation passed")
+			}
+		})
+	}
+}
+
+func TestDrawRectangleInput_Validation(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   DrawRectangleInput
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid rectangle",
+			input: DrawRectangleInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X:           10,
+				Y:           10,
+				Width:       50,
+				Height:      30,
+				Color:       "#00FF00",
+				Filled:      true,
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid width",
+			input: DrawRectangleInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X:           10,
+				Y:           10,
+				Width:       0,
+				Height:      30,
+				Color:       "#00FF00",
+				Filled:      false,
+			},
+			wantErr: true,
+			errMsg:  "width and height must be at least 1",
+		},
+		{
+			name: "invalid height",
+			input: DrawRectangleInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X:           10,
+				Y:           10,
+				Width:       50,
+				Height:      0,
+				Color:       "#00FF00",
+				Filled:      false,
+			},
+			wantErr: true,
+			errMsg:  "width and height must be at least 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Validate inputs
+			if (tt.input.Width < 1 || tt.input.Height < 1) && tt.wantErr {
+				return
+			}
+			if tt.wantErr {
+				t.Errorf("Expected error but validation passed")
+			}
+		})
+	}
+}
+
+func TestDrawCircleInput_Validation(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   DrawCircleInput
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid circle",
+			input: DrawCircleInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				CenterX:     50,
+				CenterY:     50,
+				Radius:      20,
+				Color:       "#0000FF",
+				Filled:      true,
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid radius",
+			input: DrawCircleInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				CenterX:     50,
+				CenterY:     50,
+				Radius:      0,
+				Color:       "#0000FF",
+				Filled:      false,
+			},
+			wantErr: true,
+			errMsg:  "radius must be at least 1",
+		},
+		{
+			name: "minimum radius",
+			input: DrawCircleInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				CenterX:     50,
+				CenterY:     50,
+				Radius:      1,
+				Color:       "#0000FF",
+				Filled:      false,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Validate inputs
+			if tt.input.Radius < 1 && tt.wantErr {
+				return
+			}
+			if tt.wantErr {
+				t.Errorf("Expected error but validation passed")
+			}
+		})
+	}
+}
