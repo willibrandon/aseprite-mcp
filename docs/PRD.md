@@ -436,21 +436,20 @@ The Aseprite MCP Server is a production-ready Model Context Protocol server that
 
 #### 2.2.1 Configuration Management
 
-**REQ-CONFIG-001: Environment Variables**
-- `ASEPRITE_PATH`: Path to Aseprite executable (required - must be explicitly configured)
-- `ASEPRITE_TEMP_DIR`: Temporary file directory
-- `ASEPRITE_TIMEOUT`: Operation timeout in seconds (default: 30)
-- `ASEPRITE_LOG_LEVEL`: Logging verbosity (debug, info, warn, error)
+**REQ-CONFIG-001: Configuration File**
+- Required JSON config file: `~/.config/aseprite-mcp/config.json`
+- Must contain full path to Aseprite executable
+- Configuration fields:
+  - `aseprite_path` (string, required): Full absolute path to Aseprite executable
+  - `temp_dir` (string, optional): Temporary file directory
+  - `timeout` (number, optional): Operation timeout in seconds (default: 30)
+  - `log_level` (string, optional): Logging verbosity (debug, info, warn, error)
 
-**REQ-CONFIG-002: Configuration File**
-- Optional JSON config file: `~/.config/aseprite-mcp/config.json`
-- Environment variables override config file
-- Config file overrides defaults
-
-**REQ-CONFIG-003: Aseprite Path Requirement**
-- Aseprite executable path must be explicitly provided via `ASEPRITE_PATH` environment variable or config file
-- No automatic discovery or PATH searching
-- Common install locations for reference:
+**REQ-CONFIG-002: Aseprite Executable Requirement**
+- Aseprite executable path must be explicitly configured in config file
+- Must be absolute path to executable
+- No automatic discovery, no environment variables, no system PATH usage
+- Example paths for reference only:
   - Windows: `C:\Program Files\Aseprite\Aseprite.exe`
   - macOS: `/Applications/Aseprite.app/Contents/MacOS/aseprite`
   - Linux: `/usr/bin/aseprite`, `/usr/local/bin/aseprite`
@@ -692,7 +691,6 @@ aseprite-mcp-go/
 │       └── server_test.go
 ├── internal/
 │   └── testutil/                   # Test helpers
-│       ├── mock_aseprite.go        # Mock Aseprite for testing
 │       └── fixtures/               # Test sprite files
 ├── scripts/
 │   ├── install.sh                  # Installation script
@@ -865,10 +863,10 @@ func registerCanvasTools(server *mcp.Server, client aseprite.Client, cfg config.
 
 ### 5.2 Integration Tests
 
-**REQ-TEST-004: Mock Aseprite**
-- Create mock Aseprite executable for CI
-- Mock responses for all script patterns
-- Verify command-line argument passing
+**REQ-TEST-004: Real Aseprite Required**
+- ALL tests must use real Aseprite installation
+- Tests must be provided with explicit path to Aseprite executable via config file
+- No mocks, no fakes, no stubs, no PATH usage
 
 **REQ-TEST-005: End-to-End Workflows**
 - Create sprite → draw → export workflow
@@ -927,12 +925,18 @@ Example Claude Desktop config:
 {
   "mcpServers": {
     "aseprite": {
-      "command": "/path/to/aseprite-mcp",
-      "env": {
-        "ASEPRITE_PATH": "/Applications/Aseprite.app/Contents/MacOS/aseprite"
-      }
+      "command": "/path/to/aseprite-mcp"
     }
   }
+}
+```
+
+Aseprite executable path must be configured in `~/.config/aseprite-mcp/config.json`:
+```json
+{
+  "aseprite_path": "/Applications/Aseprite.app/Contents/MacOS/aseprite",
+  "temp_dir": "/tmp/aseprite-mcp",
+  "timeout": 60
 }
 ```
 

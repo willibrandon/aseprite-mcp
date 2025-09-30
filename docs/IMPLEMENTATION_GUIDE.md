@@ -626,9 +626,6 @@ git commit -m "feat(aseprite): add core domain types and color utilities
    		return nil, fmt.Errorf("failed to load config file: %w", err)
    	}
 
-   	// Override with environment variables
-   	cfg.loadFromEnv()
-
    	// Set defaults for unset values
    	if err := cfg.setDefaults(); err != nil {
    		return nil, fmt.Errorf("failed to set defaults: %w", err)
@@ -654,32 +651,13 @@ git commit -m "feat(aseprite): add core domain types and color utilities
    	return json.Unmarshal(data, c)
    }
 
-   // loadFromEnv overrides configuration with environment variables.
-   func (c *Config) loadFromEnv() {
-   	if path := os.Getenv("ASEPRITE_PATH"); path != "" {
-   		c.AsepritePath = path
-   	}
-
-   	if dir := os.Getenv("ASEPRITE_TEMP_DIR"); dir != "" {
-   		c.TempDir = dir
-   	}
-
-   	if timeout := os.Getenv("ASEPRITE_TIMEOUT"); timeout != "" {
-   		if d, err := time.ParseDuration(timeout + "s"); err == nil {
-   			c.Timeout = d
-   		}
-   	}
-
-   	if level := os.Getenv("ASEPRITE_LOG_LEVEL"); level != "" {
-   		c.LogLevel = level
-   	}
-   }
+   // No environment variable loading - all configuration comes from file
 
    // setDefaults sets default values for unset configuration fields.
    func (c *Config) setDefaults() error {
-   	// Aseprite path must be explicitly set
+   	// Aseprite path must be explicitly set in config file
    	if c.AsepritePath == "" {
-   		return fmt.Errorf("ASEPRITE_PATH must be explicitly configured via environment variable or config file")
+   		return fmt.Errorf("aseprite_path must be explicitly configured in config file")
    	}
 
    	// Set default temp directory if not configured
@@ -747,18 +725,12 @@ git commit -m "feat(aseprite): add core domain types and color utilities
    )
 
    func TestConfig_Validate(t *testing.T) {
-   	// Create a temporary directory for testing
-   	tempDir, err := os.MkdirTemp("", "aseprite-mcp-test-*")
-   	if err != nil {
-   		t.Fatal(err)
-   	}
-   	defer os.RemoveAll(tempDir)
+   	// Tests must use real Aseprite executable
+   	// Configuration should point to actual Aseprite installation
+   	// Example: /usr/bin/aseprite or C:\Program Files\Aseprite\Aseprite.exe
 
-   	// Create a fake aseprite executable
-   	fakeAseprite := filepath.Join(tempDir, "aseprite")
-   	if err := os.WriteFile(fakeAseprite, []byte("#!/bin/sh\n"), 0755); err != nil {
-   		t.Fatal(err)
-   	}
+   	realAseprite := "/path/to/real/aseprite"  // Must be configured for actual testing
+   	tempDir := t.TempDir()
 
    	tests := []struct {
    		name    string
@@ -766,9 +738,9 @@ git commit -m "feat(aseprite): add core domain types and color utilities
    		wantErr bool
    	}{
    		{
-   			name: "valid config",
+   			name: "valid config with real aseprite",
    			config: &Config{
-   				AsepritePath: fakeAseprite,
+   				AsepritePath: realAseprite,
    				TempDir:      tempDir,
    				Timeout:      30 * time.Second,
    				LogLevel:     "info",
@@ -788,7 +760,7 @@ git commit -m "feat(aseprite): add core domain types and color utilities
    		{
    			name: "invalid timeout",
    			config: &Config{
-   				AsepritePath: fakeAseprite,
+   				AsepritePath: realAseprite,
    				TempDir:      tempDir,
    				Timeout:      -1 * time.Second,
    				LogLevel:     "info",
@@ -798,7 +770,7 @@ git commit -m "feat(aseprite): add core domain types and color utilities
    		{
    			name: "invalid log level",
    			config: &Config{
-   				AsepritePath: fakeAseprite,
+   				AsepritePath: realAseprite,
    				TempDir:      tempDir,
    				Timeout:      30 * time.Second,
    				LogLevel:     "invalid",
@@ -817,63 +789,20 @@ git commit -m "feat(aseprite): add core domain types and color utilities
    	}
    }
 
-   func TestConfig_LoadFromEnv(t *testing.T) {
-   	// Save original env vars
-   	origPath := os.Getenv("ASEPRITE_PATH")
-   	origTempDir := os.Getenv("ASEPRITE_TEMP_DIR")
-   	origTimeout := os.Getenv("ASEPRITE_TIMEOUT")
-   	origLogLevel := os.Getenv("ASEPRITE_LOG_LEVEL")
-
-   	// Restore env vars after test
-   	defer func() {
-   		os.Setenv("ASEPRITE_PATH", origPath)
-   		os.Setenv("ASEPRITE_TEMP_DIR", origTempDir)
-   		os.Setenv("ASEPRITE_TIMEOUT", origTimeout)
-   		os.Setenv("ASEPRITE_LOG_LEVEL", origLogLevel)
-   	}()
-
-   	// Set test env vars
-   	os.Setenv("ASEPRITE_PATH", "/test/aseprite")
-   	os.Setenv("ASEPRITE_TEMP_DIR", "/test/tmp")
-   	os.Setenv("ASEPRITE_TIMEOUT", "60")
-   	os.Setenv("ASEPRITE_LOG_LEVEL", "debug")
-
-   	cfg := &Config{}
-   	cfg.loadFromEnv()
-
-   	if cfg.AsepritePath != "/test/aseprite" {
-   		t.Errorf("AsepritePath = %v, want /test/aseprite", cfg.AsepritePath)
-   	}
-
-   	if cfg.TempDir != "/test/tmp" {
-   		t.Errorf("TempDir = %v, want /test/tmp", cfg.TempDir)
-   	}
-
-   	if cfg.Timeout != 60*time.Second {
-   		t.Errorf("Timeout = %v, want 60s", cfg.Timeout)
-   	}
-
-   	if cfg.LogLevel != "debug" {
-   		t.Errorf("LogLevel = %v, want debug", cfg.LogLevel)
-   	}
-   }
    ```
 
 **Verification:**
 1. Code compiles without errors
 2. Tests pass with >80% coverage
-3. Config validation requires ASEPRITE_PATH to be set
+3. Config validation requires aseprite_path to be set in config file
 
 **Testing:**
 ```bash
-# Run tests (will create fake aseprite executable for testing)
+# Run tests with real Aseprite
 go test -v ./pkg/config
 
 # Check coverage
 go test -cover ./pkg/config
-
-# Test with environment variables
-ASEPRITE_PATH=/test/path ASEPRITE_LOG_LEVEL=debug go test -v ./pkg/config
 ```
 
 **Git Commit:**
@@ -881,8 +810,8 @@ ASEPRITE_PATH=/test/path ASEPRITE_LOG_LEVEL=debug go test -v ./pkg/config
 git add .
 git commit -m "feat(config): implement configuration management
 
-- Add Config struct with env var and file support
-- Require explicit ASEPRITE_PATH configuration (no auto-discovery)
+- Add Config struct with file-based configuration
+- Require explicit aseprite_path in config file (no auto-discovery, no env vars)
 - Add validation for paths, timeout, and log levels
 - Implement comprehensive unit tests with >80% coverage"
 ```
@@ -1061,7 +990,7 @@ git commit -m "feat(config): implement configuration management
 
    	now := time.Now()
    	for _, entry := range entries {
-   		// Skip directories
+   		// Ignore directories
    		if entry.IsDir() {
    			continue
    		}
@@ -1720,140 +1649,73 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
 
 #### Chunk 6: Integration Test Infrastructure
 
-**Objective:** Create mock Aseprite for testing and integration test utilities.
+**Objective:** Create test utilities for integration testing with real Aseprite executable.
 
 **Tasks:**
 
-1. Create `internal/testutil/mock_aseprite.go`:
+1. Create `internal/testutil/config.go`:
    ```go
-   
-   
-   
-
    // Package testutil provides testing utilities for the Aseprite MCP server.
    package testutil
 
    import (
-   	"fmt"
-   	"os"
-   	"path/filepath"
-   	"strings"
+   	"testing"
+   	"time"
+
+   	"github.com/willibrandon/aseprite-mcp-go/pkg/config"
    )
 
-   // MockAseprite represents a mock Aseprite executable for testing.
-   type MockAseprite struct {
-   	execPath string
-   	responses map[string]string
-   }
+   // LoadTestConfig loads the test configuration from the standard config file.
+   // Tests MUST have a valid config file with real Aseprite path configured.
+   func LoadTestConfig(t *testing.T) *config.Config {
+   	t.Helper()
 
-   // NewMockAseprite creates a new mock Aseprite executable.
-   func NewMockAseprite(dir string) (*MockAseprite, error) {
-   	// Create mock executable script
-   	execPath := filepath.Join(dir, "aseprite")
-   	if err := createMockScript(execPath); err != nil {
-   		return nil, err
+   	cfg, err := config.Load()
+   	if err != nil {
+   		t.Fatalf("Failed to load test config: %v. Ensure ~/.config/aseprite-mcp/config.json exists with aseprite_path configured", err)
    	}
 
-   	return &MockAseprite{
-   		execPath: execPath,
-   		responses: make(map[string]string),
-   	}, nil
+   	return cfg
    }
 
-   // Path returns the path to the mock executable.
-   func (m *MockAseprite) Path() string {
-   	return m.execPath
-   }
+   // CreateTestConfigWithPath creates a test config with explicit Aseprite path.
+   // Use this when you need to override the default config for specific tests.
+   func CreateTestConfigWithPath(t *testing.T, asepritePath string) *config.Config {
+   	t.Helper()
 
-   // SetResponse sets the mock response for a specific script pattern.
-   func (m *MockAseprite) SetResponse(pattern, response string) {
-   	m.responses[pattern] = response
-   }
-
-   // createMockScript creates a platform-specific mock script.
-   func createMockScript(path string) error {
-   	var script string
-
-   	// Determine script type based on platform
-   	if strings.HasSuffix(path, ".bat") || strings.HasSuffix(path, ".cmd") {
-   		// Windows batch script
-   		script = `@echo off
-   echo Aseprite 1.3.0
-   exit /b 0
-   `
-   	} else {
-   		// Unix shell script
-   		script = `#!/bin/sh
-   echo "Aseprite 1.3.0"
-   exit 0
-   `
+   	return &config.Config{
+   		AsepritePath: asepritePath,
+   		TempDir:      t.TempDir(),
+   		Timeout:      30 * time.Second,
+   		LogLevel:     "info",
    	}
-
-   	// Write script
-   	if err := os.WriteFile(path, []byte(script), 0755); err != nil {
-   		return fmt.Errorf("failed to create mock script: %w", err)
-   	}
-
-   	return nil
    }
    ```
 
 2. Create `internal/testutil/fixtures.go`:
    ```go
-   
-   
-   
-
    package testutil
 
    import (
-   	"os"
    	"path/filepath"
    	"testing"
    )
 
-   // CreateTempSprite creates a temporary .aseprite file for testing.
-   // Returns the file path and a cleanup function.
-   func CreateTempSprite(t *testing.T) (string, func()) {
+   // TempSpriteDir returns a temporary directory for sprite files.
+   func TempSpriteDir(t *testing.T) string {
    	t.Helper()
-
-   	tempDir := t.TempDir()
-   	spritePath := filepath.Join(tempDir, "test.aseprite")
-
-   	// Create dummy sprite file (just needs to exist for most tests)
-   	if err := os.WriteFile(spritePath, []byte("dummy"), 0644); err != nil {
-   		t.Fatalf("failed to create temp sprite: %v", err)
-   	}
-
-   	cleanup := func() {
-   		os.Remove(spritePath)
-   	}
-
-   	return spritePath, cleanup
+   	return t.TempDir()
    }
 
-   // CreateTestConfig creates a test configuration.
-   func CreateTestConfig(t *testing.T) (asepritePath, tempDir string) {
+   // TempSpritePath returns a path for a temporary sprite file.
+   func TempSpritePath(t *testing.T, name string) string {
    	t.Helper()
-
-   	tempDir = t.TempDir()
-
-   	// Create mock Aseprite
-   	mock, err := NewMockAseprite(tempDir)
-   	if err != nil {
-   		t.Fatalf("failed to create mock aseprite: %v", err)
-   	}
-
-   	return mock.Path(), tempDir
+   	return filepath.Join(t.TempDir(), name)
    }
    ```
 
 3. Create `pkg/aseprite/integration_test.go`:
    ```go
-   
-   
-   
-
    //go:build integration
    // +build integration
 
@@ -1862,30 +1724,27 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
    import (
    	"context"
    	"os"
-   	"os/exec"
-   	"path/filepath"
    	"testing"
    	"time"
+
+   	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
    )
 
-   // These tests require a real Aseprite installation.
+   // Integration tests require real Aseprite installation.
+   // Config file must be present at ~/.config/aseprite-mcp/config.json
+   // with aseprite_path pointing to real Aseprite executable.
+   //
    // Run with: go test -tags=integration ./pkg/aseprite
 
    func TestIntegration_CreateCanvas(t *testing.T) {
-   	// Skip if ASEPRITE_PATH not set
-   	asepritePath := os.Getenv("ASEPRITE_PATH")
-   	if asepritePath == "" {
-   		t.Skip("ASEPRITE_PATH environment variable not set")
-   	}
-
-   	tempDir := t.TempDir()
-   	client := NewClient(asepritePath, tempDir, 30*time.Second)
+   	cfg := testutil.LoadTestConfig(t)
+   	client := NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
    	gen := NewLuaGenerator()
 
-   	// Generate script to create canvas
+   	// Generate script to create canvas with real Aseprite
    	script := gen.CreateCanvas(100, 100, ColorModeRGB)
 
-   	// Execute
+   	// Execute with real Aseprite
    	ctx := context.Background()
    	output, err := client.ExecuteLua(ctx, script, "")
    	if err != nil {
@@ -1895,7 +1754,7 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
    	// Output should be the path to the created sprite
    	spritePath := output
 
-   	// Verify file was created
+   	// Verify file was created by real Aseprite
    	if _, err := os.Stat(spritePath); os.IsNotExist(err) {
    		t.Errorf("sprite file was not created at %s", spritePath)
    	}
@@ -1904,13 +1763,8 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
    }
 
    func TestIntegration_GetVersion(t *testing.T) {
-   	asepritePath := os.Getenv("ASEPRITE_PATH")
-   	if asepritePath == "" {
-   		t.Skip("ASEPRITE_PATH environment variable not set")
-   	}
-
-   	tempDir := t.TempDir()
-   	client := NewClient(asepritePath, tempDir, 30*time.Second)
+   	cfg := testutil.LoadTestConfig(t)
+   	client := NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
 
    	ctx := context.Background()
    	version, err := client.GetVersion(ctx)
@@ -1926,24 +1780,40 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
    }
    ```
 
-4. Add integration test documentation to `docs/TESTING.md`:
+4. Create `docs/TESTING.md`:
    ```markdown
    # Testing Guide
 
+   ## Prerequisites
+
+   ALL tests require a real Aseprite installation with configuration file.
+
+   Create `~/.config/aseprite-mcp/config.json`:
+   ```json
+   {
+     "aseprite_path": "/absolute/path/to/aseprite",
+     "temp_dir": "/tmp/aseprite-mcp",
+     "timeout": 30,
+     "log_level": "info"
+   }
+   ```
+
+   Example paths:
+   - Windows: `C:\\Program Files\\Aseprite\\Aseprite.exe`
+   - macOS: `/Applications/Aseprite.app/Contents/MacOS/aseprite`
+   - Linux: `/usr/bin/aseprite`
+
    ## Unit Tests
 
-   Run unit tests:
+   Run unit tests (requires config file with real Aseprite):
    ```bash
    go test ./...
    ```
 
    ## Integration Tests
 
-   Integration tests require Aseprite to be installed and ASEPRITE_PATH to be set.
-
-   Run integration tests:
+   Run integration tests (requires config file with real Aseprite):
    ```bash
-   export ASEPRITE_PATH=/path/to/aseprite  # Set the path first
    go test -tags=integration ./...
    ```
 
@@ -1957,42 +1827,40 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
 
    ## Manual Testing
 
-   Test with real Aseprite:
+   Test server manually:
    ```bash
-   export ASEPRITE_PATH=/path/to/aseprite  # Required
    go run ./cmd/aseprite-mcp
    ```
    ```
 
 **Verification:**
-1. Mock Aseprite script is created correctly
-2. Unit tests pass without real Aseprite
-3. Integration tests can be run with real Aseprite (if available)
+1. Test utilities created for real Aseprite integration
+2. All tests require config file with real Aseprite path
+3. No mocks, no fakes, no stubs, no environment variables
+4. Integration tests can be run with proper configuration
 
 **Testing:**
 ```bash
-# Run unit tests (no Aseprite required)
+# Ensure config file exists
+cat ~/.config/aseprite-mcp/config.json
+
+# Run unit tests
 go test ./...
 
-# Run integration tests (requires Aseprite)
+# Run integration tests
 go test -tags=integration ./...
-
-# Check overall coverage
-make test-coverage
 ```
 
 **Git Commit:**
 ```bash
 git add .
-git commit -m "test: add integration test infrastructure
+git commit -m "feat(test): add integration test infrastructure
 
-- Create MockAseprite for unit testing
-- Add fixture utilities for test data
-- Implement integration tests for real Aseprite
-- Add TESTING.md documentation
-- Use build tags to separate unit and integration tests"
+- Add test utilities for real Aseprite integration
+- Require config file with aseprite_path for all tests
+- Add integration tests with real Aseprite execution
+- Create testing documentation with configuration requirements"
 ```
 
 ---
-
 **Continue to next comment for Chunks 7-10...**

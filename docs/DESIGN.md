@@ -392,10 +392,13 @@ app.transaction(function()
 
 ## Configuration
 
-### Environment Variables
-- `ASEPRITE_PATH`: Path to Aseprite executable (required - must be explicitly set)
-- `ASEPRITE_TEMP_DIR`: Directory for temporary files (default: system temp)
-- `ASEPRITE_TIMEOUT`: Timeout for operations in seconds (default: 30)
+### Configuration File
+- Required config file: `~/.config/aseprite-mcp/config.json`
+- Fields:
+  - `aseprite_path` (required): Full absolute path to Aseprite executable
+  - `temp_dir` (optional): Directory for temporary files (default: system temp)
+  - `timeout` (optional): Timeout for operations in seconds (default: 30)
+  - `log_level` (optional): Logging verbosity (default: info)
 
 ### Configuration File (optional)
 ```json
@@ -436,23 +439,24 @@ func handleAsepriteError(err error, stderr string) error {
 - Error handling
 
 ### Integration Tests
-- Mock Aseprite executable for CI
-- Test full tool workflows
+- Real Aseprite executable required (no mocks)
+- Test configuration must provide explicit path to Aseprite
+- Test full tool workflows with actual Aseprite
 - Verify generated sprites
 
 ### Example Test
 ```go
 func TestCreateCanvas(t *testing.T) {
-    // Create test server with mock Aseprite
+    // Load test config with real Aseprite path
     cfg := &Config{
-        AsepritePath: "./testdata/mock-aseprite.sh",
+        AsepritePath: "/absolute/path/to/aseprite",  // Must be real executable
         TempDir:      t.TempDir(),
     }
     server := NewServer(cfg)
 
     // Test via in-memory transport
     clientTransport, serverTransport := mcp.NewInMemoryTransports()
-    // ... test tool invocation
+    // ... test tool invocation with real Aseprite
 }
 ```
 
