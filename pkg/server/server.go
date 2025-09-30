@@ -73,13 +73,11 @@ func (s *Server) registerTools() {
 	// Register canvas management tools (Tasks 8-10)
 	tools.RegisterCanvasTools(s.mcp, s.client, s.gen, s.config, s.logger)
 
-	// Register drawing tools (Task 11)
+	// Register drawing tools (Tasks 11-13)
 	tools.RegisterDrawingTools(s.mcp, s.client, s.gen, s.config, s.logger)
 
-	// Additional tools will be registered in subsequent tasks:
-	// - draw_line, draw_rectangle, draw_circle (Task 12)
-	// - fill_area (Task 13)
-	// - export_sprite (Task 14)
+	// Register export tools (Task 14)
+	tools.RegisterExportTools(s.mcp, s.client, s.gen, s.config, s.logger)
 }
 
 // Client returns the underlying Aseprite client for testing.
