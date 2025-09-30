@@ -393,7 +393,7 @@ app.transaction(function()
 ## Configuration
 
 ### Environment Variables
-- `ASEPRITE_PATH`: Path to Aseprite executable (default: search PATH)
+- `ASEPRITE_PATH`: Path to Aseprite executable (required - must be explicitly set)
 - `ASEPRITE_TEMP_DIR`: Directory for temporary files (default: system temp)
 - `ASEPRITE_TIMEOUT`: Timeout for operations in seconds (default: 30)
 

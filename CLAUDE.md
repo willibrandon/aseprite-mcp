@@ -66,7 +66,7 @@ The server follows a three-layer architecture:
 
 **Configuration (`pkg/config/config.go`):**
 - Loads config from environment variables and optional JSON file
-- Auto-discovers Aseprite executable on Windows/macOS/Linux
+- Requires explicit ASEPRITE_PATH configuration (no auto-discovery or PATH search)
 - Validates paths, permissions, and settings
 - Priority: env vars > config file > defaults
 
@@ -136,7 +136,8 @@ func registerCanvasTools(server *mcp.Server, client *Client, cfg *Config) {
 # Unit only (fast, no Aseprite needed)
 go test ./...
 
-# Integration (requires Aseprite in PATH)
+# Integration (requires ASEPRITE_PATH environment variable set)
+export ASEPRITE_PATH=/path/to/aseprite
 go test -tags=integration ./...
 
 # Specific package
@@ -156,7 +157,7 @@ go test -cover ./...
 - **Timeout Enforcement**: All operations use context.Context with configurable timeout
 
 ### Error Handling
-- Configuration errors: Missing Aseprite, invalid paths → exit with clear message
+- Configuration errors: ASEPRITE_PATH not set, invalid paths → exit with clear message
 - Validation errors: Invalid params → return JSON schema validation error
 - Execution errors: Aseprite failures → include stderr in error message
 - Timeout errors: Context deadline exceeded → return specific timeout error

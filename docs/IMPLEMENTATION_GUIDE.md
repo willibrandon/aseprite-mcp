@@ -23,7 +23,7 @@ This guide provides a step-by-step implementation plan for building the Aseprite
 
 Before starting, ensure:
 1. Go 1.23+ is installed
-2. Aseprite is installed and accessible in PATH or known location
+2. Aseprite is installed and you know the full path to the executable
 3. Git is installed
 4. Working directory: `D:\SRC\aseprite-mcp-go`
 
@@ -691,13 +691,9 @@ git commit -m "feat(aseprite): add core domain types and color utilities
 
    // setDefaults sets default values for unset configuration fields.
    func (c *Config) setDefaults() error {
-   	// Set default Aseprite path if not configured
+   	// Aseprite path must be explicitly set
    	if c.AsepritePath == "" {
-   		path, err := findAsepritePath()
-   		if err != nil {
-   			return fmt.Errorf("could not find Aseprite executable: %w", err)
-   		}
-   		c.AsepritePath = path
+   		return fmt.Errorf("ASEPRITE_PATH must be explicitly configured via environment variable or config file")
    	}
 
    	// Set default temp directory if not configured
@@ -750,49 +746,6 @@ git commit -m "feat(aseprite): add core domain types and color utilities
    func getConfigFilePath() string {
    	homeDir, _ := os.UserHomeDir()
    	return filepath.Join(homeDir, ".config", "aseprite-mcp", "config.json")
-   }
-
-   // findAsepritePath attempts to locate the Aseprite executable.
-   func findAsepritePath() (string, error) {
-   	// Try common installation locations first
-   	commonPaths := getCommonAsepritePaths()
-   	for _, path := range commonPaths {
-   		if _, err := os.Stat(path); err == nil {
-   			return path, nil
-   		}
-   	}
-
-   	// Search in PATH
-   	path, err := exec.LookPath("aseprite")
-   	if err != nil {
-   		return "", fmt.Errorf("aseprite not found in PATH or common locations")
-   	}
-
-   	return path, nil
-   }
-
-   // getCommonAsepritePaths returns common installation paths by OS.
-   func getCommonAsepritePaths() []string {
-   	switch runtime.GOOS {
-   	case "windows":
-   		return []string{
-   			`C:\Program Files\Aseprite\Aseprite.exe`,
-   			`C:\Program Files (x86)\Aseprite\Aseprite.exe`,
-   		}
-   	case "darwin":
-   		return []string{
-   			"/Applications/Aseprite.app/Contents/MacOS/aseprite",
-   			filepath.Join(os.Getenv("HOME"), "Applications", "Aseprite.app", "Contents", "MacOS", "aseprite"),
-   		}
-   	case "linux":
-   		return []string{
-   			"/usr/bin/aseprite",
-   			"/usr/local/bin/aseprite",
-   			filepath.Join(os.Getenv("HOME"), ".local", "bin", "aseprite"),
-   		}
-   	default:
-   		return nil
-   	}
    }
    ```
 
@@ -922,27 +875,16 @@ git commit -m "feat(aseprite): add core domain types and color utilities
    		t.Errorf("LogLevel = %v, want debug", cfg.LogLevel)
    	}
    }
-
-   func TestGetCommonAsepritePaths(t *testing.T) {
-   	paths := getCommonAsepritePaths()
-
-   	if len(paths) == 0 {
-   		t.Error("getCommonAsepritePaths() returned no paths")
-   	}
-
-   	// Just verify we get some platform-specific paths
-   	// Don't check exact values as they vary by OS
-   	t.Logf("Common paths: %v", paths)
-   }
    ```
 
 **Verification:**
 1. Code compiles without errors
 2. Tests pass with >80% coverage
+3. Config validation requires ASEPRITE_PATH to be set
 
 **Testing:**
 ```bash
-# Run tests
+# Run tests (will create fake aseprite executable for testing)
 go test -v ./pkg/config
 
 # Check coverage
@@ -958,7 +900,7 @@ git add .
 git commit -m "feat(config): implement configuration management
 
 - Add Config struct with env var and file support
-- Implement Aseprite path discovery for Windows/macOS/Linux
+- Require explicit ASEPRITE_PATH configuration (no auto-discovery)
 - Add validation for paths, timeout, and log levels
 - Implement comprehensive unit tests with >80% coverage"
 ```
@@ -1948,10 +1890,10 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
    // Run with: go test -tags=integration ./pkg/aseprite
 
    func TestIntegration_CreateCanvas(t *testing.T) {
-   	// Skip if Aseprite not available
-   	asepritePath, err := exec.LookPath("aseprite")
-   	if err != nil {
-   		t.Skip("Aseprite not found in PATH")
+   	// Skip if ASEPRITE_PATH not set
+   	asepritePath := os.Getenv("ASEPRITE_PATH")
+   	if asepritePath == "" {
+   		t.Skip("ASEPRITE_PATH environment variable not set")
    	}
 
    	tempDir := t.TempDir()
@@ -1980,9 +1922,9 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
    }
 
    func TestIntegration_GetVersion(t *testing.T) {
-   	asepritePath, err := exec.LookPath("aseprite")
-   	if err != nil {
-   		t.Skip("Aseprite not found in PATH")
+   	asepritePath := os.Getenv("ASEPRITE_PATH")
+   	if asepritePath == "" {
+   		t.Skip("ASEPRITE_PATH environment variable not set")
    	}
 
    	tempDir := t.TempDir()
@@ -2015,10 +1957,11 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
 
    ## Integration Tests
 
-   Integration tests require Aseprite to be installed.
+   Integration tests require Aseprite to be installed and ASEPRITE_PATH to be set.
 
    Run integration tests:
    ```bash
+   export ASEPRITE_PATH=/path/to/aseprite  # Set the path first
    go test -tags=integration ./...
    ```
 
@@ -2034,7 +1977,7 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
 
    Test with real Aseprite:
    ```bash
-   export ASEPRITE_PATH=/path/to/aseprite
+   export ASEPRITE_PATH=/path/to/aseprite  # Required
    go run ./cmd/aseprite-mcp
    ```
    ```

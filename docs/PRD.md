@@ -437,7 +437,7 @@ The Aseprite MCP Server is a production-ready Model Context Protocol server that
 #### 2.2.1 Configuration Management
 
 **REQ-CONFIG-001: Environment Variables**
-- `ASEPRITE_PATH`: Path to Aseprite executable
+- `ASEPRITE_PATH`: Path to Aseprite executable (required - must be explicitly configured)
 - `ASEPRITE_TEMP_DIR`: Temporary file directory
 - `ASEPRITE_TIMEOUT`: Operation timeout in seconds (default: 30)
 - `ASEPRITE_LOG_LEVEL`: Logging verbosity (debug, info, warn, error)
@@ -447,9 +447,10 @@ The Aseprite MCP Server is a production-ready Model Context Protocol server that
 - Environment variables override config file
 - Config file overrides defaults
 
-**REQ-CONFIG-003: Aseprite Discovery**
-- Search PATH for `aseprite` executable if not configured
-- Common install locations:
+**REQ-CONFIG-003: Aseprite Path Requirement**
+- Aseprite executable path must be explicitly provided via `ASEPRITE_PATH` environment variable or config file
+- No automatic discovery or PATH searching
+- Common install locations for reference:
   - Windows: `C:\Program Files\Aseprite\Aseprite.exe`
   - macOS: `/Applications/Aseprite.app/Contents/MacOS/aseprite`
   - Linux: `/usr/bin/aseprite`, `/usr/local/bin/aseprite`
