@@ -157,8 +157,6 @@ func TestPixelInput_ColorFormats(t *testing.T) {
 			// Test color parsing using the Color type from aseprite package
 			// This is tested indirectly through the tool validation
 			pixel := PixelInput{
-				X:     0,
-				Y:     0,
 				Color: tt.color,
 			}
 
@@ -172,9 +170,6 @@ func TestPixelInput_ColorFormats(t *testing.T) {
 
 func TestDrawPixelsInput_MultiplePixels(t *testing.T) {
 	input := DrawPixelsInput{
-		SpritePath:  "/path/to/sprite.aseprite",
-		LayerName:   "Layer 1",
-		FrameNumber: 1,
 		Pixels: []PixelInput{
 			{X: 0, Y: 0, Color: "#FF0000"},
 			{X: 1, Y: 1, Color: "#00FF00"},
