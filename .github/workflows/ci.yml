@@ -136,11 +136,16 @@ jobs:
           $config | Out-File -FilePath "$env:USERPROFILE\.config\aseprite-mcp\config.json" -Encoding utf8
         shell: powershell
 
+      - name: Return to project root
+        run: cd ${{ github.workspace }}
+
       - name: Download dependencies
         run: go mod download
+        working-directory: ${{ github.workspace }}
 
       - name: Lint - go vet
         run: go vet ./...
+        working-directory: ${{ github.workspace }}
 
       - name: Lint - go fmt
         run: |
@@ -149,16 +154,20 @@ jobs:
             gofmt -s -l .
             exit 1
           fi
+        working-directory: ${{ github.workspace }}
         shell: bash
 
       - name: Build
         run: go build -v -o bin/aseprite-mcp${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/aseprite-mcp
+        working-directory: ${{ github.workspace }}
 
       - name: Run unit tests
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+        working-directory: ${{ github.workspace }}
 
       - name: Run integration tests
         run: go test -tags=integration -v -race ./...
+        working-directory: ${{ github.workspace }}
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
