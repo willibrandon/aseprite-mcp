@@ -1,0 +1,40 @@
+# Binaries
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+aseprite-mcp
+
+# Test files
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Temporary files
+*.tmp
+*.aseprite
+*.png
+*.gif
+/tmp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config
+config.json
+.env
+
+# Claude AI
+.claude/
