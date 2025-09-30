@@ -70,13 +70,13 @@ func (s *Server) Run(ctx context.Context) error {
 func (s *Server) registerTools() {
 	s.logger.Debug("Registering MCP tools")
 
-	// Register canvas management tools (Task 8)
+	// Register canvas management tools (Tasks 8-10)
 	tools.RegisterCanvasTools(s.mcp, s.client, s.gen, s.config, s.logger)
 
+	// Register drawing tools (Task 11)
+	tools.RegisterDrawingTools(s.mcp, s.client, s.gen, s.config, s.logger)
+
 	// Additional tools will be registered in subsequent tasks:
-	// - add_layer, add_frame (Task 9)
-	// - get_sprite_info (Task 10)
-	// - draw_pixels (Task 11)
 	// - draw_line, draw_rectangle, draw_circle (Task 12)
 	// - fill_area (Task 13)
 	// - export_sprite (Task 14)
