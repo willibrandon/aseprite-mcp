@@ -28,6 +28,7 @@ A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and anim
 - Canvas creation with RGB, Grayscale, and Indexed color modes
 - Layer and frame management for complex compositions
 - Drawing primitives: pixels, lines, rectangles, circles, flood fill
+- Animation tools: frame durations, tags, frame duplication, linked cels
 - Sprite export to PNG, GIF, JPG, and BMP formats
 - Sprite metadata retrieval
 - Cross-platform support: Windows, macOS, Linux
@@ -113,8 +114,10 @@ Then use natural language to create sprites:
 | `draw_circle` | Draw a circle/ellipse (filled or outline) |
 | `fill_area` | Flood fill from a point (paint bucket) |
 | `export_sprite` | Export sprite to PNG/GIF/JPG/BMP |
-
-See [docs/API.md](docs/API.md) for detailed API documentation (coming soon).
+| `set_frame_duration` | Set the duration of an animation frame in milliseconds |
+| `create_tag` | Create an animation tag with playback direction |
+| `duplicate_frame` | Duplicate an existing frame with all cels |
+| `link_cel` | Create a linked cel that shares image data |
 
 ## Development
 

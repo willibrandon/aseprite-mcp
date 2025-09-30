@@ -70,14 +70,17 @@ func (s *Server) Run(ctx context.Context) error {
 func (s *Server) registerTools() {
 	s.logger.Debug("Registering MCP tools")
 
-	// Register canvas management tools (Tasks 8-10)
+	// Register canvas management tools
 	tools.RegisterCanvasTools(s.mcp, s.client, s.gen, s.config, s.logger)
 
-	// Register drawing tools (Tasks 11-13)
+	// Register drawing tools
 	tools.RegisterDrawingTools(s.mcp, s.client, s.gen, s.config, s.logger)
 
-	// Register export tools (Task 14)
+	// Register export tools
 	tools.RegisterExportTools(s.mcp, s.client, s.gen, s.config, s.logger)
+
+	// Register animation tools
+	tools.RegisterAnimationTools(s.mcp, s.client, s.gen, s.config, s.logger)
 }
 
 // Client returns the underlying Aseprite client for testing.

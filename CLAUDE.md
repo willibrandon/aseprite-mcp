@@ -115,6 +115,7 @@ Core functionality implemented and tested:
 - Canvas creation and management (RGB, Grayscale, Indexed)
 - Layer and frame operations
 - Drawing primitives (pixels, lines, rectangles, circles, fill)
+- Animation tools (frame duration, tags, duplication, linked cels)
 - Sprite export (PNG, GIF, JPG, BMP)
 - Metadata retrieval
 - Example client implementation (examples/client/main.go)

@@ -420,3 +420,174 @@ end
 spr:saveCopyAs("%s")
 print("Exported successfully")`, escapedPath)
 }
+
+// SetFrameDuration generates a Lua script to set the duration of a frame.
+func (g *LuaGenerator) SetFrameDuration(frameNumber int, durationMs int) string {
+	durationSec := float64(durationMs) / 1000.0
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+app.transaction(function()
+	frame.duration = %.3f
+end)
+
+spr:saveAs(spr.filename)
+print("Frame duration set successfully")`, frameNumber, frameNumber, durationSec)
+}
+
+// CreateTag generates a Lua script to create an animation tag.
+func (g *LuaGenerator) CreateTag(tagName string, fromFrame, toFrame int, direction string) string {
+	escapedName := EscapeString(tagName)
+
+	// Map direction to Aseprite AniDir enum
+	var aniDir string
+	switch direction {
+	case "forward":
+		aniDir = "AniDir.FORWARD"
+	case "reverse":
+		aniDir = "AniDir.REVERSE"
+	case "pingpong":
+		aniDir = "AniDir.PING_PONG"
+	default:
+		aniDir = "AniDir.FORWARD"
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+if #spr.frames < %d then
+	error("Frame range exceeds sprite frames")
+end
+
+app.transaction(function()
+	local tag = spr:newTag(%d, %d)
+	tag.name = "%s"
+	tag.aniDir = %s
+end)
+
+spr:saveAs(spr.filename)
+print("Tag created successfully")`, toFrame, fromFrame, toFrame, escapedName, aniDir)
+}
+
+// DuplicateFrame generates a Lua script to duplicate a frame.
+func (g *LuaGenerator) DuplicateFrame(sourceFrame int, insertAfter int) string {
+	if insertAfter == 0 {
+		// Insert at end
+		return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+local srcFrame = spr.frames[%d]
+if not srcFrame then
+	error("Source frame not found: %d")
+end
+
+local newFrame
+app.transaction(function()
+	newFrame = spr:newFrame(#spr.frames + 1)
+	newFrame.duration = srcFrame.duration
+
+	-- Copy cels from source frame to new frame
+	for _, layer in ipairs(spr.layers) do
+		local srcCel = layer:cel(srcFrame)
+		if srcCel then
+			local newCel = spr:newCel(layer, newFrame, srcCel.image, srcCel.position)
+		end
+	end
+end)
+
+spr:saveAs(spr.filename)
+print(#spr.frames)`, sourceFrame, sourceFrame)
+	}
+
+	// Insert after specific frame
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+local srcFrame = spr.frames[%d]
+if not srcFrame then
+	error("Source frame not found: %d")
+end
+
+if #spr.frames < %d then
+	error("Insert position exceeds sprite frames")
+end
+
+local newFrame
+app.transaction(function()
+	newFrame = spr:newFrame(%d + 1)
+	newFrame.duration = srcFrame.duration
+
+	-- Copy cels from source frame to new frame
+	for _, layer in ipairs(spr.layers) do
+		local srcCel = layer:cel(srcFrame)
+		if srcCel then
+			local newCel = spr:newCel(layer, newFrame, srcCel.image, srcCel.position)
+		end
+	end
+end)
+
+spr:saveAs(spr.filename)
+print(%d + 1)`, sourceFrame, sourceFrame, insertAfter, insertAfter, insertAfter)
+}
+
+// LinkCel generates a Lua script to create a linked cel.
+func (g *LuaGenerator) LinkCel(layerName string, sourceFrame, targetFrame int) string {
+	escapedName := EscapeString(layerName)
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+local srcFrame = spr.frames[%d]
+if not srcFrame then
+	error("Source frame not found: %d")
+end
+
+local tgtFrame = spr.frames[%d]
+if not tgtFrame then
+	error("Target frame not found: %d")
+end
+
+local srcCel = layer:cel(srcFrame)
+if not srcCel then
+	error("Source cel not found in frame %d")
+end
+
+app.transaction(function()
+	-- Create linked cel by copying with same image reference
+	spr:newCel(layer, tgtFrame, srcCel.image, srcCel.position)
+end)
+
+spr:saveAs(spr.filename)
+print("Cel linked successfully")`,
+		escapedName, escapedName,
+		sourceFrame, sourceFrame,
+		targetFrame, targetFrame,
+		sourceFrame)
+}
