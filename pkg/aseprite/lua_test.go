@@ -182,12 +182,16 @@ func TestLuaGenerator_ExportSprite(t *testing.T) {
 	t.Run("export specific frame", func(t *testing.T) {
 		script := gen.ExportSprite("output.png", 2)
 
-		if !strings.Contains(script, "spr.frames[2]") {
-			t.Error("script missing frame selection")
+		if !strings.Contains(script, "SaveFileCopyAs") {
+			t.Error("script missing SaveFileCopyAs command")
 		}
 
-		if !strings.Contains(script, "frame = frame") {
-			t.Error("script missing frame parameter")
+		if !strings.Contains(script, "fromFrame = 2") {
+			t.Error("script missing fromFrame parameter")
+		}
+
+		if !strings.Contains(script, "toFrame = 2") {
+			t.Error("script missing toFrame parameter")
 		}
 	})
 }
