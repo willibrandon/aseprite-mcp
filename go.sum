@@ -1,0 +1,4 @@
+github.com/modelcontextprotocol/go-sdk v0.8.0 h1:jdsBtGzBLY287WKSIjYovOXAqtJkP+HtFQFKrZd4a6c=
+github.com/modelcontextprotocol/go-sdk v0.8.0/go.mod h1:nYtYQroQ2KQiM0/SbyEPUWQ6xs4B95gJjEalc9AQyOs=
+github.com/willibrandon/mtlog v0.9.0 h1:DTsi+In254MB1+49OWy5wpLEW++qMkNu5t9TMbQC0PM=
+github.com/willibrandon/mtlog v0.9.0/go.mod h1:lgCcScZ+nYWeeSNw+lxYk7paleph8S45lJ24LvdGXS0=
