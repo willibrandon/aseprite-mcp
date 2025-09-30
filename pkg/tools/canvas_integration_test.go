@@ -5,6 +5,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -141,4 +142,151 @@ func TestIntegration_CreateCanvas_LargeSize(t *testing.T) {
 		defer os.Remove(filename)
 		t.Logf("✓ Created 2048x2048 sprite at: %s", filename)
 	}
+}
+
+func TestIntegration_AddLayer(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// First create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-addlayer.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Now add a layer
+	addLayerScript := gen.AddLayer("Test Layer")
+	output, err := client.ExecuteLua(ctx, addLayerScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(AddLayer) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Layer added successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Added layer to sprite")
+}
+
+func TestIntegration_AddMultipleLayers(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-multilayer.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Add multiple layers
+	layers := []string{"Background", "Midground", "Foreground"}
+	for _, layerName := range layers {
+		addLayerScript := gen.AddLayer(layerName)
+		_, err := client.ExecuteLua(ctx, addLayerScript, spritePath)
+		if err != nil {
+			t.Fatalf("Failed to add layer %s: %v", layerName, err)
+		}
+	}
+
+	t.Logf("✓ Added %d layers to sprite", len(layers))
+}
+
+func TestIntegration_AddFrame(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-addframe.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Add a frame with 100ms duration
+	addFrameScript := gen.AddFrame(100)
+	output, err := client.ExecuteLua(ctx, addFrameScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(AddFrame) error = %v", err)
+	}
+
+	// Parse frame count from output
+	var frameCount int
+	_, err = fmt.Sscanf(strings.TrimSpace(output), "%d", &frameCount)
+	if err != nil {
+		t.Fatalf("Failed to parse frame count: %v", err)
+	}
+
+	if frameCount < 2 {
+		t.Errorf("Expected at least 2 frames, got %d", frameCount)
+	}
+
+	t.Logf("✓ Added frame (total frames: %d)", frameCount)
+}
+
+func TestIntegration_AddMultipleFrames(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-animation.aseprite")
+	createScript := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Add multiple frames with different durations
+	durations := []int{100, 150, 200, 100}
+	for _, duration := range durations {
+		addFrameScript := gen.AddFrame(duration)
+		_, err := client.ExecuteLua(ctx, addFrameScript, spritePath)
+		if err != nil {
+			t.Fatalf("Failed to add frame with duration %dms: %v", duration, err)
+		}
+	}
+
+	t.Logf("✓ Created animation with %d frames", len(durations)+1) // +1 for initial frame
+}
+
+func TestIntegration_AddLayerSpecialCharacters(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-special-chars.aseprite")
+	createScript := gen.CreateCanvas(50, 50, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Add layer with special characters
+	layerName := "Layer_1-Test (Copy)"
+	addLayerScript := gen.AddLayer(layerName)
+	_, err = client.ExecuteLua(ctx, addLayerScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to add layer with special characters: %v", err)
+	}
+
+	t.Logf("✓ Added layer with special characters: %s", layerName)
 }

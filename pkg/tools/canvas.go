@@ -25,6 +25,28 @@ type CreateCanvasOutput struct {
 	FilePath string `json:"file_path" jsonschema:"Absolute path to the created Aseprite file"`
 }
 
+// AddLayerInput defines the input parameters for the add_layer tool.
+type AddLayerInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	LayerName  string `json:"layer_name" jsonschema:"Name for the new layer"`
+}
+
+// AddLayerOutput defines the output for the add_layer tool.
+type AddLayerOutput struct {
+	Success bool `json:"success" jsonschema:"Whether the layer was added successfully"`
+}
+
+// AddFrameInput defines the input parameters for the add_frame tool.
+type AddFrameInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	DurationMs int    `json:"duration_ms" jsonschema:"Frame duration in milliseconds (1-65535)"`
+}
+
+// AddFrameOutput defines the output for the add_frame tool.
+type AddFrameOutput struct {
+	FrameNumber int `json:"frame_number" jsonschema:"Index of the created frame (1-based)"`
+}
+
 // RegisterCanvasTools registers all canvas management tools with the MCP server.
 func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *aseprite.LuaGenerator, cfg *config.Config, logger core.Logger) {
 	// Register create_canvas tool
@@ -69,6 +91,75 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			logger.Information("Canvas created successfully", "path", filePath, "width", input.Width, "height", input.Height)
 
 			return nil, &CreateCanvasOutput{FilePath: filePath}, nil
+		},
+	)
+
+	// Register add_layer tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "add_layer",
+			Description: "Add a new layer to an existing Aseprite sprite. Returns success status.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input AddLayerInput) (*mcp.CallToolResult, *AddLayerOutput, error) {
+			logger.Debug("add_layer tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName)
+
+			// Validate layer name
+			if input.LayerName == "" {
+				return nil, nil, fmt.Errorf("layer_name cannot be empty")
+			}
+
+			// Generate Lua script
+			script := gen.AddLayer(input.LayerName)
+
+			// Execute Lua script with the sprite
+			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to add layer", "error", err)
+				return nil, nil, fmt.Errorf("failed to add layer: %w", err)
+			}
+
+			logger.Information("Layer added successfully", "sprite", input.SpritePath, "layer", input.LayerName)
+
+			return nil, &AddLayerOutput{Success: true}, nil
+		},
+	)
+
+	// Register add_frame tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "add_frame",
+			Description: "Add a new frame to an existing Aseprite sprite. Returns the frame number (1-based index).",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input AddFrameInput) (*mcp.CallToolResult, *AddFrameOutput, error) {
+			logger.Debug("add_frame tool called", "sprite_path", input.SpritePath, "duration_ms", input.DurationMs)
+
+			// Validate duration
+			if input.DurationMs < 1 || input.DurationMs > 65535 {
+				return nil, nil, fmt.Errorf("duration_ms must be between 1 and 65535, got %d", input.DurationMs)
+			}
+
+			// Generate Lua script
+			script := gen.AddFrame(input.DurationMs)
+
+			// Execute Lua script with the sprite
+			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to add frame", "error", err)
+				return nil, nil, fmt.Errorf("failed to add frame: %w", err)
+			}
+
+			// Parse frame number from output
+			var frameNumber int
+			_, err = fmt.Sscanf(strings.TrimSpace(output), "%d", &frameNumber)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to parse frame number from output: %w", err)
+			}
+
+			logger.Information("Frame added successfully", "sprite", input.SpritePath, "frame_number", frameNumber)
+
+			return nil, &AddFrameOutput{FrameNumber: frameNumber}, nil
 		},
 	)
 }
