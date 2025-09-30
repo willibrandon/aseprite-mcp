@@ -9,8 +9,12 @@ import (
 )
 
 func TestConfig_Validate(t *testing.T) {
-	// Use real Aseprite path for testing
-	realAseprite := `D:\SRC\aseprite\build\bin\aseprite.exe`
+	// Load Aseprite path from test config (works both locally and in CI)
+	testCfg, err := Load()
+	if err != nil {
+		t.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/aseprite-mcp/config.json exists with aseprite_path configured.", err)
+	}
+	realAseprite := testCfg.AsepritePath
 	tempDir := t.TempDir()
 
 	tests := []struct {
@@ -71,7 +75,11 @@ func TestConfig_Validate(t *testing.T) {
 }
 
 func TestConfig_SetDefaults(t *testing.T) {
-	realAseprite := `D:\SRC\aseprite\build\bin\aseprite.exe`
+	testCfg, err := Load()
+	if err != nil {
+		t.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/aseprite-mcp/config.json exists with aseprite_path configured.", err)
+	}
+	realAseprite := testCfg.AsepritePath
 
 	t.Run("sets defaults for empty fields", func(t *testing.T) {
 		cfg := &Config{
