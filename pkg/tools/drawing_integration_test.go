@@ -357,3 +357,109 @@ func TestIntegration_DrawCircle_Filled(t *testing.T) {
 
 	t.Logf("✓ Drew filled circle successfully")
 }
+
+func TestIntegration_FillArea_ZeroTolerance(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-fill-zero-tolerance.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw a rectangle outline first to create a boundary
+	rectScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 30, 30, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, false)
+	_, err = client.ExecuteLua(ctx, rectScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to draw rectangle: %v", err)
+	}
+
+	// Fill the area inside the rectangle
+	fillScript := gen.FillArea("Layer 1", 1, 20, 20, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, 0)
+	output, err := client.ExecuteLua(ctx, fillScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(FillArea) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Area filled successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Filled area with zero tolerance successfully")
+}
+
+func TestIntegration_FillArea_WithTolerance(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-fill-with-tolerance.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw some pixels with similar colors
+	pixels := []aseprite.Pixel{
+		{Point: aseprite.Point{X: 10, Y: 10}, Color: aseprite.Color{R: 100, G: 100, B: 100, A: 255}},
+		{Point: aseprite.Point{X: 11, Y: 10}, Color: aseprite.Color{R: 105, G: 105, B: 105, A: 255}},
+		{Point: aseprite.Point{X: 12, Y: 10}, Color: aseprite.Color{R: 110, G: 110, B: 110, A: 255}},
+	}
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to draw pixels: %v", err)
+	}
+
+	// Fill area with tolerance - should fill similar colors
+	fillScript := gen.FillArea("Layer 1", 1, 10, 10, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, 50)
+	output, err := client.ExecuteLua(ctx, fillScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(FillArea) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Area filled successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Filled area with tolerance successfully")
+}
+
+func TestIntegration_FillArea_EmptyCanvas(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-fill-empty.aseprite")
+	createScript := gen.CreateCanvas(50, 50, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Fill entire empty canvas (should fill all transparent pixels)
+	fillScript := gen.FillArea("Layer 1", 1, 25, 25, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 0)
+	output, err := client.ExecuteLua(ctx, fillScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(FillArea) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Area filled successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Filled empty canvas successfully")
+}

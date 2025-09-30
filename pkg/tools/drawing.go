@@ -84,6 +84,22 @@ type DrawCircleOutput struct {
 	Success bool `json:"success" jsonschema:"Whether the circle was drawn successfully"`
 }
 
+// FillAreaInput defines the input parameters for the fill_area tool.
+type FillAreaInput struct {
+	SpritePath  string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	LayerName   string `json:"layer_name" jsonschema:"Name of the layer to draw on"`
+	FrameNumber int    `json:"frame_number" jsonschema:"Frame number to draw on (1-based)"`
+	X           int    `json:"x" jsonschema:"X coordinate of starting point"`
+	Y           int    `json:"y" jsonschema:"Y coordinate of starting point"`
+	Color       string `json:"color" jsonschema:"Hex color string in format #RRGGBB or #RRGGBBAA"`
+	Tolerance   int    `json:"tolerance" jsonschema:"Color matching tolerance (0-255, default 0)"`
+}
+
+// FillAreaOutput defines the output for the fill_area tool.
+type FillAreaOutput struct {
+	Success bool `json:"success" jsonschema:"Whether the fill operation was successful"`
+}
+
 // RegisterDrawingTools registers all drawing tools with the MCP server.
 func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *aseprite.LuaGenerator, cfg *config.Config, logger core.Logger) {
 	// Register draw_pixels tool
@@ -291,6 +307,56 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			logger.Information("Circle drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "radius", input.Radius, "filled", input.Filled)
 
 			return nil, &DrawCircleOutput{Success: true}, nil
+		},
+	)
+
+	// Register fill_area tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "fill_area",
+			Description: "Flood fill from a starting point with specified color (paint bucket tool).",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input FillAreaInput) (*mcp.CallToolResult, *FillAreaOutput, error) {
+			logger.Debug("fill_area tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "x", input.X, "y", input.Y, "tolerance", input.Tolerance)
+
+			// Validate inputs
+			if input.LayerName == "" {
+				return nil, nil, fmt.Errorf("layer_name cannot be empty")
+			}
+
+			if input.FrameNumber < 1 {
+				return nil, nil, fmt.Errorf("frame_number must be at least 1, got %d", input.FrameNumber)
+			}
+
+			if input.Tolerance < 0 || input.Tolerance > 255 {
+				return nil, nil, fmt.Errorf("tolerance must be between 0 and 255, got %d", input.Tolerance)
+			}
+
+			// Parse color
+			var color aseprite.Color
+			if err := color.FromHex(input.Color); err != nil {
+				return nil, nil, fmt.Errorf("invalid color format: %w", err)
+			}
+
+			// Generate Lua script
+			script := gen.FillArea(input.LayerName, input.FrameNumber, input.X, input.Y, color, input.Tolerance)
+
+			// Execute Lua script with the sprite
+			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to fill area", "error", err)
+				return nil, nil, fmt.Errorf("failed to fill area: %w", err)
+			}
+
+			// Check for success message
+			if !strings.Contains(output, "Area filled successfully") {
+				logger.Warning("Unexpected output from fill_area", "output", output)
+			}
+
+			logger.Information("Area filled successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "x", input.X, "y", input.Y, "tolerance", input.Tolerance)
+
+			return nil, &FillAreaOutput{Success: true}, nil
 		},
 	)
 }

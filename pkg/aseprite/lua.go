@@ -339,6 +339,54 @@ print("Circle drawn successfully")`,
 		FormatPoint(Point{X: x2, Y: y2}))
 }
 
+// FillArea generates a Lua script to flood fill an area (paint bucket).
+func (g *LuaGenerator) FillArea(layerName string, frameNumber int, x, y int, color Color, tolerance int) string {
+	escapedName := EscapeString(layerName)
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+app.transaction(function()
+	app.activeLayer = layer
+	app.activeFrame = frame
+
+	app.useTool{
+		tool = "paint_bucket",
+		color = %s,
+		points = {%s},
+		contiguous = true,
+		tolerance = %d
+	}
+end)
+
+spr:saveAs(spr.filename)
+print("Area filled successfully")`,
+		escapedName, escapedName,
+		frameNumber, frameNumber,
+		FormatColor(color),
+		FormatPoint(Point{X: x, Y: y}),
+		tolerance)
+}
+
 // ExportSprite generates a Lua script to export a sprite.
 func (g *LuaGenerator) ExportSprite(outputPath string, frameNumber int) string {
 	escapedPath := EscapeString(outputPath)

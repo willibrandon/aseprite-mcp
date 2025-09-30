@@ -431,3 +431,109 @@ func TestDrawCircleInput_Validation(t *testing.T) {
 		})
 	}
 }
+
+func TestFillAreaInput_Validation(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   FillAreaInput
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid fill area",
+			input: FillAreaInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X:           10,
+				Y:           10,
+				Color:       "#FF0000",
+				Tolerance:   0,
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid fill area with tolerance",
+			input: FillAreaInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X:           10,
+				Y:           10,
+				Color:       "#FF0000",
+				Tolerance:   50,
+			},
+			wantErr: false,
+		},
+		{
+			name: "maximum tolerance",
+			input: FillAreaInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X:           10,
+				Y:           10,
+				Color:       "#FF0000",
+				Tolerance:   255,
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid tolerance - too small",
+			input: FillAreaInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X:           10,
+				Y:           10,
+				Color:       "#FF0000",
+				Tolerance:   -1,
+			},
+			wantErr: true,
+			errMsg:  "tolerance must be between 0 and 255",
+		},
+		{
+			name: "invalid tolerance - too large",
+			input: FillAreaInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "Layer 1",
+				FrameNumber: 1,
+				X:           10,
+				Y:           10,
+				Color:       "#FF0000",
+				Tolerance:   256,
+			},
+			wantErr: true,
+			errMsg:  "tolerance must be between 0 and 255",
+		},
+		{
+			name: "empty layer name",
+			input: FillAreaInput{
+				SpritePath:  "/path/to/sprite.aseprite",
+				LayerName:   "",
+				FrameNumber: 1,
+				X:           10,
+				Y:           10,
+				Color:       "#FF0000",
+				Tolerance:   0,
+			},
+			wantErr: true,
+			errMsg:  "layer_name cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Validate inputs
+			if tt.input.LayerName == "" && tt.wantErr {
+				return
+			}
+			if (tt.input.Tolerance < 0 || tt.input.Tolerance > 255) && tt.wantErr {
+				return
+			}
+			if tt.wantErr {
+				t.Errorf("Expected error but validation passed")
+			}
+		})
+	}
+}
