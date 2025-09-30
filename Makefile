@@ -2,6 +2,9 @@
 
 # Binary name
 BINARY_NAME=aseprite-mcp
+ifeq ($(OS),Windows_NT)
+	BINARY_NAME := $(BINARY_NAME).exe
+endif
 
 # Build variables
 VERSION:=$(shell git describe --tags --always --dirty || echo dev)

@@ -13,7 +13,6 @@ import (
 	"github.com/willibrandon/aseprite-mcp-go/pkg/server"
 	"github.com/willibrandon/mtlog"
 	"github.com/willibrandon/mtlog/core"
-	"github.com/willibrandon/mtlog/sinks"
 )
 
 var (
@@ -109,8 +108,8 @@ func main() {
 
 // createLogger creates a configured logger instance.
 func createLogger(logLevel string) core.Logger {
-	// Create console sink
-	sink := sinks.NewConsoleSink()
+	// Create stderr sink (stdout is used for MCP communication)
+	sink := &stderrSink{}
 
 	// Create logger with options based on log level
 	var opts []mtlog.Option
@@ -176,4 +175,66 @@ func performHealthCheck(cfg *config.Config, logger core.Logger) int {
 
 	logger.Information("Health check passed - all systems operational")
 	return 0
+}
+
+// stderrSink writes log events to stderr without colors.
+type stderrSink struct{}
+
+func (s *stderrSink) Emit(event *core.LogEvent) {
+	timestamp := event.Timestamp.Format("2006-01-02 15:04:05.000")
+
+	// Map log level to string
+	var levelStr string
+	switch event.Level {
+	case core.DebugLevel:
+		levelStr = "DBG"
+	case core.InformationLevel:
+		levelStr = "INF"
+	case core.WarningLevel:
+		levelStr = "WRN"
+	case core.ErrorLevel:
+		levelStr = "ERR"
+	case core.FatalLevel:
+		levelStr = "FTL"
+	default:
+		levelStr = "???"
+	}
+
+	// Render message with properties
+	message := event.MessageTemplate
+	for name, value := range event.Properties {
+		placeholder := fmt.Sprintf("{%s}", name)
+		valueStr := fmt.Sprintf("%v", value)
+		message = replaceAll(message, placeholder, valueStr)
+	}
+
+	fmt.Fprintf(os.Stderr, "[%s] [%s] %s\n", timestamp, levelStr, message)
+}
+
+func (s *stderrSink) Close() error {
+	return nil
+}
+
+// replaceAll is a simple string replacement helper
+func replaceAll(s, old, new string) string {
+	result := ""
+	for {
+		idx := indexString(s, old)
+		if idx == -1 {
+			result += s
+			break
+		}
+		result += s[:idx] + new
+		s = s[idx+len(old):]
+	}
+	return result
+}
+
+func indexString(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }
