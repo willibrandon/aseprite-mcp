@@ -30,8 +30,69 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Install Aseprite CLI
-        uses: neomura/setup-aseprite-cli-action@v1.0.1
+      - name: Install build dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libfontconfig1-dev
+
+      - name: Install build dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja p7zip
+
+      - name: Cache Skia
+        id: cache-skia
+        uses: actions/cache@v4
+        with:
+          path: skia
+          key: skia-${{ runner.os }}-m116-2024-01-05
+
+      - name: Download Skia
+        if: steps.cache-skia.outputs.cache-hit != 'true'
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            curl -L https://github.com/aseprite/skia/releases/download/m116-2024-01-05/Skia-Linux-Release-x64-libstdc++.zip -o skia.zip
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            curl -L https://github.com/aseprite/skia/releases/download/m116-2024-01-05/Skia-Windows-Release-x64.zip -o skia.zip
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            curl -L https://github.com/aseprite/skia/releases/download/m116-2024-01-05/Skia-macOS-Release-x64.zip -o skia.zip
+          fi
+          unzip skia.zip -d skia
+        shell: bash
+
+      - name: Checkout Aseprite
+        uses: actions/checkout@v4
+        with:
+          repository: aseprite/aseprite
+          ref: v1.3.10
+          submodules: recursive
+          path: aseprite
+
+      - name: Build Aseprite
+        run: |
+          cd aseprite
+          mkdir build
+          cd build
+          cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_UI=OFF \
+            -DENABLE_TESTS=OFF \
+            -DENABLE_SCRIPTING=ON \
+            -DLAF_BACKEND=none \
+            -DSKIA_DIR=${{ github.workspace }}/skia \
+            -DSKIA_LIBRARY_DIR=${{ github.workspace }}/skia/out/Release-x64 \
+            ..
+          ninja aseprite
+        shell: bash
+
+      - name: Install Aseprite to PATH
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "${{ github.workspace }}/aseprite/build/bin" >> $GITHUB_PATH
+          else
+            echo "${{ github.workspace }}/aseprite/build/bin" >> $GITHUB_PATH
+          fi
+        shell: bash
 
       - name: Verify Aseprite installation
         run: aseprite --version
