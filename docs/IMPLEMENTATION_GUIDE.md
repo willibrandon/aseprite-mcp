@@ -129,8 +129,6 @@ Before starting, ensure:
    ```
    MIT License
 
-   Copyright (c) 2025 Brandon Williams
-
    Permission is hereby granted, free of charge, to any person obtaining a copy
    of this software and associated documentation files (the "Software"), to deal
    in the Software without restriction, including without limitation the rights
@@ -253,10 +251,6 @@ git commit -m "feat: initialize project structure and Go module
 
 2. Create `pkg/aseprite/types.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
-
    // Package aseprite provides types and utilities for interacting with Aseprite.
    package aseprite
 
@@ -387,10 +381,6 @@ git commit -m "feat: initialize project structure and Go module
 
 3. Create `pkg/aseprite/types_test.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
-
    package aseprite
 
    import (
@@ -589,10 +579,6 @@ git commit -m "feat(aseprite): add core domain types and color utilities
 
 1. Create `pkg/config/config.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
-
    // Package config provides configuration management for the Aseprite MCP server.
    package config
 
@@ -751,10 +737,6 @@ git commit -m "feat(aseprite): add core domain types and color utilities
 
 2. Create `pkg/config/config_test.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
-
    package config
 
    import (
@@ -917,9 +899,9 @@ git commit -m "feat(config): implement configuration management
 
 1. Create `pkg/aseprite/client.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
+   
+   
+   
 
    package aseprite
 
@@ -1108,9 +1090,9 @@ git commit -m "feat(config): implement configuration management
 
 2. Create `pkg/aseprite/client_test.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
+   
+   
+   
 
    package aseprite
 
@@ -1254,9 +1236,9 @@ git commit -m "feat(aseprite): implement command executor with timeout
 
 1. Create `pkg/aseprite/lua.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
+   
+   
+   
 
    package aseprite
 
@@ -1510,9 +1492,9 @@ git commit -m "feat(aseprite): implement command executor with timeout
 
 2. Create `pkg/aseprite/lua_test.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
+   
+   
+   
 
    package aseprite
 
@@ -1744,9 +1726,9 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
 
 1. Create `internal/testutil/mock_aseprite.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
+   
+   
+   
 
    // Package testutil provides testing utilities for the Aseprite MCP server.
    package testutil
@@ -1818,9 +1800,9 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
 
 2. Create `internal/testutil/fixtures.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
+   
+   
+   
 
    package testutil
 
@@ -1868,9 +1850,9 @@ git commit -m "feat(aseprite): implement Lua script generation utilities
 
 3. Create `pkg/aseprite/integration_test.go`:
    ```go
-   // Copyright 2025 Brandon Williams. All rights reserved.
-   // Use of this source code is governed by an MIT-style
-   // license that can be found in the LICENSE file.
+   
+   
+   
 
    //go:build integration
    // +build integration
