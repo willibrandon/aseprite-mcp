@@ -66,11 +66,11 @@ jobs:
           repository: aseprite/aseprite
           ref: v1.3.15.3
           submodules: recursive
-          path: aseprite
+          path: ../aseprite-build
 
       - name: Build Aseprite
         run: |
-          cd aseprite
+          cd ../aseprite-build
           mkdir build
           cd build
           cmake -G Ninja \
@@ -83,14 +83,15 @@ jobs:
             -DSKIA_LIBRARY_DIR=${{ github.workspace }}/skia/out/Release-x64 \
             ..
           ninja aseprite
+        working-directory: ${{ github.workspace }}
         shell: bash
 
       - name: Install Aseprite to PATH
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then
-            echo "${{ github.workspace }}/aseprite/build/bin" >> $GITHUB_PATH
+            echo "${{ github.workspace }}/../aseprite-build/build/bin" >> $GITHUB_PATH
           else
-            echo "${{ github.workspace }}/aseprite/build/bin" >> $GITHUB_PATH
+            echo "${{ github.workspace }}/../aseprite-build/build/bin" >> $GITHUB_PATH
           fi
         shell: bash
 
@@ -110,7 +111,7 @@ jobs:
       - name: Find Aseprite path (Unix)
         if: runner.os != 'Windows'
         run: |
-          ASEPRITE_PATH=$(which aseprite)
+          ASEPRITE_PATH="${{ github.workspace }}/../aseprite-build/build/bin/aseprite"
           echo "Found Aseprite at: $ASEPRITE_PATH"
           cat > "$HOME/.config/aseprite-mcp/config.json" << EOF
           {
@@ -125,7 +126,7 @@ jobs:
       - name: Find Aseprite path (Windows)
         if: runner.os == 'Windows'
         run: |
-          $asepritePath = (Get-Command aseprite).Path
+          $asepritePath = "${{ github.workspace }}\..\aseprite-build\build\bin\aseprite.exe"
           Write-Host "Found Aseprite at: $asepritePath"
           $config = @{
             aseprite_path = $asepritePath
