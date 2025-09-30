@@ -7,14 +7,16 @@ on:
     branches: [ main ]
 
 jobs:
-  ci:
-    name: Build, Lint & Test on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        go-version: ['1.23']
+  test-linux:
+    name: Test on Linux with Docker
+    runs-on: ubuntu-latest
+
+    services:
+      aseprite:
+        image: ghcr.io/${{ github.repository }}/aseprite-cli:latest
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -23,36 +25,145 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: '1.23'
+          cache: true
+
+      - name: Pull Aseprite Docker image
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker pull ghcr.io/${{ github.repository }}/aseprite-cli:latest || echo "Image not found, will build from source"
+
+      - name: Extract Aseprite from Docker (if image exists)
+        id: docker-extract
+        run: |
+          if docker image inspect ghcr.io/${{ github.repository }}/aseprite-cli:latest > /dev/null 2>&1; then
+            mkdir -p /tmp/aseprite-bin
+            docker create --name aseprite-temp ghcr.io/${{ github.repository }}/aseprite-cli:latest
+            docker cp aseprite-temp:/usr/local/bin/aseprite /tmp/aseprite-bin/aseprite
+            docker cp aseprite-temp:/usr/local/lib/. /tmp/aseprite-bin/lib/
+            docker rm aseprite-temp
+            chmod +x /tmp/aseprite-bin/aseprite
+            echo "extracted=true" >> $GITHUB_OUTPUT
+          else
+            echo "extracted=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Build Aseprite from source (fallback)
+        if: steps.docker-extract.outputs.extracted != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libfontconfig1-dev libxrandr-dev
+
+          curl -L https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Linux-Release-x64.zip -o skia.zip
+          unzip skia.zip -d skia
+
+          git clone --recursive --branch v1.3.15.3 https://github.com/aseprite/aseprite.git
+          cd aseprite
+          mkdir build && cd build
+          cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DENABLE_UI=OFF \
+            -DENABLE_TESTS=OFF \
+            -DENABLE_SCRIPTING=ON \
+            -DLAF_BACKEND=none \
+            -DSKIA_DIR=${{ github.workspace }}/skia \
+            -DSKIA_LIBRARY_DIR=${{ github.workspace }}/skia/out/Release-x64 \
+            ..
+          ninja aseprite
+
+          mkdir -p /tmp/aseprite-bin
+          cp bin/aseprite /tmp/aseprite-bin/aseprite
+
+      - name: Setup Aseprite PATH
+        run: |
+          echo "/tmp/aseprite-bin" >> $GITHUB_PATH
+          if [ -d "/tmp/aseprite-bin/lib" ]; then
+            echo "LD_LIBRARY_PATH=/tmp/aseprite-bin/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          fi
+
+      - name: Verify Aseprite installation
+        run: aseprite --version
+
+      - name: Create config directory
+        run: mkdir -p "$HOME/.config/aseprite-mcp"
+
+      - name: Configure Aseprite path
+        run: |
+          cat > "$HOME/.config/aseprite-mcp/config.json" << EOF
+          {
+            "aseprite_path": "/tmp/aseprite-bin/aseprite",
+            "temp_dir": "/tmp/aseprite-mcp-test",
+            "timeout": 30,
+            "log_level": "info"
+          }
+          EOF
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Lint - go vet
+        run: go vet ./...
+
+      - name: Lint - go fmt
+        run: |
+          UNFORMATTED=$(gofmt -s -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files need formatting:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: Build
+        run: go build -v -o bin/aseprite-mcp ./cmd/aseprite-mcp
+
+      - name: Run unit tests
+        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+      - name: Run integration tests
+        run: go test -tags=integration -v -race ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.txt
+          flags: unittests-linux
+          name: codecov-linux
+        continue-on-error: true
+
+  test-windows-macos:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
           cache: true
 
       - name: Install MSVC (Windows only)
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Install build dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libx11-dev libxcursor-dev libxi-dev libgl1-mesa-dev libfontconfig1-dev libxrandr-dev
-
       - name: Install build dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install ninja p7zip
+        run: brew install ninja cmake
 
-      - name: Cache Skia
-        id: cache-skia
-        uses: actions/cache@v4
-        with:
-          path: skia
-          key: skia-${{ runner.os }}-m124-08a5439a6b
+      - name: Install build dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja cmake
 
       - name: Download Skia
-        if: steps.cache-skia.outputs.cache-hit != 'true'
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            curl -L https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Linux-Release-x64.zip -o skia.zip
-          elif [ "$RUNNER_OS" == "Windows" ]; then
+          if [ "$RUNNER_OS" == "Windows" ]; then
             curl -L https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Windows-Release-x64.zip -o skia.zip
           elif [ "$RUNNER_OS" == "macOS" ]; then
             curl -L https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-macOS-Release-x64.zip -o skia.zip
@@ -60,19 +171,13 @@ jobs:
           unzip skia.zip -d skia
         shell: bash
 
-      - name: Checkout Aseprite
-        uses: actions/checkout@v4
-        with:
-          repository: aseprite/aseprite
-          ref: v1.3.15.3
-          submodules: recursive
-          path: aseprite
+      - name: Clone Aseprite
+        run: git clone --recursive --branch v1.3.15.3 https://github.com/aseprite/aseprite.git
 
       - name: Build Aseprite
         run: |
           cd aseprite
-          mkdir build
-          cd build
+          mkdir build && cd build
           cmake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_UI=OFF \
@@ -98,10 +203,6 @@ jobs:
         run: aseprite --version
         shell: bash
 
-      - name: Exclude Aseprite from Go module scanning
-        run: echo "module ignore" > aseprite/go.mod
-        shell: bash
-
       - name: Create config directory
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then
@@ -111,14 +212,12 @@ jobs:
           fi
         shell: bash
 
-      - name: Find Aseprite path (Unix)
+      - name: Configure Aseprite path (Unix)
         if: runner.os != 'Windows'
         run: |
-          ASEPRITE_PATH="${{ github.workspace }}/aseprite/build/bin/aseprite"
-          echo "Found Aseprite at: $ASEPRITE_PATH"
           cat > "$HOME/.config/aseprite-mcp/config.json" << EOF
           {
-            "aseprite_path": "$ASEPRITE_PATH",
+            "aseprite_path": "${{ github.workspace }}/aseprite/build/bin/aseprite",
             "temp_dir": "/tmp/aseprite-mcp-test",
             "timeout": 30,
             "log_level": "info"
@@ -126,13 +225,11 @@ jobs:
           EOF
         shell: bash
 
-      - name: Find Aseprite path (Windows)
+      - name: Configure Aseprite path (Windows)
         if: runner.os == 'Windows'
         run: |
-          $asepritePath = "${{ github.workspace }}\aseprite\build\bin\aseprite.exe"
-          Write-Host "Found Aseprite at: $asepritePath"
           $config = @{
-            aseprite_path = $asepritePath
+            aseprite_path = "${{ github.workspace }}\aseprite\build\bin\aseprite.exe"
             temp_dir = "$env:TEMP\aseprite-mcp-test"
             timeout = 30
             log_level = "info"
@@ -140,44 +237,35 @@ jobs:
           $config | Out-File -FilePath "$env:USERPROFILE\.config\aseprite-mcp\config.json" -Encoding utf8
         shell: powershell
 
-      - name: Return to project root
-        run: cd ${{ github.workspace }}
-
       - name: Download dependencies
         run: go mod download
-        working-directory: ${{ github.workspace }}
 
       - name: Lint - go vet
         run: go vet ./...
-        working-directory: ${{ github.workspace }}
 
       - name: Lint - go fmt
         run: |
-          UNFORMATTED=$(find . -name "*.go" -not -path "./aseprite/*" -not -path "./skia/*" -exec gofmt -s -l {} +)
+          UNFORMATTED=$(gofmt -s -l .)
           if [ -n "$UNFORMATTED" ]; then
             echo "The following files need formatting:"
             echo "$UNFORMATTED"
             exit 1
           fi
-        working-directory: ${{ github.workspace }}
         shell: bash
 
       - name: Build
         run: go build -v -o bin/aseprite-mcp${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/aseprite-mcp
-        working-directory: ${{ github.workspace }}
 
       - name: Run unit tests
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-        working-directory: ${{ github.workspace }}
 
       - name: Run integration tests
         run: go test -tags=integration -v -race ./...
-        working-directory: ${{ github.workspace }}
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.txt
-          flags: unittests
+          flags: unittests-${{ matrix.os }}
           name: codecov-${{ matrix.os }}
         continue-on-error: true
