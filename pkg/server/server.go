@@ -7,6 +7,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
 	"github.com/willibrandon/aseprite-mcp-go/pkg/config"
+	"github.com/willibrandon/aseprite-mcp-go/pkg/tools"
 	"github.com/willibrandon/mtlog/core"
 )
 
@@ -66,12 +67,13 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 // registerTools registers all MCP tools with the server.
-// Tool implementations will be added in subsequent tasks.
 func (s *Server) registerTools() {
 	s.logger.Debug("Registering MCP tools")
 
-	// Tools will be registered here in Tasks 8-14:
-	// - create_canvas (Task 8)
+	// Register canvas management tools (Task 8)
+	tools.RegisterCanvasTools(s.mcp, s.client, s.gen, s.config, s.logger)
+
+	// Additional tools will be registered in subsequent tasks:
 	// - add_layer, add_frame (Task 9)
 	// - get_sprite_info (Task 10)
 	// - draw_pixels (Task 11)
