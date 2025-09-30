@@ -20,10 +20,10 @@ type PixelInput struct {
 
 // DrawPixelsInput defines the input parameters for the draw_pixels tool.
 type DrawPixelsInput struct {
-	SpritePath  string        `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
-	LayerName   string        `json:"layer_name" jsonschema:"Name of the layer to draw on"`
-	FrameNumber int           `json:"frame_number" jsonschema:"Frame number to draw on (1-based)"`
-	Pixels      []PixelInput  `json:"pixels" jsonschema:"Array of pixels to draw"`
+	SpritePath  string       `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	LayerName   string       `json:"layer_name" jsonschema:"Name of the layer to draw on"`
+	FrameNumber int          `json:"frame_number" jsonschema:"Frame number to draw on (1-based)"`
+	Pixels      []PixelInput `json:"pixels" jsonschema:"Array of pixels to draw"`
 }
 
 // DrawPixelsOutput defines the output for the draw_pixels tool.

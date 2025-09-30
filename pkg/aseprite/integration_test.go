@@ -121,9 +121,9 @@ func TestIntegration_DrawPixels(t *testing.T) {
 
 	// Draw some pixels
 	pixels := []Pixel{
-		{Point: Point{X: 10, Y: 10}, Color: NewColorRGB(255, 0, 0)},   // Red
-		{Point: Point{X: 20, Y: 20}, Color: NewColorRGB(0, 255, 0)},   // Green
-		{Point: Point{X: 30, Y: 30}, Color: NewColorRGB(0, 0, 255)},   // Blue
+		{Point: Point{X: 10, Y: 10}, Color: NewColorRGB(255, 0, 0)}, // Red
+		{Point: Point{X: 20, Y: 20}, Color: NewColorRGB(0, 255, 0)}, // Green
+		{Point: Point{X: 30, Y: 30}, Color: NewColorRGB(0, 0, 255)}, // Blue
 	}
 
 	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
