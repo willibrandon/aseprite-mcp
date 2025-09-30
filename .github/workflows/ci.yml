@@ -153,9 +153,10 @@ jobs:
 
       - name: Lint - go fmt
         run: |
-          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          UNFORMATTED=$(find . -name "*.go" -not -path "./aseprite/*" -not -path "./skia/*" -exec gofmt -s -l {} +)
+          if [ -n "$UNFORMATTED" ]; then
             echo "The following files need formatting:"
-            gofmt -s -l .
+            echo "$UNFORMATTED"
             exit 1
           fi
         working-directory: ${{ github.workspace }}
