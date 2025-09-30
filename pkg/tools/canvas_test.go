@@ -205,3 +205,35 @@ func TestAddFrameInput_Validation(t *testing.T) {
 		})
 	}
 }
+
+func TestGetSpriteInfoInput_Validation(t *testing.T) {
+	tests := []struct {
+		name  string
+		input GetSpriteInfoInput
+		valid bool
+	}{
+		{
+			name: "valid sprite path",
+			input: GetSpriteInfoInput{
+				SpritePath: "/path/to/sprite.aseprite",
+			},
+			valid: true,
+		},
+		{
+			name: "empty sprite path",
+			input: GetSpriteInfoInput{
+				SpritePath: "",
+			},
+			valid: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isEmpty := tt.input.SpritePath == ""
+			if isEmpty == tt.valid {
+				t.Errorf("Expected valid=%v but path is empty=%v", tt.valid, isEmpty)
+			}
+		})
+	}
+}

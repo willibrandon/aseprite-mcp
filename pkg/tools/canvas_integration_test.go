@@ -290,3 +290,96 @@ func TestIntegration_AddLayerSpecialCharacters(t *testing.T) {
 
 	t.Logf("✓ Added layer with special characters: %s", layerName)
 }
+
+func TestIntegration_GetSpriteInfo(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-info.aseprite")
+	createScript := gen.CreateCanvas(320, 240, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Get sprite info
+	infoScript := gen.GetSpriteInfo()
+	output, err := client.ExecuteLua(ctx, infoScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(GetSpriteInfo) error = %v", err)
+	}
+
+	// Verify output contains expected fields
+	if !strings.Contains(output, "\"width\"") {
+		t.Errorf("Output missing 'width' field: %s", output)
+	}
+	if !strings.Contains(output, "\"height\"") {
+		t.Errorf("Output missing 'height' field: %s", output)
+	}
+	if !strings.Contains(output, "320") {
+		t.Errorf("Output missing width value 320: %s", output)
+	}
+	if !strings.Contains(output, "240") {
+		t.Errorf("Output missing height value 240: %s", output)
+	}
+
+	t.Logf("✓ Retrieved sprite info successfully")
+}
+
+func TestIntegration_GetSpriteInfoWithLayersAndFrames(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-info-complex.aseprite")
+	createScript := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Add layers
+	layers := []string{"Background", "Midground", "Foreground"}
+	for _, layerName := range layers {
+		addLayerScript := gen.AddLayer(layerName)
+		_, err := client.ExecuteLua(ctx, addLayerScript, spritePath)
+		if err != nil {
+			t.Fatalf("Failed to add layer %s: %v", layerName, err)
+		}
+	}
+
+	// Add frames
+	for i := 0; i < 3; i++ {
+		addFrameScript := gen.AddFrame(100)
+		_, err := client.ExecuteLua(ctx, addFrameScript, spritePath)
+		if err != nil {
+			t.Fatalf("Failed to add frame: %v", err)
+		}
+	}
+
+	// Get sprite info
+	infoScript := gen.GetSpriteInfo()
+	output, err := client.ExecuteLua(ctx, infoScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(GetSpriteInfo) error = %v", err)
+	}
+
+	// Verify frame count (1 initial + 3 added = 4)
+	if !strings.Contains(output, "\"frame_count\": 4") {
+		t.Errorf("Expected frame_count: 4, got output: %s", output)
+	}
+
+	// Verify layer count (1 default + 3 added = 4)
+	if !strings.Contains(output, "\"layer_count\": 4") {
+		t.Errorf("Expected layer_count: 4, got output: %s", output)
+	}
+
+	t.Logf("✓ Retrieved complex sprite info (4 layers, 4 frames)")
+}

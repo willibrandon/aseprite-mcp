@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -45,6 +46,21 @@ type AddFrameInput struct {
 // AddFrameOutput defines the output for the add_frame tool.
 type AddFrameOutput struct {
 	FrameNumber int `json:"frame_number" jsonschema:"Index of the created frame (1-based)"`
+}
+
+// GetSpriteInfoInput defines the input parameters for the get_sprite_info tool.
+type GetSpriteInfoInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+}
+
+// GetSpriteInfoOutput defines the output for the get_sprite_info tool.
+type GetSpriteInfoOutput struct {
+	Width      int      `json:"width" jsonschema:"Sprite width in pixels"`
+	Height     int      `json:"height" jsonschema:"Sprite height in pixels"`
+	ColorMode  string   `json:"color_mode" jsonschema:"Color mode (rgb, grayscale, or indexed)"`
+	FrameCount int      `json:"frame_count" jsonschema:"Number of frames in the sprite"`
+	LayerCount int      `json:"layer_count" jsonschema:"Number of layers in the sprite"`
+	Layers     []string `json:"layers" jsonschema:"Names of all layers in the sprite"`
 }
 
 // RegisterCanvasTools registers all canvas management tools with the MCP server.
@@ -160,6 +176,39 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			logger.Information("Frame added successfully", "sprite", input.SpritePath, "frame_number", frameNumber)
 
 			return nil, &AddFrameOutput{FrameNumber: frameNumber}, nil
+		},
+	)
+
+	// Register get_sprite_info tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "get_sprite_info",
+			Description: "Retrieve metadata about an existing Aseprite sprite including dimensions, color mode, frame count, layer count, and layer names.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input GetSpriteInfoInput) (*mcp.CallToolResult, *GetSpriteInfoOutput, error) {
+			logger.Debug("get_sprite_info tool called", "sprite_path", input.SpritePath)
+
+			// Generate Lua script
+			script := gen.GetSpriteInfo()
+
+			// Execute Lua script with the sprite
+			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to get sprite info", "error", err)
+				return nil, nil, fmt.Errorf("failed to get sprite info: %w", err)
+			}
+
+			// Parse JSON output
+			var info GetSpriteInfoOutput
+			if err := json.Unmarshal([]byte(strings.TrimSpace(output)), &info); err != nil {
+				logger.Error("Failed to parse sprite info", "error", err, "output", output)
+				return nil, nil, fmt.Errorf("failed to parse sprite info: %w", err)
+			}
+
+			logger.Information("Sprite info retrieved successfully", "sprite", input.SpritePath, "width", info.Width, "height", info.Height)
+
+			return nil, &info, nil
 		},
 	)
 }
