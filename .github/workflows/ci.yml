@@ -45,17 +45,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: skia
-          key: skia-${{ runner.os }}-m116-2024-01-05
+          key: skia-${{ runner.os }}-m124-08a5439a6b
 
       - name: Download Skia
         if: steps.cache-skia.outputs.cache-hit != 'true'
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            curl -L https://github.com/aseprite/skia/releases/download/m116-2024-01-05/Skia-Linux-Release-x64-libstdc++.zip -o skia.zip
+            curl -L https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Linux-Release-x64.zip -o skia.zip
           elif [ "$RUNNER_OS" == "Windows" ]; then
-            curl -L https://github.com/aseprite/skia/releases/download/m116-2024-01-05/Skia-Windows-Release-x64.zip -o skia.zip
+            curl -L https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Windows-Release-x64.zip -o skia.zip
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            curl -L https://github.com/aseprite/skia/releases/download/m116-2024-01-05/Skia-macOS-Release-x64.zip -o skia.zip
+            curl -L https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-macOS-Release-x64.zip -o skia.zip
           fi
           unzip skia.zip -d skia
         shell: bash
