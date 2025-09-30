@@ -98,6 +98,10 @@ jobs:
         run: aseprite --version
         shell: bash
 
+      - name: Exclude Aseprite from Go module scanning
+        run: echo "module ignore" > aseprite/go.mod
+        shell: bash
+
       - name: Create config directory
         run: |
           if [ "$RUNNER_OS" == "Windows" ]; then
