@@ -181,9 +181,44 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 		logger.Information("  Frame {Frame}: radius {Radius}, color {Color}", frame, radius, colors[frame-1])
 	}
 
-	// Step 6: Get sprite info
+	// Step 6: Read pixels to verify drawing (read center 10x10 region from frame 2)
 	logger.Information("")
-	logger.Information("Step 6: Getting sprite metadata...")
+	logger.Information("Step 6: Reading pixels from frame 2 to verify drawing...")
+	pixelsResp, err := callTool(ctx, session, "get_pixels", map[string]any{
+		"sprite_path":  spritePath,
+		"layer_name":   "Layer 1",
+		"frame_number": 2,
+		"x":            27,
+		"y":            27,
+		"width":        10,
+		"height":       10,
+	})
+	if err != nil {
+		return fmt.Errorf("get_pixels failed: %w", err)
+	}
+	var pixelsResult struct {
+		Pixels []struct {
+			X     int    `json:"x"`
+			Y     int    `json:"y"`
+			Color string `json:"color"`
+		} `json:"pixels"`
+	}
+	if err := json.Unmarshal([]byte(pixelsResp), &pixelsResult); err != nil {
+		return fmt.Errorf("failed to parse pixels result: %w", err)
+	}
+	logger.Information("  Read {Count} pixels from center region", len(pixelsResult.Pixels))
+	// Count green pixels (frame 2 has green circle)
+	greenCount := 0
+	for _, p := range pixelsResult.Pixels {
+		if p.Color == "#00FF00FF" {
+			greenCount++
+		}
+	}
+	logger.Information("  Found {GreenCount} green pixels in the region", greenCount)
+
+	// Step 7: Get sprite info
+	logger.Information("")
+	logger.Information("Step 7: Getting sprite metadata...")
 	infoResp, err := callTool(ctx, session, "get_sprite_info", map[string]any{
 		"sprite_path": spritePath,
 	})
@@ -192,9 +227,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Info: {Info}", infoResp)
 
-	// Step 7: Export as GIF
+	// Step 8: Export as GIF
 	logger.Information("")
-	logger.Information("Step 7: Exporting as GIF...")
+	logger.Information("Step 8: Exporting as GIF...")
 	gifPath := filepath.Join(outputDir, "animated-example.gif")
 	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
 		"sprite_path":  spritePath,
@@ -206,9 +241,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Exported: {GifPath}", gifPath)
 
-	// Step 8: Export frame 2 as PNG
+	// Step 9: Export frame 2 as PNG
 	logger.Information("")
-	logger.Information("Step 8: Exporting frame 2 as PNG...")
+	logger.Information("Step 9: Exporting frame 2 as PNG...")
 	pngPath := filepath.Join(outputDir, "frame2-example.png")
 	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
 		"sprite_path":  spritePath,

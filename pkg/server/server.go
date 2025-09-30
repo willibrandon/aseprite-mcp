@@ -81,6 +81,9 @@ func (s *Server) registerTools() {
 
 	// Register animation tools
 	tools.RegisterAnimationTools(s.mcp, s.client, s.gen, s.config, s.logger)
+
+	// Register inspection tools
+	tools.RegisterInspectionTools(s.mcp, s.client, s.gen, s.config, s.logger)
 }
 
 // Client returns the underlying Aseprite client for testing.

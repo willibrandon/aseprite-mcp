@@ -60,6 +60,7 @@ Available tools:
   - add_layer: Add a new layer to the sprite
   - add_frame: Add a new frame to the sprite timeline
   - get_sprite_info: Get metadata about a sprite
+  - get_pixels: Read pixel data from a rectangular region
   - draw_pixels: Draw individual pixels on a layer
   - draw_line: Draw a line on a layer
   - draw_rectangle: Draw a rectangle on a layer
@@ -85,13 +86,17 @@ Step 5: Drawing animated circles...
   Frame 3: radius 14, color #FFFF00
   Frame 4: radius 17, color #FF00FF
 
-Step 6: Getting sprite metadata...
+Step 6: Reading pixels from frame 2 to verify drawing...
+  Read 100 pixels from center region
+  Found 78 green pixels in the region
+
+Step 7: Getting sprite metadata...
   Info: {"width":64,"height":64,"color_mode":"RGB","frame_count":4,"layer_count":2,"layers":["Background","Layer 1"]}
 
-Step 7: Exporting as GIF...
+Step 8: Exporting as GIF...
   Exported: ../sprites/animated-example.gif
 
-Step 8: Exporting frame 2 as PNG...
+Step 9: Exporting frame 2 as PNG...
   Exported: ../sprites/frame2-example.png
 
 Example completed successfully!

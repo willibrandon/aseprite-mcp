@@ -108,6 +108,7 @@ Then use natural language to create sprites:
 | `add_layer` | Add a new layer to the sprite |
 | `add_frame` | Add a new animation frame |
 | `get_sprite_info` | Get sprite metadata (size, layers, frames) |
+| `get_pixels` | Read pixel data from a rectangular region (returns colors and coordinates) |
 | `draw_pixels` | Draw individual pixels (supports batch operations) |
 | `draw_line` | Draw a line between two points |
 | `draw_rectangle` | Draw a rectangle (filled or outline) |

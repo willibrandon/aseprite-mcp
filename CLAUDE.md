@@ -85,6 +85,7 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
   - `canvas.go` - Sprite/layer/frame management
   - `drawing.go` - Drawing primitives (pixels, lines, shapes)
   - `animation.go` - Animation and timeline operations
+  - `inspection.go` - Pixel data inspection and reading
   - `selection.go` - Selection manipulation
   - `palette.go` - Color palette operations
   - `transform.go` - Transform and filter operations
@@ -116,6 +117,7 @@ Core functionality implemented and tested:
 - Layer and frame operations
 - Drawing primitives (pixels, lines, rectangles, circles, fill)
 - Animation tools (frame duration, tags, duplication, linked cels)
+- Inspection tools (pixel data reading for verification and analysis)
 - Sprite export (PNG, GIF, JPG, BMP)
 - Metadata retrieval
 - Example client implementation (examples/client/main.go)

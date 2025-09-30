@@ -598,3 +598,68 @@ print("Cel linked successfully")`,
 		targetFrame, targetFrame,
 		sourceFrame)
 }
+
+// GetPixels generates a Lua script to read pixel data from a rectangular region.
+func (g *LuaGenerator) GetPixels(layerName string, frameNumber int, x, y, width, height int) string {
+	escapedName := EscapeString(layerName)
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+local cel = layer:cel(frame)
+if not cel then
+	error("No cel found in frame %d")
+end
+
+local img = cel.image
+local pixels = {}
+
+-- Read pixels from the specified region
+for py = %d, %d do
+	for px = %d, %d do
+		-- Adjust coordinates relative to cel position
+		local imgX = px - cel.position.x
+		local imgY = py - cel.position.y
+
+		-- Check if coordinates are within image bounds
+		if imgX >= 0 and imgX < img.width and imgY >= 0 and imgY < img.height then
+			local pixelValue = img:getPixel(imgX, imgY)
+
+			-- Convert pixel value to RGBA
+			local r = app.pixelColor.rgbaR(pixelValue)
+			local g = app.pixelColor.rgbaG(pixelValue)
+			local b = app.pixelColor.rgbaB(pixelValue)
+			local a = app.pixelColor.rgbaA(pixelValue)
+
+			-- Store as hex color
+			local hexColor = string.format("#%%02X%%02X%%02X%%02X", r, g, b, a)
+			table.insert(pixels, string.format('{"x":%%d,"y":%%d,"color":"%%s"}', px, py, hexColor))
+		end
+	end
+end
+
+-- Output as JSON array
+print("[" .. table.concat(pixels, ",") .. "]")`,
+		escapedName, escapedName,
+		frameNumber, frameNumber, frameNumber,
+		y, y+height-1, x, x+width-1)
+}
