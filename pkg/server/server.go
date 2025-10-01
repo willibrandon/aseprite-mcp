@@ -96,6 +96,9 @@ func (s *Server) registerTools() {
 
 	// Register palette tools
 	tools.RegisterPaletteTools(s.mcp, s.client, s.gen, s.config, s.logger)
+
+	// Register antialiasing tools
+	tools.RegisterAntialiasingTools(s.mcp, s.client, s.gen, s.config, s.logger)
 }
 
 // Client returns the underlying Aseprite client for testing.

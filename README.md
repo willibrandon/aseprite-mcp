@@ -1,7 +1,5 @@
 # Aseprite MCP Server
 
-> **AI-Powered Pixel Art Creation** - Connect Aseprite to AI assistants like Claude for natural language sprite creation and manipulation.
-
 A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and animation capabilities to AI assistants, enabling you to create and edit sprites using natural language.
 
 ## Why Use This?
@@ -129,6 +127,7 @@ Then use natural language to create sprites:
 | `set_palette` | Set sprite's color palette to specified colors (supports 1-256 colors) |
 | `apply_shading` | Apply palette-constrained shading based on light direction (smooth, hard, or pillow styles) |
 | `analyze_palette_harmonies` | Analyze palette for complementary, triadic, analogous relationships and color temperature |
+| `suggest_antialiasing` | Detect jagged diagonal edges and suggest intermediate colors for smooth curves (with optional auto-apply) |
 
 ### Animation
 | Tool | Description |

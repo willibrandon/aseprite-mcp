@@ -130,6 +130,7 @@ Core functionality implemented and tested:
   - Palette-constrained shading (smooth, hard, pillow styles with 8 light directions)
   - Palette harmony analysis (complementary, triadic, analogous relationships, color temperature)
   - Palette-aware drawing: All drawing tools support `use_palette` flag to snap arbitrary colors to nearest palette color
+  - Antialiasing suggestions: Detect jagged diagonal edges and suggest intermediate colors to smooth curves (suggest_antialiasing tool with auto-apply option)
 - Sprite export (PNG, GIF, JPG, BMP)
 - Metadata retrieval
 - Example client implementation (examples/client/main.go)

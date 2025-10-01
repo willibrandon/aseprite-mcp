@@ -598,6 +598,130 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Exported: {PaletteDrawPng}", paletteDrawPngPath)
 
+	// Step 17: Demonstrate antialiasing for smooth diagonal edges
+	logger.Information("")
+	logger.Information("Step 17: Demonstrating antialiasing suggestions...")
+
+	// Create a sprite with jagged diagonal edges
+	aaResp, err := callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      64,
+		"height":     64,
+		"color_mode": "rgb",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for antialiasing failed: %w", err)
+	}
+	var aaResult struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(aaResp), &aaResult); err != nil {
+		return fmt.Errorf("failed to parse antialiasing canvas result: %w", err)
+	}
+	aaSprite := aaResult.FilePath
+	logger.Information("  Created: {AASprite}", aaSprite)
+
+	// Draw a jagged diagonal line (stair-step pattern)
+	// Pattern:   ....####
+	//            ...####.
+	//            ..####..
+	//            .####...
+	//            ####....
+	jaggedPixels := []map[string]any{}
+	for i := 0; i < 5; i++ {
+		for j := 0; j < 4; j++ {
+			jaggedPixels = append(jaggedPixels, map[string]any{
+				"x":     20 + i + j,
+				"y":     10 + i,
+				"color": "#FF00FFFF", // Magenta
+			})
+		}
+	}
+
+	if _, err := callTool(ctx, session, "draw_pixels", map[string]any{
+		"sprite_path":  aaSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"pixels":       jaggedPixels,
+		"use_palette":  false,
+	}); err != nil {
+		return fmt.Errorf("draw_pixels for jagged line failed: %w", err)
+	}
+
+	// Get antialiasing suggestions (without auto-apply first to see what it suggests)
+	suggestResp, err := callTool(ctx, session, "suggest_antialiasing", map[string]any{
+		"sprite_path":  aaSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"threshold":    128,
+		"auto_apply":   false,
+		"use_palette":  false,
+	})
+	if err != nil {
+		return fmt.Errorf("suggest_antialiasing failed: %w", err)
+	}
+
+	var aaAnalysis struct {
+		Suggestions []struct {
+			X              int    `json:"x"`
+			Y              int    `json:"y"`
+			CurrentColor   string `json:"current_color"`
+			NeighborColor  string `json:"neighbor_color"`
+			SuggestedColor string `json:"suggested_color"`
+			Direction      string `json:"direction"`
+		} `json:"suggestions"`
+		Applied    bool `json:"applied"`
+		TotalEdges int  `json:"total_edges"`
+	}
+	if err := json.Unmarshal([]byte(suggestResp), &aaAnalysis); err != nil {
+		return fmt.Errorf("failed to parse antialiasing result: %w", err)
+	}
+
+	logger.Information("  Found {EdgeCount} jagged edge positions", aaAnalysis.TotalEdges)
+	if len(aaAnalysis.Suggestions) > 0 && len(aaAnalysis.Suggestions) <= 3 {
+		for i, sug := range aaAnalysis.Suggestions {
+			logger.Information("    - Suggestion {Index}: pos=({X},{Y}) direction={Direction}",
+				i+1, sug.X, sug.Y, sug.Direction)
+		}
+	}
+
+	// Export the jagged version
+	jaggedPngPath := filepath.Join(outputDir, "antialiasing-before.png")
+	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
+		"sprite_path":  aaSprite,
+		"output_path":  jaggedPngPath,
+		"format":       "png",
+		"frame_number": 0,
+	}); err != nil {
+		return fmt.Errorf("export_sprite jagged failed: %w", err)
+	}
+
+	// Now apply antialiasing automatically to smooth the edges
+	if _, err := callTool(ctx, session, "suggest_antialiasing", map[string]any{
+		"sprite_path":  aaSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"threshold":    128,
+		"auto_apply":   true,  // Apply smoothing automatically
+		"use_palette":  false,
+	}); err != nil {
+		return fmt.Errorf("suggest_antialiasing with auto_apply failed: %w", err)
+	}
+
+	// Export the smoothed version
+	smoothPngPath := filepath.Join(outputDir, "antialiasing-after.png")
+	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
+		"sprite_path":  aaSprite,
+		"output_path":  smoothPngPath,
+		"format":       "png",
+		"frame_number": 0,
+	}); err != nil {
+		return fmt.Errorf("export_sprite smooth failed: %w", err)
+	}
+
+	logger.Information("  Antialiasing applied: jagged diagonal smoothed")
+	logger.Information("  Exported before: {JaggedPng}", jaggedPngPath)
+	logger.Information("  Exported after: {SmoothPng}", smoothPngPath)
+
 	return nil
 }
 

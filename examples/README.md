@@ -17,6 +17,7 @@ The `client/` directory contains a complete example MCP client that demonstrates
 - Setting custom limited palettes
 - Applying palette-constrained shading with light direction
 - Palette-aware drawing with automatic color snapping
+- Detecting and smoothing jagged edges with antialiasing
 - Retrieving sprite metadata
 - Exporting to GIF and PNG
 
@@ -53,6 +54,8 @@ The example creates:
 - `../sprites/dithered-gradient.png` - Demonstration of Bayer 4x4 dithering pattern
 - `../sprites/shaded-sphere.png` - 64x64 sphere with palette-constrained smooth shading from light to dark
 - `../sprites/palette-drawing-comparison.png` - Side-by-side comparison: pastel colors (left) vs palette-snapped pure colors (right)
+- `../sprites/antialiasing-before.png` - Jagged diagonal line (stair-step pattern)
+- `../sprites/antialiasing-after.png` - Smoothed diagonal with intermediate colors applied
 
 ## Example Output
 
@@ -139,6 +142,16 @@ Step 16: Demonstrating palette-aware drawing...
   Created: /tmp/aseprite-mcp/sprite-...
   Palette-aware drawing completed (left: pastel colors, right: snapped to pure colors)
   Exported: ../sprites/palette-drawing-comparison.png
+
+Step 17: Demonstrating antialiasing suggestions...
+  Created: /tmp/aseprite-mcp/sprite-...
+  Found 4 jagged edge positions
+    - Suggestion 1: pos=(24,11) direction=diagonal_nw
+    - Suggestion 2: pos=(25,12) direction=diagonal_nw
+    - Suggestion 3: pos=(26,13) direction=diagonal_nw
+  Antialiasing applied: jagged diagonal smoothed
+  Exported before: ../sprites/antialiasing-before.png
+  Exported after: ../sprites/antialiasing-after.png
 
 Example completed successfully!
 ```
