@@ -182,16 +182,19 @@ func TestLuaGenerator_ExportSprite(t *testing.T) {
 	t.Run("export specific frame", func(t *testing.T) {
 		script := gen.ExportSprite("output.png", 2)
 
-		if !strings.Contains(script, "SaveFileCopyAs") {
-			t.Error("script missing SaveFileCopyAs command")
+		// Check that it sets the active frame to the target frame
+		if !strings.Contains(script, "app.activeFrame = spr.frames[2]") {
+			t.Error("script missing active frame setting")
 		}
 
-		if !strings.Contains(script, "fromFrame = 2") {
-			t.Error("script missing fromFrame parameter")
+		// Check that it uses saveCopyAs (not SaveFileCopyAs which produces blank PNGs)
+		if !strings.Contains(script, `saveCopyAs("output.png")`) {
+			t.Error("script missing saveCopyAs call")
 		}
 
-		if !strings.Contains(script, "toFrame = 2") {
-			t.Error("script missing toFrame parameter")
+		// Check that it restores the original frame
+		if !strings.Contains(script, "app.activeFrame = originalFrame") {
+			t.Error("script missing frame restoration")
 		}
 	})
 }

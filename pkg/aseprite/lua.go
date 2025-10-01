@@ -550,6 +550,108 @@ spr:saveAs(spr.filename)
 print(%d + 1)`, sourceFrame, sourceFrame, insertAfter, insertAfter, insertAfter)
 }
 
+// DownsampleImage generates a Lua script to downsample an image using box filter (area averaging).
+func (g *LuaGenerator) DownsampleImage(sourcePath, outputPath string, targetWidth, targetHeight int) string {
+	escapedSource := EscapeString(sourcePath)
+	escapedOutput := EscapeString(outputPath)
+
+	return fmt.Sprintf(`-- Load source image
+local srcSprite = app.open("%s")
+if not srcSprite then
+	error("Failed to open source image: %s")
+end
+
+local srcWidth = srcSprite.width
+local srcHeight = srcSprite.height
+local targetWidth = %d
+local targetHeight = %d
+
+-- Get the first layer and frame from source
+local srcLayer = srcSprite.layers[1]
+if not srcLayer then
+	error("Source sprite has no layers")
+end
+
+local srcFrame = srcSprite.frames[1]
+if not srcFrame then
+	error("Source sprite has no frames")
+end
+
+local srcCel = srcLayer:cel(srcFrame)
+if not srcCel then
+	error("Source sprite has no cel in first frame")
+end
+
+local srcImage = srcCel.image
+
+-- Create target sprite with same color mode
+local targetSprite = Sprite(targetWidth, targetHeight, srcSprite.colorMode)
+local targetLayer = targetSprite.layers[1]
+local targetFrame = targetSprite.frames[1]
+local targetCel = targetSprite:newCel(targetLayer, targetFrame)
+local targetImage = Image(targetWidth, targetHeight, srcSprite.colorMode)
+
+-- Calculate scaling factors
+local scaleX = srcWidth / targetWidth
+local scaleY = srcHeight / targetHeight
+
+-- Downsample using box filter (area averaging)
+for ty = 0, targetHeight - 1 do
+	for tx = 0, targetWidth - 1 do
+		-- Calculate source region bounds
+		local sx1 = math.floor(tx * scaleX)
+		local sy1 = math.floor(ty * scaleY)
+		local sx2 = math.floor((tx + 1) * scaleX)
+		local sy2 = math.floor((ty + 1) * scaleY)
+
+		-- Clamp to source image bounds
+		sx2 = math.min(sx2, srcWidth)
+		sy2 = math.min(sy2, srcHeight)
+
+		-- Average all pixels in the source region
+		local sumR, sumG, sumB, sumA = 0, 0, 0, 0
+		local count = 0
+
+		for sy = sy1, sy2 - 1 do
+			for sx = sx1, sx2 - 1 do
+				local pixel = srcImage:getPixel(sx, sy)
+				sumR = sumR + app.pixelColor.rgbaR(pixel)
+				sumG = sumG + app.pixelColor.rgbaG(pixel)
+				sumB = sumB + app.pixelColor.rgbaB(pixel)
+				sumA = sumA + app.pixelColor.rgbaA(pixel)
+				count = count + 1
+			end
+		end
+
+		-- Calculate average color
+		local avgR = math.floor(sumR / count + 0.5)
+		local avgG = math.floor(sumG / count + 0.5)
+		local avgB = math.floor(sumB / count + 0.5)
+		local avgA = math.floor(sumA / count + 0.5)
+
+		-- Set target pixel
+		local color = app.pixelColor.rgba(avgR, avgG, avgB, avgA)
+		targetImage:drawPixel(tx, ty, color)
+	end
+end
+
+-- Assign image to cel
+targetCel.image = targetImage
+
+-- Save target sprite
+targetSprite:saveAs("%s")
+
+-- Close sprites
+targetSprite:close()
+srcSprite:close()
+
+-- Output the result path
+print("%s")`,
+		escapedSource, escapedSource,
+		targetWidth, targetHeight,
+		escapedOutput, escapedOutput)
+}
+
 // LinkCel generates a Lua script to create a linked cel.
 func (g *LuaGenerator) LinkCel(layerName string, sourceFrame, targetFrame int) string {
 	escapedName := EscapeString(layerName)
@@ -601,6 +703,10 @@ print("Cel linked successfully")`,
 
 // GetPixels generates a Lua script to read pixel data from a rectangular region.
 func (g *LuaGenerator) GetPixels(layerName string, frameNumber int, x, y, width, height int) string {
+	return g.GetPixelsWithPagination(layerName, frameNumber, x, y, width, height, 0, 0)
+}
+
+func (g *LuaGenerator) GetPixelsWithPagination(layerName string, frameNumber int, x, y, width, height int, offset int, limit int) string {
 	escapedName := EscapeString(layerName)
 	return fmt.Sprintf(`local spr = app.activeSprite
 if not spr then
@@ -631,29 +737,52 @@ if not cel then
 end
 
 local img = cel.image
+local offset = %d
+local limit = %d
+
+-- Calculate pagination bounds
+local pixelIndex = 0
+local startIdx = offset
+local endIdx = (limit > 0) and (offset + limit - 1) or -1
+
 local pixels = {}
 
 -- Read pixels from the specified region
 for py = %d, %d do
 	for px = %d, %d do
-		-- Adjust coordinates relative to cel position
-		local imgX = px - cel.position.x
-		local imgY = py - cel.position.y
+		-- Check if we're within the pagination range
+		if endIdx < 0 or (pixelIndex >= startIdx and pixelIndex <= endIdx) then
+			-- Adjust coordinates relative to cel position
+			local imgX = px - cel.position.x
+			local imgY = py - cel.position.y
 
-		-- Check if coordinates are within image bounds
-		if imgX >= 0 and imgX < img.width and imgY >= 0 and imgY < img.height then
-			local pixelValue = img:getPixel(imgX, imgY)
+			-- Check if coordinates are within image bounds
+			if imgX >= 0 and imgX < img.width and imgY >= 0 and imgY < img.height then
+				local pixelValue = img:getPixel(imgX, imgY)
 
-			-- Convert pixel value to RGBA
-			local r = app.pixelColor.rgbaR(pixelValue)
-			local g = app.pixelColor.rgbaG(pixelValue)
-			local b = app.pixelColor.rgbaB(pixelValue)
-			local a = app.pixelColor.rgbaA(pixelValue)
+				-- Convert pixel value to RGBA
+				local r = app.pixelColor.rgbaR(pixelValue)
+				local g = app.pixelColor.rgbaG(pixelValue)
+				local b = app.pixelColor.rgbaB(pixelValue)
+				local a = app.pixelColor.rgbaA(pixelValue)
 
-			-- Store as hex color
-			local hexColor = string.format("#%%02X%%02X%%02X%%02X", r, g, b, a)
-			table.insert(pixels, string.format('{"x":%%d,"y":%%d,"color":"%%s"}', px, py, hexColor))
+				-- Store as hex color
+				local hexColor = string.format("#%%02X%%02X%%02X%%02X", r, g, b, a)
+				table.insert(pixels, string.format('{"x":%%d,"y":%%d,"color":"%%s"}', px, py, hexColor))
+			end
 		end
+
+		pixelIndex = pixelIndex + 1
+
+		-- Early exit if we've collected enough pixels
+		if limit > 0 and #pixels >= limit then
+			break
+		end
+	end
+
+	-- Early exit from outer loop
+	if limit > 0 and #pixels >= limit then
+		break
 	end
 end
 
@@ -661,5 +790,6 @@ end
 print("[" .. table.concat(pixels, ",") .. "]")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber, frameNumber,
+		offset, limit,
 		y, y+height-1, x, x+width-1)
 }
