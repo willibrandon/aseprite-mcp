@@ -120,23 +120,12 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	spritePath := createResult.FilePath
 	logger.Information("  Created: {SpritePath}", spritePath)
 
-	// Step 2: Add a background layer
+	// Step 2: Fill background with blue on Layer 1
 	logger.Information("")
-	logger.Information("Step 2: Adding 'Background' layer...")
-	if _, err := callTool(ctx, session, "add_layer", map[string]any{
-		"sprite_path": spritePath,
-		"layer_name":  "Background",
-	}); err != nil {
-		return fmt.Errorf("add_layer failed: %w", err)
-	}
-	logger.Information("  Layer added")
-
-	// Step 3: Fill background with blue
-	logger.Information("")
-	logger.Information("Step 3: Filling background with blue...")
+	logger.Information("Step 2: Filling background with blue...")
 	if _, err := callTool(ctx, session, "fill_area", map[string]any{
 		"sprite_path":  spritePath,
-		"layer_name":   "Background",
+		"layer_name":   "Layer 1",
 		"frame_number": 1,
 		"x":            32,
 		"y":            32,
@@ -147,9 +136,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Background filled")
 
-	// Step 4: Add 3 more frames for animation
+	// Step 3: Add 3 more frames for animation
 	logger.Information("")
-	logger.Information("Step 4: Adding 3 animation frames...")
+	logger.Information("Step 3: Adding 3 animation frames...")
 	for i := 0; i < 3; i++ {
 		if _, err := callTool(ctx, session, "add_frame", map[string]any{
 			"sprite_path": spritePath,
@@ -160,9 +149,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Frames added (4 total)")
 
-	// Step 5: Draw circles on each frame (growing animation)
+	// Step 4: Draw circles on each frame (growing animation)
 	logger.Information("")
-	logger.Information("Step 5: Drawing animated circles...")
+	logger.Information("Step 4: Drawing animated circles...")
 	colors := []string{"#FF0000", "#00FF00", "#FFFF00", "#FF00FF"}
 	for frame := 1; frame <= 4; frame++ {
 		radius := 5 + frame*3
@@ -181,9 +170,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 		logger.Information("  Frame {Frame}: radius {Radius}, color {Color}", frame, radius, colors[frame-1])
 	}
 
-	// Step 6: Read pixels to verify drawing (read center 10x10 region from frame 2)
+	// Step 5: Read pixels to verify drawing (read center 10x10 region from frame 2)
 	logger.Information("")
-	logger.Information("Step 6: Reading pixels from frame 2 to verify drawing...")
+	logger.Information("Step 5: Reading pixels from frame 2 to verify drawing...")
 	pixelsResp, err := callTool(ctx, session, "get_pixels", map[string]any{
 		"sprite_path":  spritePath,
 		"layer_name":   "Layer 1",
@@ -216,9 +205,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Found {GreenCount} green pixels in the region", greenCount)
 
-	// Step 7: Get sprite info
+	// Step 6: Get sprite info
 	logger.Information("")
-	logger.Information("Step 7: Getting sprite metadata...")
+	logger.Information("Step 6: Getting sprite metadata...")
 	infoResp, err := callTool(ctx, session, "get_sprite_info", map[string]any{
 		"sprite_path": spritePath,
 	})
@@ -227,9 +216,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Info: {Info}", infoResp)
 
-	// Step 8: Export as GIF
+	// Step 7: Export as GIF
 	logger.Information("")
-	logger.Information("Step 8: Exporting as GIF...")
+	logger.Information("Step 7: Exporting as GIF...")
 	gifPath := filepath.Join(outputDir, "animated-example.gif")
 	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
 		"sprite_path":  spritePath,
@@ -241,9 +230,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Exported: {GifPath}", gifPath)
 
-	// Step 9: Export frame 2 as PNG
+	// Step 8: Export frame 2 as PNG
 	logger.Information("")
-	logger.Information("Step 9: Exporting frame 2 as PNG...")
+	logger.Information("Step 8: Exporting frame 2 as PNG...")
 	pngPath := filepath.Join(outputDir, "frame2-example.png")
 	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
 		"sprite_path":  spritePath,
@@ -255,9 +244,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Exported: {PngPath}", pngPath)
 
-	// Step 10: Demonstrate dithering (create a new sprite with gradient)
+	// Step 9: Demonstrate dithering (create a new sprite with gradient)
 	logger.Information("")
-	logger.Information("Step 10: Creating sprite with dithered gradient...")
+	logger.Information("Step 9: Creating sprite with dithered gradient...")
 	ditherResp, err := callTool(ctx, session, "create_canvas", map[string]any{
 		"width":      64,
 		"height":     64,
@@ -277,7 +266,7 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 
 	// Apply dithering with Bayer 4x4 pattern
 	logger.Information("")
-	logger.Information("Step 11: Applying Bayer 4x4 dithering pattern...")
+	logger.Information("Step 10: Applying Bayer 4x4 dithering pattern...")
 	if _, err := callTool(ctx, session, "draw_with_dither", map[string]any{
 		"sprite_path":  ditherSprite,
 		"layer_name":   "Layer 1",
@@ -299,7 +288,7 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 
 	// Export dithered sprite
 	logger.Information("")
-	logger.Information("Step 12: Exporting dithered gradient...")
+	logger.Information("Step 11: Exporting dithered gradient...")
 	ditherPngPath := filepath.Join(outputDir, "dithered-gradient.png")
 	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
 		"sprite_path":  ditherSprite,
@@ -311,9 +300,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Exported: {DitherPng}", ditherPngPath)
 
-	// Step 13: Analyze palette harmonies
+	// Step 12: Analyze palette harmonies
 	logger.Information("")
-	logger.Information("Step 13: Analyzing palette harmonies from our colors...")
+	logger.Information("Step 12: Analyzing palette harmonies from our colors...")
 	harmonyResp, err := callTool(ctx, session, "analyze_palette_harmonies", map[string]any{
 		"palette": []string{"#FF0000", "#00FF00", "#FFFF00", "#FF00FF", "#0066CC"},
 	})
@@ -337,9 +326,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 		logger.Information("  Found {Count} complementary pairs", len(harmonyResult.Complementary))
 	}
 
-	// Step 14: Create sprite with custom palette
+	// Step 13: Create sprite with custom palette
 	logger.Information("")
-	logger.Information("Step 14: Creating sprite with limited palette...")
+	logger.Information("Step 13: Creating sprite with limited palette...")
 	paletteResp, err := callTool(ctx, session, "create_canvas", map[string]any{
 		"width":      32,
 		"height":     32,
@@ -366,9 +355,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Palette set successfully (8 colors)")
 
-	// Step 15: Apply palette-constrained shading
+	// Step 14: Apply palette-constrained shading
 	logger.Information("")
-	logger.Information("Step 15: Drawing shape with palette-constrained shading...")
+	logger.Information("Step 14: Drawing shape with palette-constrained shading...")
 
 	// Create a larger 64x64 sprite for better visibility
 	shadingResp, err := callTool(ctx, session, "create_canvas", map[string]any{
@@ -433,9 +422,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Exported: {ShadedPng}", shadedPngPath)
 
-	// Step 16: Demonstrate palette-aware drawing (use_palette flag)
+	// Step 15: Demonstrate palette-aware drawing (use_palette flag)
 	logger.Information("")
-	logger.Information("Step 16: Demonstrating palette-aware drawing...")
+	logger.Information("Step 15: Demonstrating palette-aware drawing...")
 	paletteDrawResp, err := callTool(ctx, session, "create_canvas", map[string]any{
 		"width":      96,
 		"height":     32,
@@ -598,9 +587,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Exported: {PaletteDrawPng}", paletteDrawPngPath)
 
-	// Step 17: Demonstrate antialiasing for smooth diagonal edges
+	// Step 16: Demonstrate antialiasing for smooth diagonal edges
 	logger.Information("")
-	logger.Information("Step 17: Demonstrating antialiasing suggestions...")
+	logger.Information("Step 16: Demonstrating antialiasing suggestions...")
 
 	// Create a sprite with jagged diagonal edges
 	aaResp, err := callTool(ctx, session, "create_canvas", map[string]any{

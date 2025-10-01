@@ -49,8 +49,8 @@ ASEPRITE_MCP_PATH=/path/to/aseprite-mcp go run main.go
 ### Output
 
 The example creates:
-- `../sprites/animated-example.gif` - 4-frame animation with growing colored circles
-- `../sprites/frame2-example.png` - Single frame export (frame 2)
+- `../sprites/animated-example.gif` - 4-frame animation with growing colored circles on blue background
+- `../sprites/frame2-example.png` - Single frame export (frame 2, green circle)
 - `../sprites/dithered-gradient.png` - Demonstration of Bayer 4x4 dithering pattern
 - `../sprites/shaded-sphere.png` - 64x64 sphere with palette-constrained smooth shading from light to dark
 - `../sprites/palette-drawing-comparison.png` - Side-by-side comparison: pastel colors (left) vs palette-snapped pure colors (right)

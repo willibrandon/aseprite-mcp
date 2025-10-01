@@ -182,19 +182,29 @@ func TestLuaGenerator_ExportSprite(t *testing.T) {
 	t.Run("export specific frame", func(t *testing.T) {
 		script := gen.ExportSprite("output.png", 2)
 
-		// Check that it sets the active frame to the target frame
-		if !strings.Contains(script, "app.activeFrame = spr.frames[2]") {
-			t.Error("script missing active frame setting")
+		// Check that it creates a temporary sprite
+		if !strings.Contains(script, "Sprite(spr.width, spr.height, spr.colorMode)") {
+			t.Error("script missing temporary sprite creation")
 		}
 
-		// Check that it uses saveCopyAs (not SaveFileCopyAs which produces blank PNGs)
-		if !strings.Contains(script, `saveCopyAs("output.png")`) {
-			t.Error("script missing saveCopyAs call")
+		// Check that it references the target frame
+		if !strings.Contains(script, "spr.frames[2]") {
+			t.Error("script missing target frame reference")
 		}
 
-		// Check that it restores the original frame
-		if !strings.Contains(script, "app.activeFrame = originalFrame") {
-			t.Error("script missing frame restoration")
+		// Check that it flattens layers before export
+		if !strings.Contains(script, "FlattenLayers") {
+			t.Error("script missing flatten layers command")
+		}
+
+		// Check that it uses saveAs (not saveCopyAs which auto-numbers files)
+		if !strings.Contains(script, `saveAs("output.png")`) {
+			t.Error("script missing saveAs call")
+		}
+
+		// Check that it closes the temporary sprite
+		if !strings.Contains(script, "close()") {
+			t.Error("script missing sprite close")
 		}
 	})
 }
