@@ -11,6 +11,8 @@ The `client/` directory contains a complete example MCP client that demonstrates
 - Adding layers and frames
 - Drawing animated content (growing circles)
 - Filling areas with colors
+- Reading pixels for verification (using get_pixels with pagination)
+- Applying dithering patterns for professional gradients
 - Retrieving sprite metadata
 - Exporting to GIF and PNG
 
@@ -44,6 +46,7 @@ ASEPRITE_MCP_PATH=/path/to/aseprite-mcp go run main.go
 The example creates:
 - `../sprites/animated-example.gif` - 4-frame animation with growing colored circles
 - `../sprites/frame2-example.png` - Single frame export (frame 2)
+- `../sprites/dithered-gradient.png` - Demonstration of Bayer 4x4 dithering pattern
 
 ## Example Output
 
@@ -51,7 +54,7 @@ The example creates:
 Aseprite MCP Client Example
 ===========================
 
-Starting server: D:\SRC\aseprite-mcp-go\bin\aseprite-mcp.exe
+Starting server: ../../bin/aseprite-mcp
 Connecting to server...
 Connected!
 
@@ -60,16 +63,19 @@ Available tools:
   - add_layer: Add a new layer to the sprite
   - add_frame: Add a new frame to the sprite timeline
   - get_sprite_info: Get metadata about a sprite
-  - get_pixels: Read pixel data from a rectangular region
+  - get_pixels: Read pixel data from a rectangular region (with pagination)
   - draw_pixels: Draw individual pixels on a layer
   - draw_line: Draw a line on a layer
   - draw_rectangle: Draw a rectangle on a layer
   - draw_circle: Draw a circle on a layer
   - fill_area: Fill an area with a color (paint bucket tool)
+  - draw_with_dither: Fill region with dithering patterns for gradients/textures
+  - analyze_reference: Extract palette, edges, and composition from reference images
+  - downsample_image: Convert high-res images to pixel art dimensions
   - export_sprite: Export sprite to image file
 
 Step 1: Creating 64x64 RGB canvas...
-  Created: C:\Users\...\AppData\Local\Temp\aseprite-mcp\sprite-123456.aseprite
+  Created: /tmp/aseprite-mcp/sprite-123456.aseprite
 
 Step 2: Adding 'Background' layer...
   Layer added
@@ -98,6 +104,15 @@ Step 8: Exporting as GIF...
 
 Step 9: Exporting frame 2 as PNG...
   Exported: ../sprites/frame2-example.png
+
+Step 10: Creating sprite with dithered gradient...
+  Created: /tmp/aseprite-mcp/sprite-789012.aseprite
+
+Step 11: Applying Bayer 4x4 dithering pattern...
+  Dithering applied successfully
+
+Step 12: Exporting dithered gradient...
+  Exported: ../sprites/dithered-gradient.png
 
 Example completed successfully!
 ```

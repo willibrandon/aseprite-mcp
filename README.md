@@ -25,15 +25,17 @@ A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and anim
 
 ## Features
 
-- Canvas creation with RGB, Grayscale, and Indexed color modes
-- Layer and frame management for complex compositions
-- Drawing primitives: pixels, lines, rectangles, circles, flood fill
-- Animation tools: frame durations, tags, frame duplication, linked cels
-- Sprite export to PNG, GIF, JPG, and BMP formats
-- Sprite metadata retrieval
-- Cross-platform support: Windows, macOS, Linux
-- Batch pixel operations for performance
-- Integration with Claude Desktop and other MCP clients
+- **Canvas & Layer Management:** RGB, Grayscale, and Indexed color modes with multi-layer support
+- **Drawing Primitives:** Pixels, lines, rectangles, circles, flood fill with batch operations
+- **Professional Pixel Art Tools:**
+  - **Reference Analysis:** Extract palettes, brightness maps, edge detection, and composition guides from images
+  - **Dithering:** Bayer matrix (2x2, 4x4, 8x8) and checkerboard patterns for smooth gradients and textures
+  - **Palette Extraction:** K-means clustering in LAB color space for perceptually accurate color reduction
+- **Animation Tools:** Frame durations, tags, frame duplication, linked cels
+- **Inspection Tools:** Read pixel data with pagination for verification and analysis
+- **Export Formats:** PNG, GIF, JPG, and BMP
+- **Cross-platform:** Windows, macOS, Linux
+- **MCP Integration:** Works with Claude Desktop and other MCP clients
 
 ## Requirements
 
@@ -102,23 +104,43 @@ Then use natural language to create sprites:
 
 ## Available Tools
 
+### Canvas & Layer Management
 | Tool | Description |
 |------|-------------|
 | `create_canvas` | Create new sprite with specified dimensions and color mode |
 | `add_layer` | Add a new layer to the sprite |
-| `add_frame` | Add a new animation frame |
 | `get_sprite_info` | Get sprite metadata (size, layers, frames) |
-| `get_pixels` | Read pixel data from a rectangular region (returns colors and coordinates) |
+
+### Drawing & Painting
+| Tool | Description |
+|------|-------------|
 | `draw_pixels` | Draw individual pixels (supports batch operations) |
 | `draw_line` | Draw a line between two points |
 | `draw_rectangle` | Draw a rectangle (filled or outline) |
 | `draw_circle` | Draw a circle/ellipse (filled or outline) |
 | `fill_area` | Flood fill from a point (paint bucket) |
-| `export_sprite` | Export sprite to PNG/GIF/JPG/BMP |
+
+### Professional Pixel Art
+| Tool | Description |
+|------|-------------|
+| `analyze_reference` | Extract palette, brightness map, edges, and composition from reference images |
+| `draw_with_dither` | Fill region with dithering patterns (Bayer 2x2/4x4/8x8, checkerboard) for gradients and textures |
+| `downsample_image` | Downsample high-res images to pixel art dimensions using box filter |
+
+### Animation
+| Tool | Description |
+|------|-------------|
+| `add_frame` | Add a new animation frame |
 | `set_frame_duration` | Set the duration of an animation frame in milliseconds |
 | `create_tag` | Create an animation tag with playback direction |
 | `duplicate_frame` | Duplicate an existing frame with all cels |
 | `link_cel` | Create a linked cel that shares image data |
+
+### Inspection & Export
+| Tool | Description |
+|------|-------------|
+| `get_pixels` | Read pixel data from a rectangular region (paginated, for verification) |
+| `export_sprite` | Export sprite to PNG/GIF/JPG/BMP |
 
 ## Development
 

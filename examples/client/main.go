@@ -255,6 +255,62 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Exported: {PngPath}", pngPath)
 
+	// Step 10: Demonstrate dithering (create a new sprite with gradient)
+	logger.Information("")
+	logger.Information("Step 10: Creating sprite with dithered gradient...")
+	ditherResp, err := callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      64,
+		"height":     64,
+		"color_mode": "rgb",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for dither failed: %w", err)
+	}
+	var ditherResult struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(ditherResp), &ditherResult); err != nil {
+		return fmt.Errorf("failed to parse dither canvas result: %w", err)
+	}
+	ditherSprite := ditherResult.FilePath
+	logger.Information("  Created: {DitherSprite}", ditherSprite)
+
+	// Apply dithering with Bayer 4x4 pattern
+	logger.Information("")
+	logger.Information("Step 11: Applying Bayer 4x4 dithering pattern...")
+	if _, err := callTool(ctx, session, "draw_with_dither", map[string]any{
+		"sprite_path":  ditherSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"region": map[string]any{
+			"x":      0,
+			"y":      0,
+			"width":  64,
+			"height": 64,
+		},
+		"color1":  "#001F3F",
+		"color2":  "#7FDBFF",
+		"pattern": "bayer_4x4",
+		"density": 0.5,
+	}); err != nil {
+		return fmt.Errorf("draw_with_dither failed: %w", err)
+	}
+	logger.Information("  Dithering applied successfully")
+
+	// Export dithered sprite
+	logger.Information("")
+	logger.Information("Step 12: Exporting dithered gradient...")
+	ditherPngPath := filepath.Join(outputDir, "dithered-gradient.png")
+	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
+		"sprite_path":  ditherSprite,
+		"output_path":  ditherPngPath,
+		"format":       "png",
+		"frame_number": 0,
+	}); err != nil {
+		return fmt.Errorf("export_sprite dither failed: %w", err)
+	}
+	logger.Information("  Exported: {DitherPng}", ditherPngPath)
+
 	return nil
 }
 

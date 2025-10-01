@@ -77,8 +77,10 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
 - `cmd/aseprite-mcp/` - Server entry point and initialization
 - `pkg/aseprite/` - Core Aseprite integration
   - `client.go` - Command execution and Lua script execution
-  - `lua.go` - Lua script generation utilities
+  - `lua.go` - Lua script generation utilities (includes palette and dithering generators)
   - `types.go` - Domain types (Color, Point, Rectangle, Pixel, etc.)
+  - `palette.go` - K-means palette extraction and color analysis
+  - `image_analysis.go` - Brightness maps, Sobel edge detection, composition analysis
 - `pkg/config/` - Configuration management (file-based only)
 - `pkg/server/` - MCP server implementation
 - `pkg/tools/` - MCP tool implementations organized by category:
@@ -86,9 +88,9 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
   - `drawing.go` - Drawing primitives (pixels, lines, shapes)
   - `animation.go` - Animation and timeline operations
   - `inspection.go` - Pixel data inspection and reading
-  - `selection.go` - Selection manipulation
-  - `palette.go` - Color palette operations
-  - `transform.go` - Transform and filter operations
+  - `analysis.go` - Reference image analysis (palette extraction, edge detection, composition)
+  - `dithering.go` - Dithering patterns for gradients and textures
+  - `transform.go` - Transform operations (downsampling)
   - `export.go` - Export and import operations
 - `internal/testutil/` - Testing utilities (no mocks)
 
@@ -117,7 +119,12 @@ Core functionality implemented and tested:
 - Layer and frame operations
 - Drawing primitives (pixels, lines, rectangles, circles, fill)
 - Animation tools (frame duration, tags, duplication, linked cels)
-- Inspection tools (pixel data reading for verification and analysis)
+- Inspection tools (pixel data reading with pagination for verification and analysis)
+- **Professional Pixel Art Tools:**
+  - Reference image analysis (k-means palette extraction, brightness maps, Sobel edge detection)
+  - Composition analysis (rule of thirds, focal points)
+  - Dithering with Bayer matrices (2x2, 4x4, 8x8) and checkerboard patterns
+  - Image downsampling with box filter for pixel art conversion
 - Sprite export (PNG, GIF, JPG, BMP)
 - Metadata retrieval
 - Example client implementation (examples/client/main.go)
@@ -155,6 +162,11 @@ Lua script generation:
 Core dependencies (see `go.mod` for versions):
 - `github.com/modelcontextprotocol/go-sdk` - Official MCP SDK
 - `github.com/willibrandon/mtlog` - Structured logging (Serilog-style for Go)
+
+Professional pixel art tools:
+- `github.com/lucasb-eyer/go-colorful` - Color space conversions (RGB, HSL, LAB)
+- `github.com/nfnt/resize` - Image scaling with box filter
+- `gonum.org/v1/gonum` - K-means clustering for palette extraction
 
 Aseprite requirement:
 - Minimum version: 1.3.0
