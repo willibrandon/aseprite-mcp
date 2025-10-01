@@ -96,7 +96,7 @@ func BenchmarkDrawPixels_10(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		script := gen.DrawPixels("Layer 1", 1, pixels)
+		script := gen.DrawPixels("Layer 1", 1, pixels, false)
 		_, err := client.ExecuteLua(ctx, script, filename)
 		if err != nil {
 			b.Fatalf("DrawPixels failed: %v", err)
@@ -130,7 +130,7 @@ func BenchmarkDrawPixels_100(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		script := gen.DrawPixels("Layer 1", 1, pixels)
+		script := gen.DrawPixels("Layer 1", 1, pixels, false)
 		_, err := client.ExecuteLua(ctx, script, filename)
 		if err != nil {
 			b.Fatalf("DrawPixels failed: %v", err)
@@ -164,7 +164,7 @@ func BenchmarkDrawPixels_1000(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		script := gen.DrawPixels("Layer 1", 1, pixels)
+		script := gen.DrawPixels("Layer 1", 1, pixels, false)
 		_, err := client.ExecuteLua(ctx, script, filename)
 		if err != nil {
 			b.Fatalf("DrawPixels failed: %v", err)
@@ -198,7 +198,7 @@ func BenchmarkDrawPixels_10000(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		script := gen.DrawPixels("Layer 1", 1, pixels)
+		script := gen.DrawPixels("Layer 1", 1, pixels, false)
 		_, err := client.ExecuteLua(ctx, script, filename)
 		if err != nil {
 			b.Fatalf("DrawPixels failed: %v", err)
@@ -223,7 +223,7 @@ func BenchmarkDrawLine(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		script := gen.DrawLine("Layer 1", 1, 10, 10, 90, 90, Color{R: 255, G: 0, B: 0, A: 255}, 2)
+		script := gen.DrawLine("Layer 1", 1, 10, 10, 90, 90, Color{R: 255, G: 0, B: 0, A: 255}, 2, false)
 		_, err := client.ExecuteLua(ctx, script, filename)
 		if err != nil {
 			b.Fatalf("DrawLine failed: %v", err)
@@ -248,7 +248,7 @@ func BenchmarkDrawRectangle(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		script := gen.DrawRectangle("Layer 1", 1, 20, 20, 60, 60, Color{R: 0, G: 255, B: 0, A: 255}, true)
+		script := gen.DrawRectangle("Layer 1", 1, 20, 20, 60, 60, Color{R: 0, G: 255, B: 0, A: 255}, true, false)
 		_, err := client.ExecuteLua(ctx, script, filename)
 		if err != nil {
 			b.Fatalf("DrawRectangle failed: %v", err)
@@ -273,7 +273,7 @@ func BenchmarkDrawCircle(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		script := gen.DrawCircle("Layer 1", 1, 50, 50, 30, Color{R: 0, G: 0, B: 255, A: 255}, true)
+		script := gen.DrawCircle("Layer 1", 1, 50, 50, 30, Color{R: 0, G: 0, B: 255, A: 255}, true, false)
 		_, err := client.ExecuteLua(ctx, script, filename)
 		if err != nil {
 			b.Fatalf("DrawCircle failed: %v", err)
@@ -298,7 +298,7 @@ func BenchmarkFillArea(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		script := gen.FillArea("Layer 1", 1, 50, 50, Color{R: 255, G: 255, B: 0, A: 255}, 0)
+		script := gen.FillArea("Layer 1", 1, 50, 50, Color{R: 255, G: 255, B: 0, A: 255}, 0, false)
 		_, err := client.ExecuteLua(ctx, script, filename)
 		if err != nil {
 			b.Fatalf("FillArea failed: %v", err)
@@ -322,7 +322,7 @@ func BenchmarkExportSprite_PNG(b *testing.B) {
 	defer os.Remove(filename)
 
 	// Draw something
-	drawScript := gen.DrawCircle("Layer 1", 1, 50, 50, 30, Color{R: 255, G: 0, B: 0, A: 255}, true)
+	drawScript := gen.DrawCircle("Layer 1", 1, 50, 50, 30, Color{R: 255, G: 0, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, filename)
 	if err != nil {
 		b.Fatalf("Setup draw failed: %v", err)
@@ -442,7 +442,7 @@ func BenchmarkWorkflow_CreateDrawExport(b *testing.B) {
 		}
 
 		// Draw circle
-		drawScript := gen.DrawCircle("Layer 1", 1, 32, 32, 20, Color{R: 255, G: 0, B: 0, A: 255}, true)
+		drawScript := gen.DrawCircle("Layer 1", 1, 32, 32, 20, Color{R: 255, G: 0, B: 0, A: 255}, true, false)
 		_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 		if err != nil {
 			b.Fatalf("DrawCircle failed: %v", err)

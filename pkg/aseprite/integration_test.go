@@ -126,7 +126,7 @@ func TestIntegration_DrawPixels(t *testing.T) {
 		{Point: Point{X: 30, Y: 30}, Color: NewColorRGB(0, 0, 255)}, // Blue
 	}
 
-	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawPixels) error = %v", err)
