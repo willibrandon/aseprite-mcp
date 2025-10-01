@@ -35,7 +35,7 @@ func BenchmarkCompleteWorkflow_Simple(b *testing.B) {
 		}
 
 		// Draw circle
-		drawScript := gen.DrawCircle("Layer 1", 1, 32, 32, 20, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true)
+		drawScript := gen.DrawCircle("Layer 1", 1, 32, 32, 20, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true, false)
 		_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 		if err != nil {
 			b.Fatalf("DrawCircle failed: %v", err)
@@ -81,7 +81,7 @@ func BenchmarkCompleteWorkflow_Animation(b *testing.B) {
 
 		// Draw on each frame
 		for frame := 1; frame <= 4; frame++ {
-			drawScript := gen.DrawCircle("Layer 1", frame, 24, 24, 5+frame*2, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, true)
+			drawScript := gen.DrawCircle("Layer 1", frame, 24, 24, 5+frame*2, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, true, false)
 			_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 			if err != nil {
 				b.Fatalf("DrawCircle failed: %v", err)
@@ -125,14 +125,14 @@ func BenchmarkCompleteWorkflow_MultiLayer(b *testing.B) {
 		}
 
 		// Fill background
-		fillScript := gen.FillArea("Background", 1, 50, 50, aseprite.Color{R: 50, G: 50, B: 150, A: 255}, 0)
+		fillScript := gen.FillArea("Background", 1, 50, 50, aseprite.Color{R: 50, G: 50, B: 150, A: 255}, 0, false)
 		_, err = client.ExecuteLua(ctx, fillScript, spritePath)
 		if err != nil {
 			b.Fatalf("FillArea failed: %v", err)
 		}
 
 		// Draw on Layer 1
-		rectScript := gen.DrawRectangle("Layer 1", 1, 30, 30, 40, 40, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, true)
+		rectScript := gen.DrawRectangle("Layer 1", 1, 30, 30, 40, 40, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, true, false)
 		_, err = client.ExecuteLua(ctx, rectScript, spritePath)
 		if err != nil {
 			b.Fatalf("DrawRectangle failed: %v", err)
@@ -177,7 +177,7 @@ func BenchmarkCompleteWorkflow_PixelBatch(b *testing.B) {
 		}
 
 		// Draw 1000 pixels
-		drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+		drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 		_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 		if err != nil {
 			b.Fatalf("DrawPixels failed: %v", err)

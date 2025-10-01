@@ -35,7 +35,7 @@ func TestWorkflow_CreateDrawExport_SimpleSprite(t *testing.T) {
 	t.Log("✓ Step 1: Created canvas")
 
 	// Step 2: Draw a filled circle
-	drawScript := gen.DrawCircle("Layer 1", 1, 32, 32, 20, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true)
+	drawScript := gen.DrawCircle("Layer 1", 1, 32, 32, 20, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 2 (DrawCircle) failed: %v", err)
@@ -99,14 +99,14 @@ func TestWorkflow_MultiLayerDrawing(t *testing.T) {
 	}
 
 	// Step 4: Fill background layer
-	fillScript := gen.FillArea("Background", 1, 50, 50, aseprite.Color{R: 50, G: 50, B: 150, A: 255}, 0)
+	fillScript := gen.FillArea("Background", 1, 50, 50, aseprite.Color{R: 50, G: 50, B: 150, A: 255}, 0, false)
 	_, err = client.ExecuteLua(ctx, fillScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 4 (FillArea Background) failed: %v", err)
 	}
 
 	// Step 5: Draw on foreground layer
-	drawScript := gen.DrawRectangle("Foreground", 1, 30, 30, 40, 40, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, true)
+	drawScript := gen.DrawRectangle("Foreground", 1, 30, 30, 40, 40, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 5 (DrawRectangle Foreground) failed: %v", err)
@@ -163,28 +163,28 @@ func TestWorkflow_AnimationCreation(t *testing.T) {
 	}
 
 	// Step 5: Draw on frame 1
-	drawScript := gen.DrawCircle("Layer 1", 1, 16, 16, 8, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true)
+	drawScript := gen.DrawCircle("Layer 1", 1, 16, 16, 8, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 5 (DrawCircle frame 1) failed: %v", err)
 	}
 
 	// Step 6: Draw on frame 2
-	drawScript = gen.DrawCircle("Layer 1", 2, 16, 16, 10, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, true)
+	drawScript = gen.DrawCircle("Layer 1", 2, 16, 16, 10, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 6 (DrawCircle frame 2) failed: %v", err)
 	}
 
 	// Step 7: Draw on frame 3
-	drawScript = gen.DrawCircle("Layer 1", 3, 16, 16, 12, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, true)
+	drawScript = gen.DrawCircle("Layer 1", 3, 16, 16, 12, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 7 (DrawCircle frame 3) failed: %v", err)
 	}
 
 	// Step 8: Draw on frame 4
-	drawScript = gen.DrawCircle("Layer 1", 4, 16, 16, 14, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, true)
+	drawScript = gen.DrawCircle("Layer 1", 4, 16, 16, 14, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 8 (DrawCircle frame 4) failed: %v", err)
@@ -236,28 +236,28 @@ func TestWorkflow_ComplexDrawing_PixelsAndPrimitives(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Step 2: Fill background
-	fillScript := gen.FillArea("Layer 1", 1, 64, 64, aseprite.Color{R: 240, G: 240, B: 240, A: 255}, 0)
+	fillScript := gen.FillArea("Layer 1", 1, 64, 64, aseprite.Color{R: 240, G: 240, B: 240, A: 255}, 0, false)
 	_, err = client.ExecuteLua(ctx, fillScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 2 (FillArea) failed: %v", err)
 	}
 
 	// Step 3: Draw rectangle outline
-	drawScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 50, 50, aseprite.Color{R: 0, G: 0, B: 0, A: 255}, false)
+	drawScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 50, 50, aseprite.Color{R: 0, G: 0, B: 0, A: 255}, false, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 3 (DrawRectangle) failed: %v", err)
 	}
 
 	// Step 4: Draw filled circle
-	drawScript = gen.DrawCircle("Layer 1", 1, 90, 30, 15, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true)
+	drawScript = gen.DrawCircle("Layer 1", 1, 90, 30, 15, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 4 (DrawCircle) failed: %v", err)
 	}
 
 	// Step 5: Draw line
-	drawScript = gen.DrawLine("Layer 1", 1, 20, 80, 100, 110, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 2)
+	drawScript = gen.DrawLine("Layer 1", 1, 20, 80, 100, 110, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 2, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 5 (DrawLine) failed: %v", err)
@@ -269,7 +269,7 @@ func TestWorkflow_ComplexDrawing_PixelsAndPrimitives(t *testing.T) {
 		{Point: aseprite.Point{X: 31, Y: 31}, Color: aseprite.Color{R: 255, G: 255, B: 0, A: 255}},
 		{Point: aseprite.Point{X: 32, Y: 32}, Color: aseprite.Color{R: 255, G: 255, B: 0, A: 255}},
 	}
-	drawScript = gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript = gen.DrawPixels("Layer 1", 1, pixels, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 6 (DrawPixels) failed: %v", err)
@@ -333,7 +333,7 @@ func TestWorkflow_FrameByFrameAnimation(t *testing.T) {
 	}
 
 	// Step 5: Draw background on all frames (fill once)
-	fillScript := gen.FillArea("Background", 1, 24, 24, aseprite.Color{R: 30, G: 30, B: 30, A: 255}, 0)
+	fillScript := gen.FillArea("Background", 1, 24, 24, aseprite.Color{R: 30, G: 30, B: 30, A: 255}, 0, false)
 	_, err = client.ExecuteLua(ctx, fillScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 5 (FillArea Background) failed: %v", err)
@@ -341,31 +341,31 @@ func TestWorkflow_FrameByFrameAnimation(t *testing.T) {
 
 	// Step 6-8: Draw different shapes on each frame of Animation layer
 	// Frame 1: Square
-	drawScript := gen.DrawRectangle("Animation", 1, 14, 14, 20, 20, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true)
+	drawScript := gen.DrawRectangle("Animation", 1, 14, 14, 20, 20, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 6 (DrawRectangle frame 1) failed: %v", err)
 	}
 
 	// Frame 2: Circle
-	drawScript = gen.DrawCircle("Animation", 2, 24, 24, 10, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, true)
+	drawScript = gen.DrawCircle("Animation", 2, 24, 24, 10, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 7 (DrawCircle frame 2) failed: %v", err)
 	}
 
 	// Frame 3: Triangle (using line tool)
-	drawScript = gen.DrawLine("Animation", 3, 24, 10, 10, 34, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 2)
+	drawScript = gen.DrawLine("Animation", 3, 24, 10, 10, 34, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 2, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 8a (DrawLine1 frame 3) failed: %v", err)
 	}
-	drawScript = gen.DrawLine("Animation", 3, 10, 34, 38, 34, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 2)
+	drawScript = gen.DrawLine("Animation", 3, 10, 34, 38, 34, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 2, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 8b (DrawLine2 frame 3) failed: %v", err)
 	}
-	drawScript = gen.DrawLine("Animation", 3, 38, 34, 24, 10, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 2)
+	drawScript = gen.DrawLine("Animation", 3, 38, 34, 24, 10, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 2, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Step 8c (DrawLine3 frame 3) failed: %v", err)
@@ -427,7 +427,7 @@ func TestWorkflow_RapidPrototyping(t *testing.T) {
 	}
 	defer os.Remove(spritePath)
 
-	drawScript := gen.DrawRectangle("Layer 1", 1, 16, 16, 32, 32, aseprite.Color{R: 128, G: 128, B: 128, A: 255}, true)
+	drawScript := gen.DrawRectangle("Layer 1", 1, 16, 16, 32, 32, aseprite.Color{R: 128, G: 128, B: 128, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("DrawRectangle failed: %v", err)

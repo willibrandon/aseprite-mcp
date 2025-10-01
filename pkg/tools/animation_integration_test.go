@@ -282,7 +282,7 @@ func TestIntegration_DuplicateFrame_AtEnd(t *testing.T) {
 			Color: aseprite.Color{R: 0, G: 255, B: 0, A: 255},
 		},
 	}
-	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw pixels: %v", err)
@@ -424,7 +424,7 @@ func TestIntegration_LinkCel(t *testing.T) {
 			Color: aseprite.Color{R: 0, G: 255, B: 255, A: 255},
 		},
 	}
-	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw pixels: %v", err)

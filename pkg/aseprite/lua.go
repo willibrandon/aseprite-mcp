@@ -35,6 +35,50 @@ func FormatColor(c Color) string {
 	return fmt.Sprintf("Color(%d, %d, %d, %d)", c.R, c.G, c.B, c.A)
 }
 
+// FormatColorWithPalette formats a Color with optional palette snapping.
+// If usePalette is true, wraps the color in a call to snapToPalette().
+// Returns the color expression as a string.
+func FormatColorWithPalette(c Color, usePalette bool) string {
+	if !usePalette {
+		return FormatColor(c)
+	}
+	return fmt.Sprintf("snapToPalette(%d, %d, %d, %d)", c.R, c.G, c.B, c.A)
+}
+
+// GeneratePaletteSnapperHelper returns Lua code that defines a snapToPalette helper function.
+// This function snaps an RGBA color to the nearest color in the sprite's active palette.
+func GeneratePaletteSnapperHelper() string {
+	return `
+-- Helper: Snap color to nearest palette color
+local function snapToPalette(r, g, b, a)
+	local palette = app.activeSprite.palettes[1]
+	if not palette or #palette == 0 then
+		-- No palette available, return original color
+		return Color(r, g, b, a)
+	end
+
+	local minDist = math.huge
+	local nearestColor = palette:getColor(0)
+
+	for i = 0, #palette - 1 do
+		local palColor = palette:getColor(i)
+		local dr = r - palColor.red
+		local dg = g - palColor.green
+		local db = b - palColor.blue
+		local da = a - palColor.alpha
+		local dist = dr*dr + dg*dg + db*db + da*da
+
+		if dist < minDist then
+			minDist = dist
+			nearestColor = palColor
+		end
+	end
+
+	return Color(nearestColor.red, nearestColor.green, nearestColor.blue, nearestColor.alpha)
+end
+`
+}
+
 // FormatPoint formats a Point as a Lua Point constructor call.
 func FormatPoint(p Point) string {
 	return fmt.Sprintf("Point(%d, %d)", p.X, p.Y)
@@ -129,10 +173,16 @@ print(#spr.frames)`, durationSec)
 }
 
 // DrawPixels generates a Lua script to draw multiple pixels.
-func (g *LuaGenerator) DrawPixels(layerName string, frameNumber int, pixels []Pixel) string {
+func (g *LuaGenerator) DrawPixels(layerName string, frameNumber int, pixels []Pixel, usePalette bool) string {
 	var sb strings.Builder
 
 	escapedName := EscapeString(layerName)
+
+	// Add palette snapper helper if needed
+	if usePalette {
+		sb.WriteString(GeneratePaletteSnapperHelper())
+		sb.WriteString("\n")
+	}
 
 	sb.WriteString(fmt.Sprintf(`local spr = app.activeSprite
 if not spr then
@@ -168,7 +218,7 @@ app.transaction(function()
 
 	// Add pixel drawing commands
 	for _, p := range pixels {
-		sb.WriteString(fmt.Sprintf("\timg:putPixel(%d, %d, %s)\n", p.X, p.Y, FormatColor(p.Color)))
+		sb.WriteString(fmt.Sprintf("\timg:putPixel(%d, %d, %s)\n", p.X, p.Y, FormatColorWithPalette(p.Color, usePalette)))
 	}
 
 	sb.WriteString(`end)
@@ -180,9 +230,17 @@ print("Pixels drawn successfully")`)
 }
 
 // DrawLine generates a Lua script to draw a line.
-func (g *LuaGenerator) DrawLine(layerName string, frameNumber int, x1, y1, x2, y2 int, color Color, thickness int) string {
+func (g *LuaGenerator) DrawLine(layerName string, frameNumber int, x1, y1, x2, y2 int, color Color, thickness int, usePalette bool) string {
+	var sb strings.Builder
+
+	// Add palette snapper helper if needed
+	if usePalette {
+		sb.WriteString(GeneratePaletteSnapperHelper())
+		sb.WriteString("\n")
+	}
+
 	escapedName := EscapeString(layerName)
-	return fmt.Sprintf(`local spr = app.activeSprite
+	sb.WriteString(fmt.Sprintf(`local spr = app.activeSprite
 if not spr then
 	error("No active sprite")
 end
@@ -224,20 +282,30 @@ print("Line drawn successfully")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber,
 		thickness,
-		FormatColor(color),
+		FormatColorWithPalette(color, usePalette),
 		FormatPoint(Point{X: x1, Y: y1}),
-		FormatPoint(Point{X: x2, Y: y2}))
+		FormatPoint(Point{X: x2, Y: y2})))
+
+	return sb.String()
 }
 
 // DrawRectangle generates a Lua script to draw a rectangle.
-func (g *LuaGenerator) DrawRectangle(layerName string, frameNumber int, x, y, width, height int, color Color, filled bool) string {
+func (g *LuaGenerator) DrawRectangle(layerName string, frameNumber int, x, y, width, height int, color Color, filled bool, usePalette bool) string {
+	var sb strings.Builder
+
+	// Add palette snapper helper if needed
+	if usePalette {
+		sb.WriteString(GeneratePaletteSnapperHelper())
+		sb.WriteString("\n")
+	}
+
 	escapedName := EscapeString(layerName)
 	tool := "rectangle"
 	if filled {
 		tool = "filled_rectangle"
 	}
 
-	return fmt.Sprintf(`local spr = app.activeSprite
+	sb.WriteString(fmt.Sprintf(`local spr = app.activeSprite
 if not spr then
 	error("No active sprite")
 end
@@ -276,13 +344,23 @@ print("Rectangle drawn successfully")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber,
 		tool,
-		FormatColor(color),
+		FormatColorWithPalette(color, usePalette),
 		FormatPoint(Point{X: x, Y: y}),
-		FormatPoint(Point{X: x + width - 1, Y: y + height - 1}))
+		FormatPoint(Point{X: x + width - 1, Y: y + height - 1})))
+
+	return sb.String()
 }
 
 // DrawCircle generates a Lua script to draw a circle (ellipse).
-func (g *LuaGenerator) DrawCircle(layerName string, frameNumber int, centerX, centerY, radius int, color Color, filled bool) string {
+func (g *LuaGenerator) DrawCircle(layerName string, frameNumber int, centerX, centerY, radius int, color Color, filled bool, usePalette bool) string {
+	var sb strings.Builder
+
+	// Add palette snapper helper if needed
+	if usePalette {
+		sb.WriteString(GeneratePaletteSnapperHelper())
+		sb.WriteString("\n")
+	}
+
 	escapedName := EscapeString(layerName)
 	tool := "ellipse"
 	if filled {
@@ -295,7 +373,7 @@ func (g *LuaGenerator) DrawCircle(layerName string, frameNumber int, centerX, ce
 	x2 := centerX + radius
 	y2 := centerY + radius
 
-	return fmt.Sprintf(`local spr = app.activeSprite
+	sb.WriteString(fmt.Sprintf(`local spr = app.activeSprite
 if not spr then
 	error("No active sprite")
 end
@@ -334,15 +412,25 @@ print("Circle drawn successfully")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber,
 		tool,
-		FormatColor(color),
+		FormatColorWithPalette(color, usePalette),
 		FormatPoint(Point{X: x1, Y: y1}),
-		FormatPoint(Point{X: x2, Y: y2}))
+		FormatPoint(Point{X: x2, Y: y2})))
+
+	return sb.String()
 }
 
 // FillArea generates a Lua script to flood fill an area (paint bucket).
-func (g *LuaGenerator) FillArea(layerName string, frameNumber int, x, y int, color Color, tolerance int) string {
+func (g *LuaGenerator) FillArea(layerName string, frameNumber int, x, y int, color Color, tolerance int, usePalette bool) string {
+	var sb strings.Builder
+
+	// Add palette snapper helper if needed
+	if usePalette {
+		sb.WriteString(GeneratePaletteSnapperHelper())
+		sb.WriteString("\n")
+	}
+
 	escapedName := EscapeString(layerName)
-	return fmt.Sprintf(`local spr = app.activeSprite
+	sb.WriteString(fmt.Sprintf(`local spr = app.activeSprite
 if not spr then
 	error("No active sprite")
 end
@@ -382,9 +470,11 @@ spr:saveAs(spr.filename)
 print("Area filled successfully")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber,
-		FormatColor(color),
+		FormatColorWithPalette(color, usePalette),
 		FormatPoint(Point{X: x, Y: y}),
-		tolerance)
+		tolerance))
+
+	return sb.String()
 }
 
 // ExportSprite generates a Lua script to export a sprite.

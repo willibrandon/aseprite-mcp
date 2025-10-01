@@ -148,7 +148,7 @@ func TestLuaGenerator_DrawPixels(t *testing.T) {
 		{Point: Point{X: 1, Y: 1}, Color: Color{R: 0, G: 255, B: 0, A: 255}},
 	}
 
-	script := gen.DrawPixels("Layer 1", 1, pixels)
+	script := gen.DrawPixels("Layer 1", 1, pixels, false)
 
 	// Verify script contains expected elements (using loop-based layer lookup)
 	if !strings.Contains(script, `lyr.name == "Layer 1"`) {

@@ -369,35 +369,53 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	// Step 15: Apply palette-constrained shading
 	logger.Information("")
 	logger.Information("Step 15: Drawing shape with palette-constrained shading...")
-	// Draw a base circle
+
+	// Create a larger 64x64 sprite for better visibility
+	shadingResp, err := callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      64,
+		"height":     64,
+		"color_mode": "rgb",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for shading failed: %w", err)
+	}
+	var shadingResult struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(shadingResp), &shadingResult); err != nil {
+		return fmt.Errorf("failed to parse shading canvas result: %w", err)
+	}
+	shadingSprite := shadingResult.FilePath
+
+	// Draw a larger base circle
 	if _, err := callTool(ctx, session, "draw_circle", map[string]any{
-		"sprite_path":  paletteSprite,
+		"sprite_path":  shadingSprite,
 		"layer_name":   "Layer 1",
 		"frame_number": 1,
-		"center_x":     16,
-		"center_y":     16,
-		"radius":       12,
+		"center_x":     32,
+		"center_y":     32,
+		"radius":       28,
 		"color":        "#AB5236",
 		"filled":       true,
 	}); err != nil {
 		return fmt.Errorf("draw_circle for shading failed: %w", err)
 	}
 
-	// Apply shading
+	// Apply shading with wider palette range for more visible effect
 	if _, err := callTool(ctx, session, "apply_shading", map[string]any{
-		"sprite_path":  paletteSprite,
+		"sprite_path":  shadingSprite,
 		"layer_name":   "Layer 1",
 		"frame_number": 1,
 		"region": map[string]any{
-			"x":      4,
-			"y":      4,
-			"width":  24,
-			"height": 24,
+			"x":      2,
+			"y":      2,
+			"width":  60,
+			"height": 60,
 		},
-		"palette":        []string{"#1D2B53", "#7E2553", "#AB5236", "#C2C3C7", "#FFF1E8"},
+		"palette":         []string{"#1D2B53", "#7E2553", "#AB5236", "#FFB380", "#FFF1E8"},
 		"light_direction": "top_left",
-		"intensity":      0.7,
-		"style":          "smooth",
+		"intensity":       0.9,
+		"style":           "smooth",
 	}); err != nil {
 		return fmt.Errorf("apply_shading failed: %w", err)
 	}
@@ -406,7 +424,7 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	// Export shaded sprite
 	shadedPngPath := filepath.Join(outputDir, "shaded-sphere.png")
 	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
-		"sprite_path":  paletteSprite,
+		"sprite_path":  shadingSprite,
 		"output_path":  shadedPngPath,
 		"format":       "png",
 		"frame_number": 0,
@@ -414,6 +432,171 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 		return fmt.Errorf("export_sprite shaded failed: %w", err)
 	}
 	logger.Information("  Exported: {ShadedPng}", shadedPngPath)
+
+	// Step 16: Demonstrate palette-aware drawing (use_palette flag)
+	logger.Information("")
+	logger.Information("Step 16: Demonstrating palette-aware drawing...")
+	paletteDrawResp, err := callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      96,
+		"height":     32,
+		"color_mode": "rgb",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for palette draw failed: %w", err)
+	}
+	var paletteDrawResult struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(paletteDrawResp), &paletteDrawResult); err != nil {
+		return fmt.Errorf("failed to parse palette draw canvas result: %w", err)
+	}
+	paletteDrawSprite := paletteDrawResult.FilePath
+	logger.Information("  Created: {PaletteDrawSprite}", paletteDrawSprite)
+
+	// Set a simple 4-color palette (black, red, green, blue)
+	if _, err := callTool(ctx, session, "set_palette", map[string]any{
+		"sprite_path": paletteDrawSprite,
+		"colors":      []string{"#000000", "#FF0000", "#00FF00", "#0000FF"},
+	}); err != nil {
+		return fmt.Errorf("set_palette for draw demo failed: %w", err)
+	}
+
+	// Draw rectangles WITHOUT palette snapping (left side) - exact pastel colors
+	if _, err := callTool(ctx, session, "draw_rectangle", map[string]any{
+		"sprite_path":  paletteDrawSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"x":            4,
+		"y":            4,
+		"width":        12,
+		"height":       8,
+		"color":        "#FF8080", // Pastel red
+		"filled":       true,
+		"use_palette":  false,
+	}); err != nil {
+		return fmt.Errorf("draw_rectangle without palette (red) failed: %w", err)
+	}
+
+	if _, err := callTool(ctx, session, "draw_rectangle", map[string]any{
+		"sprite_path":  paletteDrawSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"x":            20,
+		"y":            4,
+		"width":        12,
+		"height":       8,
+		"color":        "#80FF80", // Pastel green
+		"filled":       true,
+		"use_palette":  false,
+	}); err != nil {
+		return fmt.Errorf("draw_rectangle without palette (green) failed: %w", err)
+	}
+
+	if _, err := callTool(ctx, session, "draw_rectangle", map[string]any{
+		"sprite_path":  paletteDrawSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"x":            36,
+		"y":            4,
+		"width":        12,
+		"height":       8,
+		"color":        "#8080FF", // Pastel blue
+		"filled":       true,
+		"use_palette":  false,
+	}); err != nil {
+		return fmt.Errorf("draw_rectangle without palette (blue) failed: %w", err)
+	}
+
+	// Draw rectangles WITH palette snapping (right side) - snaps to pure colors
+	if _, err := callTool(ctx, session, "draw_rectangle", map[string]any{
+		"sprite_path":  paletteDrawSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"x":            52,
+		"y":            4,
+		"width":        12,
+		"height":       8,
+		"color":        "#FF8080", // Pastel red → snaps to #FF0000 (pure red)
+		"filled":       true,
+		"use_palette":  true,
+	}); err != nil {
+		return fmt.Errorf("draw_rectangle with palette (red) failed: %w", err)
+	}
+
+	if _, err := callTool(ctx, session, "draw_rectangle", map[string]any{
+		"sprite_path":  paletteDrawSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"x":            68,
+		"y":            4,
+		"width":        12,
+		"height":       8,
+		"color":        "#80FF80", // Pastel green → snaps to #00FF00 (pure green)
+		"filled":       true,
+		"use_palette":  true,
+	}); err != nil {
+		return fmt.Errorf("draw_rectangle with palette (green) failed: %w", err)
+	}
+
+	if _, err := callTool(ctx, session, "draw_rectangle", map[string]any{
+		"sprite_path":  paletteDrawSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"x":            84,
+		"y":            4,
+		"width":        12,
+		"height":       8,
+		"color":        "#8080FF", // Pastel blue → snaps to #0000FF (pure blue)
+		"filled":       true,
+		"use_palette":  true,
+	}); err != nil {
+		return fmt.Errorf("draw_rectangle with palette (blue) failed: %w", err)
+	}
+
+	// Add labels with lines
+	if _, err := callTool(ctx, session, "draw_line", map[string]any{
+		"sprite_path":  paletteDrawSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"x1":           4,
+		"y1":           20,
+		"x2":           44,
+		"y2":           20,
+		"color":        "#FFFFFF",
+		"thickness":    1,
+		"use_palette":  false,
+	}); err != nil {
+		return fmt.Errorf("draw_line (left label) failed: %w", err)
+	}
+
+	if _, err := callTool(ctx, session, "draw_line", map[string]any{
+		"sprite_path":  paletteDrawSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"x1":           52,
+		"y1":           20,
+		"x2":           92,
+		"y2":           20,
+		"color":        "#FFFFFF",
+		"thickness":    1,
+		"use_palette":  false,
+	}); err != nil {
+		return fmt.Errorf("draw_line (right label) failed: %w", err)
+	}
+
+	logger.Information("  Palette-aware drawing completed (left: pastel colors, right: snapped to pure colors)")
+
+	// Export palette demo
+	paletteDrawPngPath := filepath.Join(outputDir, "palette-drawing-comparison.png")
+	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
+		"sprite_path":  paletteDrawSprite,
+		"output_path":  paletteDrawPngPath,
+		"format":       "png",
+		"frame_number": 0,
+	}); err != nil {
+		return fmt.Errorf("export_sprite palette draw failed: %w", err)
+	}
+	logger.Information("  Exported: {PaletteDrawPng}", paletteDrawPngPath)
 
 	return nil
 }

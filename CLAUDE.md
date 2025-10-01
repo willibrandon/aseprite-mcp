@@ -118,7 +118,7 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
 Core functionality implemented and tested:
 - Canvas creation and management (RGB, Grayscale, Indexed)
 - Layer and frame operations
-- Drawing primitives (pixels, lines, rectangles, circles, fill)
+- Drawing primitives (pixels, lines, rectangles, circles, fill) with optional palette-aware color snapping
 - Animation tools (frame duration, tags, duplication, linked cels)
 - Inspection tools (pixel data reading with pagination for verification and analysis)
 - **Professional Pixel Art Tools:**
@@ -129,6 +129,7 @@ Core functionality implemented and tested:
   - Palette management (set_palette with 1-256 colors)
   - Palette-constrained shading (smooth, hard, pillow styles with 8 light directions)
   - Palette harmony analysis (complementary, triadic, analogous relationships, color temperature)
+  - Palette-aware drawing: All drawing tools support `use_palette` flag to snap arbitrary colors to nearest palette color
 - Sprite export (PNG, GIF, JPG, BMP)
 - Metadata retrieval
 - Example client implementation (examples/client/main.go)

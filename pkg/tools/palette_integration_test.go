@@ -108,7 +108,7 @@ func TestIntegration_ApplyShading_SmoothStyle(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw a filled circle
-	circleScript := gen.DrawCircle("Layer 1", 1, 32, 32, 20, aseprite.Color{R: 128, G: 128, B: 128, A: 255}, true)
+	circleScript := gen.DrawCircle("Layer 1", 1, 32, 32, 20, aseprite.Color{R: 128, G: 128, B: 128, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, circleScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw circle: %v", err)
@@ -145,7 +145,7 @@ func TestIntegration_ApplyShading_HardStyle(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw a filled rectangle
-	rectScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 44, 44, aseprite.Color{R: 255, G: 100, B: 100, A: 255}, true)
+	rectScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 44, 44, aseprite.Color{R: 255, G: 100, B: 100, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, rectScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw rectangle: %v", err)
@@ -187,7 +187,7 @@ func TestIntegration_ApplyShading_AllDirections(t *testing.T) {
 			defer os.Remove(spritePath)
 
 			// Draw filled rectangle
-			rectScript := gen.DrawRectangle("Layer 1", 1, 5, 5, 22, 22, aseprite.Color{R: 128, G: 128, B: 128, A: 255}, true)
+			rectScript := gen.DrawRectangle("Layer 1", 1, 5, 5, 22, 22, aseprite.Color{R: 128, G: 128, B: 128, A: 255}, true, false)
 			_, err = client.ExecuteLua(ctx, rectScript, spritePath)
 			if err != nil {
 				t.Fatalf("Failed to draw rectangle: %v", err)
@@ -239,7 +239,7 @@ func TestIntegration_SetPalette_ThenApplyShading(t *testing.T) {
 	}
 
 	// Step 2: Draw a circle with mid-tone
-	circleScript := gen.DrawCircle("Layer 1", 1, 32, 32, 25, aseprite.Color{R: 195, G: 87, B: 54, A: 255}, true)
+	circleScript := gen.DrawCircle("Layer 1", 1, 32, 32, 25, aseprite.Color{R: 195, G: 87, B: 54, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, circleScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw circle: %v", err)

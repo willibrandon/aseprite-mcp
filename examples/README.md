@@ -16,6 +16,7 @@ The `client/` directory contains a complete example MCP client that demonstrates
 - Analyzing palette harmonies (complementary, triadic, temperature)
 - Setting custom limited palettes
 - Applying palette-constrained shading with light direction
+- Palette-aware drawing with automatic color snapping
 - Retrieving sprite metadata
 - Exporting to GIF and PNG
 
@@ -50,7 +51,8 @@ The example creates:
 - `../sprites/animated-example.gif` - 4-frame animation with growing colored circles
 - `../sprites/frame2-example.png` - Single frame export (frame 2)
 - `../sprites/dithered-gradient.png` - Demonstration of Bayer 4x4 dithering pattern
-- `../sprites/shaded-sphere.png` - Palette-constrained shaded sphere with smooth lighting
+- `../sprites/shaded-sphere.png` - 64x64 sphere with palette-constrained smooth shading from light to dark
+- `../sprites/palette-drawing-comparison.png` - Side-by-side comparison: pastel colors (left) vs palette-snapped pure colors (right)
 
 ## Example Output
 
@@ -132,6 +134,11 @@ Step 14: Creating sprite with limited palette...
 Step 15: Drawing shape with palette-constrained shading...
   Shading applied successfully
   Exported: ../sprites/shaded-sphere.png
+
+Step 16: Demonstrating palette-aware drawing...
+  Created: /tmp/aseprite-mcp/sprite-...
+  Palette-aware drawing completed (left: pastel colors, right: snapped to pure colors)
+  Exported: ../sprites/palette-drawing-comparison.png
 
 Example completed successfully!
 ```

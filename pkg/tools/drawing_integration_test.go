@@ -40,7 +40,7 @@ func TestIntegration_DrawPixels_SinglePixel(t *testing.T) {
 		},
 	}
 
-	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawPixels) error = %v", err)
@@ -77,7 +77,7 @@ func TestIntegration_DrawPixels_MultiplePixels(t *testing.T) {
 		{Point: aseprite.Point{X: 4, Y: 0}, Color: aseprite.Color{R: 255, G: 0, B: 255, A: 255}}, // Magenta
 	}
 
-	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawPixels) error = %v", err)
@@ -115,7 +115,7 @@ func TestIntegration_DrawPixels_LargeBatch(t *testing.T) {
 	}
 
 	start := time.Now()
-	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	duration := time.Since(start)
 
@@ -158,7 +158,7 @@ func TestIntegration_DrawPixels_WithAlpha(t *testing.T) {
 		{Point: aseprite.Point{X: 13, Y: 10}, Color: aseprite.Color{R: 255, G: 0, B: 0, A: 64}},  // 25% opacity
 	}
 
-	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawPixels) error = %v", err)
@@ -200,7 +200,7 @@ func TestIntegration_DrawPixels_OnCustomLayer(t *testing.T) {
 		{Point: aseprite.Point{X: 6, Y: 6}, Color: aseprite.Color{R: 0, G: 255, B: 255, A: 255}},
 	}
 
-	drawScript := gen.DrawPixels(layerName, 1, pixels)
+	drawScript := gen.DrawPixels(layerName, 1, pixels, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawPixels) error = %v", err)
@@ -229,7 +229,7 @@ func TestIntegration_DrawLine(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw a diagonal line
-	drawScript := gen.DrawLine("Layer 1", 1, 10, 10, 50, 50, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, 2)
+	drawScript := gen.DrawLine("Layer 1", 1, 10, 10, 50, 50, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, 2, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawLine) error = %v", err)
@@ -258,7 +258,7 @@ func TestIntegration_DrawRectangle_Outline(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw rectangle outline
-	drawScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 40, 30, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, false)
+	drawScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 40, 30, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, false, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawRectangle) error = %v", err)
@@ -287,7 +287,7 @@ func TestIntegration_DrawRectangle_Filled(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw filled rectangle
-	drawScript := gen.DrawRectangle("Layer 1", 1, 20, 20, 30, 20, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, true)
+	drawScript := gen.DrawRectangle("Layer 1", 1, 20, 20, 30, 20, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, true, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawRectangle) error = %v", err)
@@ -316,7 +316,7 @@ func TestIntegration_DrawCircle_Outline(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw circle outline
-	drawScript := gen.DrawCircle("Layer 1", 1, 50, 50, 20, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, false)
+	drawScript := gen.DrawCircle("Layer 1", 1, 50, 50, 20, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, false, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawCircle) error = %v", err)
@@ -345,7 +345,7 @@ func TestIntegration_DrawCircle_Filled(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw filled circle
-	drawScript := gen.DrawCircle("Layer 1", 1, 30, 30, 15, aseprite.Color{R: 255, G: 0, B: 255, A: 255}, true)
+	drawScript := gen.DrawCircle("Layer 1", 1, 30, 30, 15, aseprite.Color{R: 255, G: 0, B: 255, A: 255}, true, false)
 	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(DrawCircle) error = %v", err)
@@ -374,14 +374,14 @@ func TestIntegration_FillArea_ZeroTolerance(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw a rectangle outline first to create a boundary
-	rectScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 30, 30, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, false)
+	rectScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 30, 30, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, false, false)
 	_, err = client.ExecuteLua(ctx, rectScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw rectangle: %v", err)
 	}
 
 	// Fill the area inside the rectangle
-	fillScript := gen.FillArea("Layer 1", 1, 20, 20, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, 0)
+	fillScript := gen.FillArea("Layer 1", 1, 20, 20, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, 0, false)
 	output, err := client.ExecuteLua(ctx, fillScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(FillArea) error = %v", err)
@@ -415,14 +415,14 @@ func TestIntegration_FillArea_WithTolerance(t *testing.T) {
 		{Point: aseprite.Point{X: 11, Y: 10}, Color: aseprite.Color{R: 105, G: 105, B: 105, A: 255}},
 		{Point: aseprite.Point{X: 12, Y: 10}, Color: aseprite.Color{R: 110, G: 110, B: 110, A: 255}},
 	}
-	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw pixels: %v", err)
 	}
 
 	// Fill area with tolerance - should fill similar colors
-	fillScript := gen.FillArea("Layer 1", 1, 10, 10, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, 50)
+	fillScript := gen.FillArea("Layer 1", 1, 10, 10, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, 50, false)
 	output, err := client.ExecuteLua(ctx, fillScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(FillArea) error = %v", err)
@@ -451,7 +451,7 @@ func TestIntegration_FillArea_EmptyCanvas(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Fill entire empty canvas (should fill all transparent pixels)
-	fillScript := gen.FillArea("Layer 1", 1, 25, 25, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 0)
+	fillScript := gen.FillArea("Layer 1", 1, 25, 25, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 0, false)
 	output, err := client.ExecuteLua(ctx, fillScript, spritePath)
 	if err != nil {
 		t.Fatalf("ExecuteLua(FillArea) error = %v", err)

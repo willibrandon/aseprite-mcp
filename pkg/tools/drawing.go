@@ -24,6 +24,7 @@ type DrawPixelsInput struct {
 	LayerName   string       `json:"layer_name" jsonschema:"Name of the layer to draw on"`
 	FrameNumber int          `json:"frame_number" jsonschema:"Frame number to draw on (1-based)"`
 	Pixels      []PixelInput `json:"pixels" jsonschema:"Array of pixels to draw"`
+	UsePalette  bool         `json:"use_palette,omitempty" jsonschema:"Snap colors to nearest palette color (default: false)"`
 }
 
 // DrawPixelsOutput defines the output for the draw_pixels tool.
@@ -42,6 +43,7 @@ type DrawLineInput struct {
 	Y2          int    `json:"y2" jsonschema:"Y coordinate of line end point"`
 	Color       string `json:"color" jsonschema:"Hex color string in format #RRGGBB or #RRGGBBAA"`
 	Thickness   int    `json:"thickness" jsonschema:"Line thickness in pixels (1-100)"`
+	UsePalette  bool   `json:"use_palette,omitempty" jsonschema:"Snap colors to nearest palette color (default: false)"`
 }
 
 // DrawLineOutput defines the output for the draw_line tool.
@@ -60,6 +62,7 @@ type DrawRectangleInput struct {
 	Height      int    `json:"height" jsonschema:"Height of rectangle in pixels"`
 	Color       string `json:"color" jsonschema:"Hex color string in format #RRGGBB or #RRGGBBAA"`
 	Filled      bool   `json:"filled" jsonschema:"Fill interior (true) or draw outline only (false)"`
+	UsePalette  bool   `json:"use_palette,omitempty" jsonschema:"Snap colors to nearest palette color (default: false)"`
 }
 
 // DrawRectangleOutput defines the output for the draw_rectangle tool.
@@ -77,6 +80,7 @@ type DrawCircleInput struct {
 	Radius      int    `json:"radius" jsonschema:"Radius of circle in pixels"`
 	Color       string `json:"color" jsonschema:"Hex color string in format #RRGGBB or #RRGGBBAA"`
 	Filled      bool   `json:"filled" jsonschema:"Fill interior (true) or draw outline only (false)"`
+	UsePalette  bool   `json:"use_palette,omitempty" jsonschema:"Snap colors to nearest palette color (default: false)"`
 }
 
 // DrawCircleOutput defines the output for the draw_circle tool.
@@ -93,6 +97,7 @@ type FillAreaInput struct {
 	Y           int    `json:"y" jsonschema:"Y coordinate of starting point"`
 	Color       string `json:"color" jsonschema:"Hex color string in format #RRGGBB or #RRGGBBAA"`
 	Tolerance   int    `json:"tolerance" jsonschema:"Color matching tolerance (0-255, default 0)"`
+	UsePalette  bool   `json:"use_palette,omitempty" jsonschema:"Snap colors to nearest palette color (default: false)"`
 }
 
 // FillAreaOutput defines the output for the fill_area tool.
@@ -140,7 +145,7 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			}
 
 			// Generate Lua script
-			script := gen.DrawPixels(input.LayerName, input.FrameNumber, pixels)
+			script := gen.DrawPixels(input.LayerName, input.FrameNumber, pixels, input.UsePalette)
 
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
@@ -190,7 +195,7 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			}
 
 			// Generate Lua script
-			script := gen.DrawLine(input.LayerName, input.FrameNumber, input.X1, input.Y1, input.X2, input.Y2, color, input.Thickness)
+			script := gen.DrawLine(input.LayerName, input.FrameNumber, input.X1, input.Y1, input.X2, input.Y2, color, input.Thickness, input.UsePalette)
 
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
@@ -240,7 +245,7 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			}
 
 			// Generate Lua script
-			script := gen.DrawRectangle(input.LayerName, input.FrameNumber, input.X, input.Y, input.Width, input.Height, color, input.Filled)
+			script := gen.DrawRectangle(input.LayerName, input.FrameNumber, input.X, input.Y, input.Width, input.Height, color, input.Filled, input.UsePalette)
 
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
@@ -290,7 +295,7 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			}
 
 			// Generate Lua script
-			script := gen.DrawCircle(input.LayerName, input.FrameNumber, input.CenterX, input.CenterY, input.Radius, color, input.Filled)
+			script := gen.DrawCircle(input.LayerName, input.FrameNumber, input.CenterX, input.CenterY, input.Radius, color, input.Filled, input.UsePalette)
 
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
@@ -340,7 +345,7 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			}
 
 			// Generate Lua script
-			script := gen.FillArea(input.LayerName, input.FrameNumber, input.X, input.Y, color, input.Tolerance)
+			script := gen.FillArea(input.LayerName, input.FrameNumber, input.X, input.Y, color, input.Tolerance, input.UsePalette)
 
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)

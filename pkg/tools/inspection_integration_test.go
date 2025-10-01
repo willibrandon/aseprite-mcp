@@ -40,7 +40,7 @@ func TestIntegration_GetPixels_SinglePixel(t *testing.T) {
 			Color: aseprite.Color{R: 255, G: 0, B: 0, A: 255},
 		},
 	}
-	drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw pixel: %v", err)
@@ -93,7 +93,7 @@ func TestIntegration_GetPixels_MultiplePixels(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw a 3x3 red rectangle
-	drawScript := gen.DrawRectangle("Layer 1", 1, 2, 2, 3, 3, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true)
+	drawScript := gen.DrawRectangle("Layer 1", 1, 2, 2, 3, 3, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw rectangle: %v", err)
@@ -180,7 +180,7 @@ func TestIntegration_GetPixels_PartialOverlap(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Draw a 5x5 green square at (10, 10)
-	drawScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 5, 5, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, true)
+	drawScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 5, 5, aseprite.Color{R: 0, G: 255, B: 0, A: 255}, true, false)
 	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to draw rectangle: %v", err)
@@ -246,7 +246,7 @@ func TestIntegration_GetPixels_DifferentColorModes(t *testing.T) {
 					Color: aseprite.Color{R: 255, G: 255, B: 255, A: 255},
 				},
 			}
-			drawScript := gen.DrawPixels("Layer 1", 1, pixels)
+			drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
 			_, err = client.ExecuteLua(ctx, drawScript, spritePath)
 			if err != nil {
 				t.Fatalf("Failed to draw pixel: %v", err)
@@ -290,7 +290,7 @@ func TestIntegration_GetPixels_LargeRegion(t *testing.T) {
 	defer os.Remove(spritePath)
 
 	// Fill the entire canvas with blue
-	fillScript := gen.FillArea("Layer 1", 1, 50, 50, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 0)
+	fillScript := gen.FillArea("Layer 1", 1, 50, 50, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 0, false)
 	_, err = client.ExecuteLua(ctx, fillScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to fill area: %v", err)
