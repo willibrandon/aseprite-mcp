@@ -67,7 +67,7 @@ func suggestAntialiasing(ctx context.Context, client *aseprite.Client, gen *asep
 	}
 
 	// Build pixel grid for edge detection
-	pixelGrid := buildPixelGrid(pixels, region)
+	pixelGrid := buildPixelGrid(pixels)
 
 	// Detect jagged edges and generate suggestions
 	suggestions := detectJaggedEdges(pixelGrid, region, input.Threshold, input.UsePalette)
@@ -90,7 +90,7 @@ func suggestAntialiasing(ctx context.Context, client *aseprite.Client, gen *asep
 }
 
 // buildPixelGrid creates a 2D map of colors for edge detection.
-func buildPixelGrid(pixels []PixelData, region Region) map[int]map[int]string {
+func buildPixelGrid(pixels []PixelData) map[int]map[int]string {
 	grid := make(map[int]map[int]string)
 
 	for _, p := range pixels {
@@ -104,8 +104,12 @@ func buildPixelGrid(pixels []PixelData, region Region) map[int]map[int]string {
 }
 
 // detectJaggedEdges identifies diagonal edges that would benefit from antialiasing.
+// Note: threshold parameter reserved for future edge detection sensitivity tuning.
+// Note: usePalette is used during application (applyAntialiasingHelper), not detection.
 func detectJaggedEdges(grid map[int]map[int]string, region Region, threshold int, usePalette bool) []EdgeSuggestion {
 	var suggestions []EdgeSuggestion
+	_ = threshold  // Reserved for future use
+	_ = usePalette // Used during application, not detection
 
 	// Scan for jagged diagonal patterns
 	for y := region.Y; y < region.Y+region.Height-1; y++ {
@@ -118,25 +122,25 @@ func detectJaggedEdges(grid map[int]map[int]string, region Region, threshold int
 			// Check for diagonal stair-step patterns (4 directions)
 			// Northeast diagonal: ..##
 			//                     .##.
-			if suggestion := checkDiagonalNE(grid, x, y, current, threshold, usePalette); suggestion != nil {
+			if suggestion := checkDiagonalNE(grid, x, y, current); suggestion != nil {
 				suggestions = append(suggestions, *suggestion)
 			}
 
 			// Northwest diagonal: ##..
 			//                     .##.
-			if suggestion := checkDiagonalNW(grid, x, y, current, threshold, usePalette); suggestion != nil {
+			if suggestion := checkDiagonalNW(grid, x, y, current); suggestion != nil {
 				suggestions = append(suggestions, *suggestion)
 			}
 
 			// Southeast diagonal: .##.
 			//                     ..##
-			if suggestion := checkDiagonalSE(grid, x, y, current, threshold, usePalette); suggestion != nil {
+			if suggestion := checkDiagonalSE(grid, x, y, current); suggestion != nil {
 				suggestions = append(suggestions, *suggestion)
 			}
 
 			// Southwest diagonal: .##.
 			//                     ##..
-			if suggestion := checkDiagonalSW(grid, x, y, current, threshold, usePalette); suggestion != nil {
+			if suggestion := checkDiagonalSW(grid, x, y, current); suggestion != nil {
 				suggestions = append(suggestions, *suggestion)
 			}
 		}
@@ -146,7 +150,7 @@ func detectJaggedEdges(grid map[int]map[int]string, region Region, threshold int
 }
 
 // checkDiagonalNE checks for northeast diagonal jagged edge.
-func checkDiagonalNE(grid map[int]map[int]string, x, y int, current string, threshold int, usePalette bool) *EdgeSuggestion {
+func checkDiagonalNE(grid map[int]map[int]string, x, y int, current string) *EdgeSuggestion {
 	// Pattern: current at (x,y), same color at (x+1,y)
 	//          empty at (x,y+1), same color at (x+1,y+1)
 	// Suggests filling (x,y+1) with intermediate color
@@ -156,11 +160,8 @@ func checkDiagonalNE(grid map[int]map[int]string, x, y int, current string, thre
 	belowRight := getPixel(grid, x+1, y+1)
 
 	if right == current && (below == "" || isTransparent(below)) && belowRight == current {
+		// Blend colors to create smooth transition
 		suggested := blendColors(current, below)
-		if usePalette {
-			// TODO: Snap to palette (would need palette data passed in)
-			// For now, just use the blend
-		}
 
 		return &EdgeSuggestion{
 			X:              x,
@@ -176,7 +177,7 @@ func checkDiagonalNE(grid map[int]map[int]string, x, y int, current string, thre
 }
 
 // checkDiagonalNW checks for northwest diagonal jagged edge.
-func checkDiagonalNW(grid map[int]map[int]string, x, y int, current string, threshold int, usePalette bool) *EdgeSuggestion {
+func checkDiagonalNW(grid map[int]map[int]string, x, y int, current string) *EdgeSuggestion {
 	// Pattern: same color at (x-1,y), current at (x,y)
 	//          same color at (x-1,y+1), empty at (x,y+1)
 	// Suggests filling (x,y+1) with intermediate color
@@ -206,7 +207,7 @@ func checkDiagonalNW(grid map[int]map[int]string, x, y int, current string, thre
 }
 
 // checkDiagonalSE checks for southeast diagonal jagged edge.
-func checkDiagonalSE(grid map[int]map[int]string, x, y int, current string, threshold int, usePalette bool) *EdgeSuggestion {
+func checkDiagonalSE(grid map[int]map[int]string, x, y int, current string) *EdgeSuggestion {
 	// Pattern: empty at (x,y), current at (x+1,y)
 	//          current at (x,y+1), current at (x+1,y+1)
 	// Suggests filling (x,y) with intermediate color
@@ -216,7 +217,7 @@ func checkDiagonalSE(grid map[int]map[int]string, x, y int, current string, thre
 	belowRight := getPixel(grid, x+1, y+1)
 
 	if (current == "" || isTransparent(current)) && right != "" && !isTransparent(right) &&
-	   below == right && belowRight == right {
+		below == right && belowRight == right {
 		suggested := blendColors(right, current)
 
 		return &EdgeSuggestion{
@@ -233,7 +234,7 @@ func checkDiagonalSE(grid map[int]map[int]string, x, y int, current string, thre
 }
 
 // checkDiagonalSW checks for southwest diagonal jagged edge.
-func checkDiagonalSW(grid map[int]map[int]string, x, y int, current string, threshold int, usePalette bool) *EdgeSuggestion {
+func checkDiagonalSW(grid map[int]map[int]string, x, y int, current string) *EdgeSuggestion {
 	// Pattern: current at (x-1,y), empty at (x,y)
 	//          current at (x-1,y+1), current at (x,y+1)
 	// Suggests filling (x,y) with intermediate color
@@ -247,7 +248,7 @@ func checkDiagonalSW(grid map[int]map[int]string, x, y int, current string, thre
 	belowLeft := getPixel(grid, x-1, y+1)
 
 	if left != "" && !isTransparent(left) && (current == "" || isTransparent(current)) &&
-	   below == left && belowLeft == left {
+		below == left && belowLeft == left {
 		suggested := blendColors(left, current)
 
 		return &EdgeSuggestion{
@@ -307,14 +308,14 @@ func parseHexColor(hex string) (r, g, b, a uint8) {
 		hex = hex[1:]
 	}
 
-	// Parse RGB
-	fmt.Sscanf(hex[0:2], "%02x", &r)
-	fmt.Sscanf(hex[2:4], "%02x", &g)
-	fmt.Sscanf(hex[4:6], "%02x", &b)
+	// Parse RGB (errors ignored as format is validated by caller)
+	_, _ = fmt.Sscanf(hex[0:2], "%02x", &r)
+	_, _ = fmt.Sscanf(hex[2:4], "%02x", &g)
+	_, _ = fmt.Sscanf(hex[4:6], "%02x", &b)
 
 	// Parse alpha if present
 	if len(hex) >= 8 {
-		fmt.Sscanf(hex[6:8], "%02x", &a)
+		_, _ = fmt.Sscanf(hex[6:8], "%02x", &a)
 	} else {
 		a = 255
 	}

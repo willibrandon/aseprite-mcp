@@ -27,12 +27,12 @@ type AnalyzeReferenceInput struct {
 
 // AnalyzeReferenceOutput defines the output for the analyze_reference tool.
 type AnalyzeReferenceOutput struct {
-	Palette        []aseprite.PaletteColor   `json:"palette"`
-	BrightnessMap  *aseprite.BrightnessMap   `json:"brightness_map"`
-	EdgeMap        *aseprite.EdgeMap         `json:"edge_map"`
-	Composition    *aseprite.Composition     `json:"composition"`
-	DitheringZones []DitheringZone           `json:"dithering_zones"`
-	Metadata       *AnalysisMetadata         `json:"metadata"`
+	Palette        []aseprite.PaletteColor `json:"palette"`
+	BrightnessMap  *aseprite.BrightnessMap `json:"brightness_map"`
+	EdgeMap        *aseprite.EdgeMap       `json:"edge_map"`
+	Composition    *aseprite.Composition   `json:"composition"`
+	DitheringZones []DitheringZone         `json:"dithering_zones"`
+	Metadata       *AnalysisMetadata       `json:"metadata"`
 }
 
 // DitheringZone represents a suggested area for dithering.
@@ -49,9 +49,9 @@ type AnalysisMetadata struct {
 	SourceDimensions Dimensions `json:"source_dimensions"`
 	TargetDimensions Dimensions `json:"target_dimensions"`
 	ScaleFactor      float64    `json:"scale_factor"`
-	DominantHue      float64    `json:"dominant_hue"`      // 0-360 degrees
-	ColorHarmony     string     `json:"color_harmony"`     // "complementary", "analogous", etc.
-	ContrastRatio    string     `json:"contrast_ratio"`    // "low", "medium", "high"
+	DominantHue      float64    `json:"dominant_hue"`   // 0-360 degrees
+	ColorHarmony     string     `json:"color_harmony"`  // "complementary", "analogous", etc.
+	ContrastRatio    string     `json:"contrast_ratio"` // "low", "medium", "high"
 }
 
 // Dimensions represents width and height.
@@ -164,7 +164,7 @@ func RegisterAnalysisTools(server *mcp.Server, client *aseprite.Client, gen *ase
 			}
 
 			// Suggest dithering zones
-			ditheringZones := suggestDitheringZones(palette, brightnessMap, edgeMap, input.TargetWidth, input.TargetHeight)
+			ditheringZones := suggestDitheringZones(palette, brightnessMap, edgeMap)
 
 			// Calculate metadata
 			metadata := calculateMetadata(palette, sourceWidth, sourceHeight, input.TargetWidth, input.TargetHeight)
@@ -189,7 +189,7 @@ func RegisterAnalysisTools(server *mcp.Server, client *aseprite.Client, gen *ase
 }
 
 // suggestDitheringZones analyzes the image and suggests areas that would benefit from dithering.
-func suggestDitheringZones(palette []aseprite.PaletteColor, brightnessMap *aseprite.BrightnessMap, edgeMap *aseprite.EdgeMap, width, height int) []DitheringZone {
+func suggestDitheringZones(palette []aseprite.PaletteColor, brightnessMap *aseprite.BrightnessMap, edgeMap *aseprite.EdgeMap) []DitheringZone {
 	zones := make([]DitheringZone, 0)
 
 	// Analyze brightness map for gradients

@@ -395,11 +395,11 @@ func hexToHSL(hexColor string) (h, s, l float64) {
 	// Remove # prefix
 	hexColor = hexColor[1:]
 
-	// Parse RGB
+	// Parse RGB (errors ignored as format is validated by caller)
 	var r, g, b int
-	fmt.Sscanf(hexColor[:2], "%x", &r)
-	fmt.Sscanf(hexColor[2:4], "%x", &g)
-	fmt.Sscanf(hexColor[4:6], "%x", &b)
+	_, _ = fmt.Sscanf(hexColor[:2], "%x", &r)
+	_, _ = fmt.Sscanf(hexColor[2:4], "%x", &g)
+	_, _ = fmt.Sscanf(hexColor[4:6], "%x", &b)
 
 	// Normalize to 0-1
 	rf := float64(r) / 255.0

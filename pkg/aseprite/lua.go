@@ -758,11 +758,12 @@ func (g *LuaGenerator) SetPalette(colors []string) string {
 		}
 
 		var r, g, b, a int
-		fmt.Sscanf(hexColor[:2], "%x", &r)
-		fmt.Sscanf(hexColor[2:4], "%x", &g)
-		fmt.Sscanf(hexColor[4:6], "%x", &b)
+		// Parse hex color components (errors ignored as format is validated above)
+		_, _ = fmt.Sscanf(hexColor[:2], "%x", &r)
+		_, _ = fmt.Sscanf(hexColor[2:4], "%x", &g)
+		_, _ = fmt.Sscanf(hexColor[4:6], "%x", &b)
 		if len(hexColor) == 8 {
-			fmt.Sscanf(hexColor[6:8], "%x", &a)
+			_, _ = fmt.Sscanf(hexColor[6:8], "%x", &a)
 		} else {
 			a = 255
 		}
@@ -1025,11 +1026,12 @@ func parseHexColor(hexColor string) Color {
 	}
 
 	var r, g, b, a int
-	fmt.Sscanf(hexColor[:2], "%x", &r)
-	fmt.Sscanf(hexColor[2:4], "%x", &g)
-	fmt.Sscanf(hexColor[4:6], "%x", &b)
+	// Parse hex color components (errors ignored as format is validated above)
+	_, _ = fmt.Sscanf(hexColor[:2], "%x", &r)
+	_, _ = fmt.Sscanf(hexColor[2:4], "%x", &g)
+	_, _ = fmt.Sscanf(hexColor[4:6], "%x", &b)
 	if len(hexColor) == 8 {
-		fmt.Sscanf(hexColor[6:8], "%x", &a)
+		_, _ = fmt.Sscanf(hexColor[6:8], "%x", &a)
 	} else {
 		a = 255
 	}

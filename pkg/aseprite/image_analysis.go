@@ -3,7 +3,6 @@ package aseprite
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"math"
 
 	"github.com/nfnt/resize"
@@ -17,7 +16,7 @@ type BrightnessMap struct {
 
 // EdgeMap represents detected edges in an image.
 type EdgeMap struct {
-	Grid       [][]int   `json:"grid"`        // 2D array where 1 = edge, 0 = no edge
+	Grid       [][]int    `json:"grid"`        // 2D array where 1 = edge, 0 = no edge
 	MajorEdges []EdgeLine `json:"major_edges"` // Significant edge contours
 }
 
@@ -156,7 +155,7 @@ func DetectEdges(img image.Image, threshold int) (*EdgeMap, error) {
 	}
 
 	// Find major edges (contours with high strength)
-	majorEdges := findMajorEdges(edgeMap, gradientMagnitudes, width, height, threshold)
+	majorEdges := findMajorEdges(edgeMap, gradientMagnitudes, width, height)
 
 	return &EdgeMap{
 		Grid:       edgeMap,
@@ -166,7 +165,7 @@ func DetectEdges(img image.Image, threshold int) (*EdgeMap, error) {
 
 // findMajorEdges identifies significant edge contours from the edge map.
 // Returns simplified edge lines representing major features.
-func findMajorEdges(edgeMap [][]int, magnitudes [][]float64, width, height, threshold int) []EdgeLine {
+func findMajorEdges(edgeMap [][]int, magnitudes [][]float64, width, height int) []EdgeLine {
 	majorEdges := make([]EdgeLine, 0)
 
 	// Simple approach: scan for continuous edge segments
@@ -410,14 +409,4 @@ func findFocalPoints(edgeMap *EdgeMap, width, height int) []FocalPoint {
 	}
 
 	return focalPoints
-}
-
-// toGray converts a color to grayscale using Rec. 709 luma.
-func toGray(c color.Color) uint8 {
-	r, g, b, _ := c.RGBA()
-	r8 := uint8(r >> 8)
-	g8 := uint8(g >> 8)
-	b8 := uint8(b >> 8)
-	gray := 0.2126*float64(r8) + 0.7152*float64(g8) + 0.0722*float64(b8)
-	return uint8(gray)
 }

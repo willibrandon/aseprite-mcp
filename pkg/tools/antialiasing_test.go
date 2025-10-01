@@ -148,8 +148,7 @@ func TestBuildPixelGrid(t *testing.T) {
 		{X: 1, Y: 1, Color: "#FFFFFFFF"},
 	}
 
-	region := Region{X: 0, Y: 0, Width: 2, Height: 2}
-	grid := buildPixelGrid(pixels, region)
+	grid := buildPixelGrid(pixels)
 
 	tests := []struct {
 		x, y int
@@ -210,7 +209,7 @@ func TestCheckDiagonalNE(t *testing.T) {
 	}
 
 	current := "#FF0000FF"
-	suggestion := checkDiagonalNE(grid, 0, 0, current, 128, false)
+	suggestion := checkDiagonalNE(grid, 0, 0, current)
 
 	if suggestion == nil {
 		t.Fatal("Expected suggestion for NE diagonal, got nil")
@@ -239,7 +238,7 @@ func TestCheckDiagonalSE(t *testing.T) {
 	}
 
 	current := "" // empty pixel
-	suggestion := checkDiagonalSE(grid, 0, 0, current, 128, false)
+	suggestion := checkDiagonalSE(grid, 0, 0, current)
 
 	if suggestion == nil {
 		t.Fatal("Expected suggestion for SE diagonal, got nil")
@@ -258,33 +257,33 @@ func TestFindClosestPaletteColor(t *testing.T) {
 	palette := []string{"#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFFFF"}
 
 	tests := []struct {
-		name string
+		name    string
 		r, g, b uint8
-		want string
+		want    string
 	}{
 		{
 			name: "exact match black",
-			r: 0, g: 0, b: 0,
+			r:    0, g: 0, b: 0,
 			want: "#000000",
 		},
 		{
 			name: "exact match red",
-			r: 255, g: 0, b: 0,
+			r:    255, g: 0, b: 0,
 			want: "#FF0000",
 		},
 		{
 			name: "close to red",
-			r: 200, g: 50, b: 50,
+			r:    200, g: 50, b: 50,
 			want: "#FF0000",
 		},
 		{
 			name: "close to white",
-			r: 240, g: 240, b: 240,
+			r:    240, g: 240, b: 240,
 			want: "#FFFFFF",
 		},
 		{
 			name: "close to green",
-			r: 50, g: 200, b: 50,
+			r:    50, g: 200, b: 50,
 			want: "#00FF00",
 		},
 	}

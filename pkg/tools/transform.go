@@ -73,11 +73,11 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 				if strings.Contains(infoOutput, `"width":`) {
 					parts := strings.Split(infoOutput, `"width":`)
 					if len(parts) > 1 {
-						fmt.Sscanf(parts[1], "%d", &sourceWidth)
+						_, _ = fmt.Sscanf(parts[1], "%d", &sourceWidth)
 					}
 					parts = strings.Split(infoOutput, `"height":`)
 					if len(parts) > 1 {
-						fmt.Sscanf(parts[1], "%d", &sourceHeight)
+						_, _ = fmt.Sscanf(parts[1], "%d", &sourceHeight)
 					}
 				}
 				if sourceWidth == 0 || sourceHeight == 0 {
