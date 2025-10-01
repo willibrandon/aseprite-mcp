@@ -89,7 +89,8 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
   - `animation.go` - Animation and timeline operations
   - `inspection.go` - Pixel data inspection and reading
   - `analysis.go` - Reference image analysis (palette extraction, edge detection, composition)
-  - `dithering.go` - Dithering patterns for gradients and textures
+  - `dithering.go` - Dithering patterns for gradients and textures (15 patterns)
+  - `palette_tools.go` - Palette management (set_palette, apply_shading, analyze_palette_harmonies)
   - `transform.go` - Transform operations (downsampling)
   - `export.go` - Export and import operations
 - `internal/testutil/` - Testing utilities (no mocks)
@@ -123,8 +124,11 @@ Core functionality implemented and tested:
 - **Professional Pixel Art Tools:**
   - Reference image analysis (k-means palette extraction, brightness maps, Sobel edge detection)
   - Composition analysis (rule of thirds, focal points)
-  - Dithering with Bayer matrices (2x2, 4x4, 8x8) and checkerboard patterns
+  - Dithering with 15 patterns: Bayer matrices (2x2, 4x4, 8x8), checkerboard, and texture patterns (grass, water, stone, cloud, brick, dots, diagonal, cross, noise, horizontal_lines, vertical_lines)
   - Image downsampling with box filter for pixel art conversion
+  - Palette management (set_palette with 1-256 colors)
+  - Palette-constrained shading (smooth, hard, pillow styles with 8 light directions)
+  - Palette harmony analysis (complementary, triadic, analogous relationships, color temperature)
 - Sprite export (PNG, GIF, JPG, BMP)
 - Metadata retrieval
 - Example client implementation (examples/client/main.go)

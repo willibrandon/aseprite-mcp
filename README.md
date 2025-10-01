@@ -124,8 +124,11 @@ Then use natural language to create sprites:
 | Tool | Description |
 |------|-------------|
 | `analyze_reference` | Extract palette, brightness map, edges, and composition from reference images |
-| `draw_with_dither` | Fill region with dithering patterns (Bayer 2x2/4x4/8x8, checkerboard) for gradients and textures |
+| `draw_with_dither` | Fill region with dithering patterns (15 patterns: Bayer, checkerboard, grass, water, stone, cloud, brick, etc.) |
 | `downsample_image` | Downsample high-res images to pixel art dimensions using box filter |
+| `set_palette` | Set sprite's color palette to specified colors (supports 1-256 colors) |
+| `apply_shading` | Apply palette-constrained shading based on light direction (smooth, hard, or pillow styles) |
+| `analyze_palette_harmonies` | Analyze palette for complementary, triadic, analogous relationships and color temperature |
 
 ### Animation
 | Tool | Description |

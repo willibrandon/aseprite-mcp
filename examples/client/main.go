@@ -311,6 +311,110 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Exported: {DitherPng}", ditherPngPath)
 
+	// Step 13: Analyze palette harmonies
+	logger.Information("")
+	logger.Information("Step 13: Analyzing palette harmonies from our colors...")
+	harmonyResp, err := callTool(ctx, session, "analyze_palette_harmonies", map[string]any{
+		"palette": []string{"#FF0000", "#00FF00", "#FFFF00", "#FF00FF", "#0066CC"},
+	})
+	if err != nil {
+		return fmt.Errorf("analyze_palette_harmonies failed: %w", err)
+	}
+	var harmonyResult struct {
+		Complementary []struct {
+			Color1 string `json:"color1"`
+			Color2 string `json:"color2"`
+		} `json:"complementary"`
+		Temperature struct {
+			Dominant string `json:"dominant"`
+		} `json:"temperature"`
+	}
+	if err := json.Unmarshal([]byte(harmonyResp), &harmonyResult); err != nil {
+		return fmt.Errorf("failed to parse harmony result: %w", err)
+	}
+	logger.Information("  Dominant temperature: {Temp}", harmonyResult.Temperature.Dominant)
+	if len(harmonyResult.Complementary) > 0 {
+		logger.Information("  Found {Count} complementary pairs", len(harmonyResult.Complementary))
+	}
+
+	// Step 14: Create sprite with custom palette
+	logger.Information("")
+	logger.Information("Step 14: Creating sprite with limited palette...")
+	paletteResp, err := callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      32,
+		"height":     32,
+		"color_mode": "indexed",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for palette failed: %w", err)
+	}
+	var paletteResult struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(paletteResp), &paletteResult); err != nil {
+		return fmt.Errorf("failed to parse palette canvas result: %w", err)
+	}
+	paletteSprite := paletteResult.FilePath
+	logger.Information("  Created: {PaletteSprite}", paletteSprite)
+
+	// Set a custom 8-color palette
+	if _, err := callTool(ctx, session, "set_palette", map[string]any{
+		"sprite_path": paletteSprite,
+		"colors":      []string{"#000000", "#1D2B53", "#7E2553", "#008751", "#AB5236", "#5F574F", "#C2C3C7", "#FFF1E8"},
+	}); err != nil {
+		return fmt.Errorf("set_palette failed: %w", err)
+	}
+	logger.Information("  Palette set successfully (8 colors)")
+
+	// Step 15: Apply palette-constrained shading
+	logger.Information("")
+	logger.Information("Step 15: Drawing shape with palette-constrained shading...")
+	// Draw a base circle
+	if _, err := callTool(ctx, session, "draw_circle", map[string]any{
+		"sprite_path":  paletteSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"center_x":     16,
+		"center_y":     16,
+		"radius":       12,
+		"color":        "#AB5236",
+		"filled":       true,
+	}); err != nil {
+		return fmt.Errorf("draw_circle for shading failed: %w", err)
+	}
+
+	// Apply shading
+	if _, err := callTool(ctx, session, "apply_shading", map[string]any{
+		"sprite_path":  paletteSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"region": map[string]any{
+			"x":      4,
+			"y":      4,
+			"width":  24,
+			"height": 24,
+		},
+		"palette":        []string{"#1D2B53", "#7E2553", "#AB5236", "#C2C3C7", "#FFF1E8"},
+		"light_direction": "top_left",
+		"intensity":      0.7,
+		"style":          "smooth",
+	}); err != nil {
+		return fmt.Errorf("apply_shading failed: %w", err)
+	}
+	logger.Information("  Shading applied successfully")
+
+	// Export shaded sprite
+	shadedPngPath := filepath.Join(outputDir, "shaded-sphere.png")
+	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
+		"sprite_path":  paletteSprite,
+		"output_path":  shadedPngPath,
+		"format":       "png",
+		"frame_number": 0,
+	}); err != nil {
+		return fmt.Errorf("export_sprite shaded failed: %w", err)
+	}
+	logger.Information("  Exported: {ShadedPng}", shadedPngPath)
+
 	return nil
 }
 

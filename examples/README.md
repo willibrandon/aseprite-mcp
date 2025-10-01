@@ -13,6 +13,9 @@ The `client/` directory contains a complete example MCP client that demonstrates
 - Filling areas with colors
 - Reading pixels for verification (using get_pixels with pagination)
 - Applying dithering patterns for professional gradients
+- Analyzing palette harmonies (complementary, triadic, temperature)
+- Setting custom limited palettes
+- Applying palette-constrained shading with light direction
 - Retrieving sprite metadata
 - Exporting to GIF and PNG
 
@@ -47,6 +50,7 @@ The example creates:
 - `../sprites/animated-example.gif` - 4-frame animation with growing colored circles
 - `../sprites/frame2-example.png` - Single frame export (frame 2)
 - `../sprites/dithered-gradient.png` - Demonstration of Bayer 4x4 dithering pattern
+- `../sprites/shaded-sphere.png` - Palette-constrained shaded sphere with smooth lighting
 
 ## Example Output
 
@@ -72,6 +76,9 @@ Available tools:
   - draw_with_dither: Fill region with dithering patterns for gradients/textures
   - analyze_reference: Extract palette, edges, and composition from reference images
   - downsample_image: Convert high-res images to pixel art dimensions
+  - set_palette: Set sprite's color palette
+  - apply_shading: Apply palette-constrained shading with light direction
+  - analyze_palette_harmonies: Analyze color relationships and temperature
   - export_sprite: Export sprite to image file
 
 Step 1: Creating 64x64 RGB canvas...
@@ -113,6 +120,18 @@ Step 11: Applying Bayer 4x4 dithering pattern...
 
 Step 12: Exporting dithered gradient...
   Exported: ../sprites/dithered-gradient.png
+
+Step 13: Analyzing palette harmonies from our colors...
+  Dominant temperature: warm
+  Found 2 complementary pairs
+
+Step 14: Creating sprite with limited palette...
+  Created: /tmp/aseprite-mcp/sprite-456789.aseprite
+  Palette set successfully (8 colors)
+
+Step 15: Drawing shape with palette-constrained shading...
+  Shading applied successfully
+  Exported: ../sprites/shaded-sphere.png
 
 Example completed successfully!
 ```

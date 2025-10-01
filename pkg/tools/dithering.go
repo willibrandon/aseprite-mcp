@@ -18,7 +18,7 @@ type DrawWithDitherInput struct {
 	Region      RegionInput    `json:"region" jsonschema:"Rectangular region to fill with dithering"`
 	Color1      string         `json:"color1" jsonschema:"First color (hex #RRGGBB or #RRGGBBAA)"`
 	Color2      string         `json:"color2" jsonschema:"Second color (hex #RRGGBB or #RRGGBBAA)"`
-	Pattern     string         `json:"pattern" jsonschema:"Dithering pattern: bayer_2x2, bayer_4x4, bayer_8x8, checkerboard"`
+	Pattern     string         `json:"pattern" jsonschema:"Dithering pattern: bayer_2x2|bayer_4x4|bayer_8x8|checkerboard|grass|water|stone|cloud|brick|dots|diagonal|cross|noise|horizontal_lines|vertical_lines"`
 	Density     float64        `json:"density,omitempty" jsonschema:"Ratio of color1 to color2 (0.0-1.0, default: 0.5)"`
 }
 
@@ -37,7 +37,7 @@ func RegisterDitheringTools(server *mcp.Server, client *aseprite.Client, gen *as
 		server,
 		&mcp.Tool{
 			Name:        "draw_with_dither",
-			Description: "Fill a region with a dithering pattern to create smooth gradients and textures. Supports Bayer matrix patterns (2x2, 4x4, 8x8) for ordered dithering and checkerboard for simple 50/50 blends. Use density parameter to control the ratio of color1 to color2 (0.0 = all color1, 1.0 = all color2, 0.5 = even mix). Essential for professional pixel art gradients and textures.",
+			Description: "Fill a region with a dithering pattern to create smooth gradients and textures. Supports 15 patterns: Bayer matrix (bayer_2x2, bayer_4x4, bayer_8x8) for ordered dithering, checkerboard for 50/50 blends, and texture patterns (grass, water, stone, cloud, brick, dots, diagonal, cross, noise, horizontal_lines, vertical_lines) for organic effects. Use density parameter to control the ratio of color1 to color2 (0.0 = all color1, 1.0 = all color2, 0.5 = even mix). Essential for professional pixel art gradients and textures.",
 		},
 		func(ctx context.Context, req *mcp.CallToolRequest, input DrawWithDitherInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
 			logger.Debug("draw_with_dither tool called",
@@ -63,13 +63,24 @@ func RegisterDitheringTools(server *mcp.Server, client *aseprite.Client, gen *as
 
 			// Validate pattern
 			validPatterns := map[string]bool{
-				"bayer_2x2":    true,
-				"bayer_4x4":    true,
-				"bayer_8x8":    true,
-				"checkerboard": true,
+				"bayer_2x2":        true,
+				"bayer_4x4":        true,
+				"bayer_8x8":        true,
+				"checkerboard":     true,
+				"grass":            true,
+				"water":            true,
+				"stone":            true,
+				"cloud":            true,
+				"brick":            true,
+				"dots":             true,
+				"diagonal":         true,
+				"cross":            true,
+				"noise":            true,
+				"horizontal_lines": true,
+				"vertical_lines":   true,
 			}
 			if !validPatterns[input.Pattern] {
-				return nil, nil, fmt.Errorf("invalid pattern: %s (must be bayer_2x2, bayer_4x4, bayer_8x8, or checkerboard)", input.Pattern)
+				return nil, nil, fmt.Errorf("invalid pattern: %s (must be one of: bayer_2x2, bayer_4x4, bayer_8x8, checkerboard, grass, water, stone, cloud, brick, dots, diagonal, cross, noise, horizontal_lines, vertical_lines)", input.Pattern)
 			}
 
 			// Validate colors (basic hex format check)

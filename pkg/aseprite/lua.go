@@ -747,6 +747,107 @@ local matrixSize = 8`
 	case "checkerboard":
 		matrixCode = `local matrix = {{0, 1}, {1, 0}}
 local matrixSize = 2`
+	case "grass":
+		matrixCode = `local matrix = {
+	{1, 0, 1, 0, 1, 0},
+	{0, 1, 1, 0, 0, 1},
+	{1, 1, 0, 1, 0, 0},
+	{0, 1, 0, 1, 1, 0},
+	{1, 0, 0, 0, 1, 1},
+	{0, 0, 1, 1, 0, 1}
+}
+local matrixSize = 6`
+	case "water":
+		matrixCode = `local matrix = {
+	{0, 0, 1, 1, 0, 0},
+	{0, 1, 1, 1, 1, 0},
+	{1, 1, 0, 0, 1, 1},
+	{1, 0, 0, 0, 0, 1},
+	{0, 1, 1, 1, 1, 0},
+	{0, 0, 1, 1, 0, 0}
+}
+local matrixSize = 6`
+	case "stone":
+		matrixCode = `local matrix = {
+	{0, 0, 0, 1, 1, 0},
+	{0, 1, 0, 0, 1, 1},
+	{0, 0, 1, 1, 0, 0},
+	{1, 1, 0, 0, 0, 1},
+	{1, 0, 0, 1, 1, 0},
+	{0, 1, 1, 0, 0, 0}
+}
+local matrixSize = 6`
+	case "cloud":
+		matrixCode = `local matrix = {
+	{0, 0, 0, 0, 1, 1},
+	{0, 0, 0, 1, 1, 1},
+	{0, 0, 1, 1, 1, 0},
+	{0, 1, 1, 1, 0, 0},
+	{1, 1, 1, 0, 0, 0},
+	{1, 1, 0, 0, 0, 0}
+}
+local matrixSize = 6`
+	case "brick":
+		matrixCode = `local matrix = {
+	{0, 0, 0, 0, 1, 0, 0, 0},
+	{0, 0, 0, 0, 1, 0, 0, 0},
+	{1, 1, 1, 1, 1, 1, 1, 1},
+	{0, 0, 1, 0, 0, 0, 0, 1},
+	{0, 0, 1, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1},
+	{0, 0, 0, 0, 1, 0, 0, 0},
+	{0, 0, 0, 0, 1, 0, 0, 0}
+}
+local matrixSize = 8`
+	case "dots":
+		matrixCode = `local matrix = {
+	{1, 0, 0, 0},
+	{0, 0, 0, 0},
+	{0, 0, 1, 0},
+	{0, 0, 0, 0}
+}
+local matrixSize = 4`
+	case "diagonal":
+		matrixCode = `local matrix = {
+	{1, 0, 0, 0},
+	{0, 1, 0, 0},
+	{0, 0, 1, 0},
+	{0, 0, 0, 1}
+}
+local matrixSize = 4`
+	case "cross":
+		matrixCode = `local matrix = {
+	{0, 1, 0},
+	{1, 1, 1},
+	{0, 1, 0}
+}
+local matrixSize = 3`
+	case "noise":
+		matrixCode = `local matrix = {
+	{1, 0, 1, 0, 0, 1},
+	{0, 1, 0, 1, 1, 0},
+	{1, 0, 0, 1, 0, 1},
+	{0, 1, 1, 0, 1, 0},
+	{0, 0, 1, 0, 1, 1},
+	{1, 1, 0, 1, 0, 0}
+}
+local matrixSize = 6`
+	case "horizontal_lines":
+		matrixCode = `local matrix = {
+	{1, 1, 1, 1},
+	{0, 0, 0, 0},
+	{1, 1, 1, 1},
+	{0, 0, 0, 0}
+}
+local matrixSize = 4`
+	case "vertical_lines":
+		matrixCode = `local matrix = {
+	{1, 0, 1, 0},
+	{1, 0, 1, 0},
+	{1, 0, 1, 0},
+	{1, 0, 1, 0}
+}
+local matrixSize = 4`
 	default:
 		return fmt.Sprintf(`error("Unknown dithering pattern: %s")`, pattern)
 	}
@@ -893,6 +994,219 @@ print("Cel linked successfully")`,
 		sourceFrame, sourceFrame,
 		targetFrame, targetFrame,
 		sourceFrame)
+}
+
+// ApplyShading generates a Lua script to apply palette-constrained shading based on light direction.
+func (g *LuaGenerator) ApplyShading(layerName string, frameNumber int, x, y, width, height int, palette []string, lightDirection string, intensity float64, style string) string {
+	escapedLayerName := EscapeString(layerName)
+
+	// Build palette color list
+	paletteColors := "{\n"
+	for i, hexColor := range palette {
+		c := parseHexColor(hexColor)
+		paletteColors += fmt.Sprintf("\t\t{r=%d, g=%d, b=%d, a=%d}", c.R, c.G, c.B, c.A)
+		if i < len(palette)-1 {
+			paletteColors += ","
+		}
+		paletteColors += "\n"
+	}
+	paletteColors += "\t}"
+
+	// Map light direction to offset vectors
+	var dx, dy int
+	switch lightDirection {
+	case "top_left":
+		dx, dy = -1, -1
+	case "top":
+		dx, dy = 0, -1
+	case "top_right":
+		dx, dy = 1, -1
+	case "left":
+		dx, dy = -1, 0
+	case "right":
+		dx, dy = 1, 0
+	case "bottom_left":
+		dx, dy = -1, 1
+	case "bottom":
+		dx, dy = 0, 1
+	case "bottom_right":
+		dx, dy = 1, 1
+	default:
+		dx, dy = -1, -1 // Default to top_left
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer
+local layer = nil
+for _, l in ipairs(spr.layers) do
+	if l.name == "%s" then
+		layer = l
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+-- Get frame
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+-- Get or create cel
+local cel = layer:cel(frame)
+if not cel then
+	error("No cel found in frame %d")
+end
+
+local img = cel.image
+
+-- Palette colors (ordered darkest to lightest)
+local palette = %s
+
+-- Light direction offset
+local lightDx = %d
+local lightDy = %d
+local intensity = %f
+local style = "%s"
+
+-- Helper: Find nearest palette color
+local function findNearestPaletteColor(r, g, b, a)
+	local minDist = math.huge
+	local nearestColor = palette[1]
+
+	for _, palColor in ipairs(palette) do
+		local dr = r - palColor.r
+		local dg = g - palColor.g
+		local db = b - palColor.b
+		local da = a - palColor.a
+		local dist = dr*dr + dg*dg + db*db + da*da
+
+		if dist < minDist then
+			minDist = dist
+			nearestColor = palColor
+		end
+	end
+
+	return app.pixelColor.rgba(nearestColor.r, nearestColor.g, nearestColor.b, nearestColor.a)
+end
+
+-- Helper: Calculate shading factor based on position and light direction
+local function calculateShadingFactor(px, py, regionX, regionY, regionW, regionH)
+	-- Normalize position to 0-1
+	local normX = (px - regionX) / regionW
+	local normY = (py - regionY) / regionH
+
+	-- Calculate distance from light source direction
+	local lightFactor = 0.5
+	if lightDx < 0 then
+		lightFactor = lightFactor + (1 - normX) * 0.5
+	elseif lightDx > 0 then
+		lightFactor = lightFactor + normX * 0.5
+	end
+
+	if lightDy < 0 then
+		lightFactor = lightFactor + (1 - normY) * 0.5
+	elseif lightDy > 0 then
+		lightFactor = lightFactor + normY * 0.5
+	end
+
+	-- Normalize to 0-1 range
+	lightFactor = math.max(0, math.min(1, lightFactor))
+
+	return lightFactor
+end
+
+-- Helper: Apply shading to color
+local function applyShading(pixelValue, shadingFactor)
+	local r = app.pixelColor.rgbaR(pixelValue)
+	local g = app.pixelColor.rgbaG(pixelValue)
+	local b = app.pixelColor.rgbaB(pixelValue)
+	local a = app.pixelColor.rgbaA(pixelValue)
+
+	if a == 0 then
+		return pixelValue  -- Skip transparent pixels
+	end
+
+	-- Apply shading based on style
+	local shadedR, shadedG, shadedB
+
+	if style == "hard" then
+		-- Hard shading: quantize to palette steps
+		local paletteIndex = math.floor(shadingFactor * (#palette - 1)) + 1
+		paletteIndex = math.max(1, math.min(#palette, paletteIndex))
+		return app.pixelColor.rgba(palette[paletteIndex].r, palette[paletteIndex].g, palette[paletteIndex].b, a)
+	elseif style == "smooth" then
+		-- Smooth shading: blend current color toward palette extremes
+		local targetBrightness = shadingFactor
+		local currentBrightness = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+		-- Blend toward target brightness
+		local blend = intensity * 0.5
+		shadedR = math.floor(r * (1 - blend) + r * (targetBrightness / math.max(0.01, currentBrightness)) * blend)
+		shadedG = math.floor(g * (1 - blend) + g * (targetBrightness / math.max(0.01, currentBrightness)) * blend)
+		shadedB = math.floor(b * (1 - blend) + b * (targetBrightness / math.max(0.01, currentBrightness)) * blend)
+	else  -- pillow (avoid - but included for completeness)
+		-- Pillow shading: center highlight regardless of light direction
+		local centerX = 0.5
+		local centerY = 0.5
+		local distFromCenter = math.sqrt((shadingFactor - centerX)^2 + (shadingFactor - centerY)^2)
+		local pillow = 1 - distFromCenter
+
+		shadedR = math.floor(r * (1 + pillow * intensity))
+		shadedG = math.floor(g * (1 + pillow * intensity))
+		shadedB = math.floor(b * (1 + pillow * intensity))
+	end
+
+	-- Clamp values
+	shadedR = math.max(0, math.min(255, shadedR))
+	shadedG = math.max(0, math.min(255, shadedG))
+	shadedB = math.max(0, math.min(255, shadedB))
+
+	-- Find nearest palette color
+	return findNearestPaletteColor(shadedR, shadedG, shadedB, a)
+end
+
+-- Apply shading to region
+local affectedPixels = 0
+
+app.transaction(function()
+	for py = %d, %d do
+		for px = %d, %d do
+			-- Adjust coordinates relative to cel position
+			local imgX = px - cel.position.x
+			local imgY = py - cel.position.y
+
+			-- Check if coordinates are within image bounds
+			if imgX >= 0 and imgX < img.width and imgY >= 0 and imgY < img.height then
+				local pixelValue = img:getPixel(imgX, imgY)
+				local alpha = app.pixelColor.rgbaA(pixelValue)
+
+				if alpha > 0 then
+					local shadingFactor = calculateShadingFactor(px, py, %d, %d, %d, %d)
+					local shadedColor = applyShading(pixelValue, shadingFactor)
+					img:drawPixel(imgX, imgY, shadedColor)
+					affectedPixels = affectedPixels + 1
+				end
+			end
+		end
+	end
+end)
+
+spr:saveAs(spr.filename)
+print(string.format("Shading applied to %%d pixels", affectedPixels))`,
+		escapedLayerName, escapedLayerName,
+		frameNumber, frameNumber, frameNumber,
+		paletteColors,
+		dx, dy, intensity, style,
+		y, y+height-1, x, x+width-1,
+		x, y, width, height)
 }
 
 // GetPixels generates a Lua script to read pixel data from a rectangular region.
