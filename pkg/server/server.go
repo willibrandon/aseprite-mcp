@@ -87,6 +87,12 @@ func (s *Server) registerTools() {
 
 	// Register transform tools
 	tools.RegisterTransformTools(s.mcp, s.client, s.gen, s.config, s.logger)
+
+	// Register analysis tools
+	tools.RegisterAnalysisTools(s.mcp, s.client, s.gen, s.config, s.logger)
+
+	// Register dithering tools
+	tools.RegisterDitheringTools(s.mcp, s.client, s.gen, s.config, s.logger)
 }
 
 // Client returns the underlying Aseprite client for testing.

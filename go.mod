@@ -9,5 +9,8 @@ require (
 
 require (
 	github.com/google/jsonschema-go v0.3.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
+	gonum.org/v1/gonum v0.16.0 // indirect
 )

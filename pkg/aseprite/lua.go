@@ -652,6 +652,200 @@ print("%s")`,
 		escapedOutput, escapedOutput)
 }
 
+// SetPalette generates a Lua script to set the sprite's palette to the specified colors.
+func (g *LuaGenerator) SetPalette(colors []string) string {
+	if len(colors) == 0 {
+		return `error("No colors provided for palette")`
+	}
+
+	// Build palette color list
+	colorList := "{\n"
+	for i, hexColor := range colors {
+		// Parse hex color #RRGGBB
+		hexColor = strings.TrimPrefix(hexColor, "#")
+		if len(hexColor) != 6 && len(hexColor) != 8 {
+			continue
+		}
+
+		var r, g, b, a int
+		fmt.Sscanf(hexColor[:2], "%x", &r)
+		fmt.Sscanf(hexColor[2:4], "%x", &g)
+		fmt.Sscanf(hexColor[4:6], "%x", &b)
+		if len(hexColor) == 8 {
+			fmt.Sscanf(hexColor[6:8], "%x", &a)
+		} else {
+			a = 255
+		}
+
+		colorList += fmt.Sprintf("\t\tColor{r=%d, g=%d, b=%d, a=%d}", r, g, b, a)
+		if i < len(colors)-1 {
+			colorList += ","
+		}
+		colorList += "\n"
+	}
+	colorList += "\t}"
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Get or create palette
+local palette = spr.palettes[1]
+if not palette then
+	error("No palette found")
+end
+
+-- Resize palette to match color count
+palette:resize(%d)
+
+-- Set palette colors
+local colors = %s
+
+for i, color in ipairs(colors) do
+	palette:setColor(i - 1, color)  -- Palette is 0-indexed
+end
+
+spr:saveAs(spr.filename)
+print("Palette set successfully")`, len(colors), colorList)
+}
+
+// DrawWithDither generates a Lua script to fill a region with a dithering pattern.
+func (g *LuaGenerator) DrawWithDither(layerName string, frameNumber int, x, y, width, height int, color1, color2 string, pattern string, density float64) string {
+	escapedLayerName := EscapeString(layerName)
+
+	// Parse hex colors
+	c1 := parseHexColor(color1)
+	c2 := parseHexColor(color2)
+
+	// Get dithering matrix based on pattern
+	var matrixCode string
+	switch pattern {
+	case "bayer_2x2":
+		matrixCode = `local matrix = {{0, 2}, {3, 1}}
+local matrixSize = 2`
+	case "bayer_4x4":
+		matrixCode = `local matrix = {
+	{ 0,  8,  2, 10},
+	{12,  4, 14,  6},
+	{ 3, 11,  1,  9},
+	{15,  7, 13,  5}
+}
+local matrixSize = 4`
+	case "bayer_8x8":
+		matrixCode = `local matrix = {
+	{ 0, 32,  8, 40,  2, 34, 10, 42},
+	{48, 16, 56, 24, 50, 18, 58, 26},
+	{12, 44,  4, 36, 14, 46,  6, 38},
+	{60, 28, 52, 20, 62, 30, 54, 22},
+	{ 3, 35, 11, 43,  1, 33,  9, 41},
+	{51, 19, 59, 27, 49, 17, 57, 25},
+	{15, 47,  7, 39, 13, 45,  5, 37},
+	{63, 31, 55, 23, 61, 29, 53, 21}
+}
+local matrixSize = 8`
+	case "checkerboard":
+		matrixCode = `local matrix = {{0, 1}, {1, 0}}
+local matrixSize = 2`
+	default:
+		return fmt.Sprintf(`error("Unknown dithering pattern: %s")`, pattern)
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer
+local layer = nil
+for _, l in ipairs(spr.layers) do
+	if l.name == "%s" then
+		layer = l
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+-- Get frame
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+-- Get or create cel
+local cel = layer:cel(frame)
+if not cel then
+	cel = spr:newCel(layer, frame)
+end
+
+-- Create or get image
+local img = cel.image
+if not img then
+	img = Image(spr.width, spr.height, spr.colorMode)
+	cel.image = img
+end
+
+-- Define colors
+local color1 = app.pixelColor.rgba(%d, %d, %d, %d)
+local color2 = app.pixelColor.rgba(%d, %d, %d, %d)
+
+-- Dithering matrix
+%s
+
+-- Dithering threshold (based on density)
+local threshold = %f * (matrixSize * matrixSize)
+
+-- Apply dithering pattern
+app.transaction(function()
+	for py = 0, %d - 1 do
+		for px = 0, %d - 1 do
+			local mx = (px %% matrixSize) + 1
+			local my = (py %% matrixSize) + 1
+			local matrixValue = matrix[my][mx]
+
+			local useColor2 = matrixValue < threshold
+			local finalColor = useColor2 and color2 or color1
+
+			img:drawPixel(%d + px, %d + py, finalColor)
+		end
+	end
+end)
+
+spr:saveAs(spr.filename)
+print("Dithering applied successfully")`,
+		escapedLayerName, escapedLayerName,
+		frameNumber, frameNumber,
+		c1.R, c1.G, c1.B, c1.A,
+		c2.R, c2.G, c2.B, c2.A,
+		matrixCode,
+		density,
+		height, width,
+		x, y)
+}
+
+// parseHexColor parses a hex color string and returns RGBA components.
+func parseHexColor(hexColor string) Color {
+	hexColor = strings.TrimPrefix(hexColor, "#")
+	if len(hexColor) != 6 && len(hexColor) != 8 {
+		return Color{R: 0, G: 0, B: 0, A: 255}
+	}
+
+	var r, g, b, a int
+	fmt.Sscanf(hexColor[:2], "%x", &r)
+	fmt.Sscanf(hexColor[2:4], "%x", &g)
+	fmt.Sscanf(hexColor[4:6], "%x", &b)
+	if len(hexColor) == 8 {
+		fmt.Sscanf(hexColor[6:8], "%x", &a)
+	} else {
+		a = 255
+	}
+
+	return Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
+}
+
 // LinkCel generates a Lua script to create a linked cel.
 func (g *LuaGenerator) LinkCel(layerName string, sourceFrame, targetFrame int) string {
 	escapedName := EscapeString(layerName)
