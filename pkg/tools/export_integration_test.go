@@ -301,3 +301,285 @@ func TestIntegration_ExportSprite_SpecificFrameWithContent(t *testing.T) {
 
 	t.Logf("✓ Exported frame with content successfully (%d bytes, %d red pixels)", fileInfo.Size(), redPixels)
 }
+
+func TestIntegration_ExportSpritesheet_Horizontal(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas with multiple frames
+	spritePath := testutil.TempSpritePath(t, "test-spritesheet-h.aseprite")
+	createScript := gen.CreateCanvas(32, 32, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Add 2 more frames (total 3 frames)
+	for i := 0; i < 2; i++ {
+		addFrameScript := gen.AddFrame(100)
+		_, err = client.ExecuteLua(ctx, addFrameScript, spritePath)
+		if err != nil {
+			t.Fatalf("Failed to add frame %d: %v", i+1, err)
+		}
+	}
+
+	// Draw different content on each frame
+	colors := []aseprite.Color{
+		{R: 255, G: 0, B: 0, A: 255}, // Red
+		{R: 0, G: 255, B: 0, A: 255}, // Green
+		{R: 0, G: 0, B: 255, A: 255}, // Blue
+	}
+	for i := 0; i < 3; i++ {
+		drawScript := gen.DrawCircle("Layer 1", i+1, 16, 16, 10, colors[i], true, false)
+		_, err = client.ExecuteLua(ctx, drawScript, spritePath)
+		if err != nil {
+			t.Fatalf("Failed to draw on frame %d: %v", i+1, err)
+		}
+	}
+
+	// Export spritesheet with horizontal layout
+	outputPath := filepath.Join(t.TempDir(), "spritesheet-h.png")
+	exportScript := gen.ExportSpritesheet(outputPath, "horizontal", 2, false)
+	output, err := client.ExecuteLua(ctx, exportScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(ExportSpritesheet) error = %v", err)
+	}
+
+	// Parse JSON output
+	var result ExportSpritesheetOutput
+	if err := parseJSON(output, &result); err != nil {
+		t.Fatalf("Failed to parse output: %v", err)
+	}
+
+	if result.FrameCount != 3 {
+		t.Errorf("Expected 3 frames, got %d", result.FrameCount)
+	}
+
+	if result.SpritesheetPath != outputPath {
+		t.Errorf("Expected path %s, got %s", outputPath, result.SpritesheetPath)
+	}
+
+	// Verify file was created
+	fileInfo, err := os.Stat(outputPath)
+	if err != nil {
+		t.Fatalf("Spritesheet file not found: %v", err)
+	}
+
+	if fileInfo.Size() == 0 {
+		t.Error("Spritesheet file is empty")
+	}
+
+	t.Logf("✓ Exported horizontal spritesheet successfully (%d frames, %d bytes)", result.FrameCount, fileInfo.Size())
+}
+
+func TestIntegration_ExportSpritesheet_WithJSON(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas with 2 frames
+	spritePath := testutil.TempSpritePath(t, "test-spritesheet-json.aseprite")
+	createScript := gen.CreateCanvas(16, 16, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	addFrameScript := gen.AddFrame(100)
+	_, err = client.ExecuteLua(ctx, addFrameScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to add frame: %v", err)
+	}
+
+	// Export spritesheet with JSON metadata
+	outputPath := filepath.Join(t.TempDir(), "spritesheet-with-json.png")
+	exportScript := gen.ExportSpritesheet(outputPath, "packed", 0, true)
+	output, err := client.ExecuteLua(ctx, exportScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(ExportSpritesheet) error = %v", err)
+	}
+
+	// Parse JSON output
+	var result ExportSpritesheetOutput
+	if err := parseJSON(output, &result); err != nil {
+		t.Fatalf("Failed to parse output: %v", err)
+	}
+
+	if result.MetadataPath == nil {
+		t.Error("Expected metadata path, got nil")
+	} else {
+		// Verify JSON file was created
+		jsonInfo, err := os.Stat(*result.MetadataPath)
+		if err != nil {
+			t.Errorf("JSON metadata file not found: %v", err)
+		} else if jsonInfo.Size() == 0 {
+			t.Error("JSON metadata file is empty")
+		} else {
+			t.Logf("✓ JSON metadata created (%d bytes)", jsonInfo.Size())
+		}
+	}
+
+	t.Logf("✓ Exported spritesheet with JSON metadata successfully (%d frames)", result.FrameCount)
+}
+
+func TestIntegration_ImportImage(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-import.aseprite")
+	createScript := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// First export a small image to use for import
+	drawScript := gen.DrawRectangle("Layer 1", 1, 10, 10, 20, 20, aseprite.Color{R: 255, G: 255, B: 0, A: 255}, true, false)
+	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to draw rectangle: %v", err)
+	}
+
+	imagePath := filepath.Join(t.TempDir(), "import-source.png")
+	exportScript := gen.ExportSprite(imagePath, 1)
+	_, err = client.ExecuteLua(ctx, exportScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to export source image: %v", err)
+	}
+
+	// Now import that image back as a new layer
+	importScript := gen.ImportImage(imagePath, "Imported Layer", 1, nil, nil)
+	output, err := client.ExecuteLua(ctx, importScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(ImportImage) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Image imported successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	// Verify the layer was created by checking sprite info
+	infoScript := gen.GetSpriteInfo()
+	infoOutput, err := client.ExecuteLua(ctx, infoScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to get sprite info: %v", err)
+	}
+
+	if !strings.Contains(infoOutput, "Imported Layer") {
+		t.Error("Imported layer not found in sprite")
+	}
+
+	t.Logf("✓ Imported image successfully")
+}
+
+func TestIntegration_ImportImage_WithPosition(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-import-pos.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Create an image to import (use test data)
+	testdataDir := filepath.Join("..", "..", "testdata")
+	imagePath := filepath.Join(testdataDir, "Mona_Lisa.jpg")
+
+	// Import with custom position
+	x := 25
+	y := 25
+	importScript := gen.ImportImage(imagePath, "Reference", 1, &x, &y)
+	output, err := client.ExecuteLua(ctx, importScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(ImportImage) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Image imported successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Imported image with custom position successfully")
+}
+
+func TestIntegration_SaveAs(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas with some content
+	spritePath := testutil.TempSpritePath(t, "test-save-original.aseprite")
+	createScript := gen.CreateCanvas(32, 32, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw something
+	drawScript := gen.DrawCircle("Layer 1", 1, 16, 16, 10, aseprite.Color{R: 0, G: 255, B: 255, A: 255}, true, false)
+	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to draw: %v", err)
+	}
+
+	// Save as new file
+	newPath := filepath.Join(t.TempDir(), "saved-copy.aseprite")
+	saveAsScript := gen.SaveAs(newPath)
+	output, err := client.ExecuteLua(ctx, saveAsScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(SaveAs) error = %v", err)
+	}
+
+	// Parse JSON output
+	var result SaveAsOutput
+	if err := parseJSON(output, &result); err != nil {
+		t.Fatalf("Failed to parse output: %v", err)
+	}
+
+	if !result.Success {
+		t.Error("Expected success=true")
+	}
+
+	if result.FilePath != newPath {
+		t.Errorf("Expected file path %s, got %s", newPath, result.FilePath)
+	}
+
+	// Verify new file was created
+	fileInfo, err := os.Stat(newPath)
+	if err != nil {
+		t.Fatalf("Saved file not found: %v", err)
+	}
+
+	if fileInfo.Size() == 0 {
+		t.Error("Saved file is empty")
+	}
+
+	// Verify we can open the new file
+	infoScript := gen.GetSpriteInfo()
+	infoOutput, err := client.ExecuteLua(ctx, infoScript, newPath)
+	if err != nil {
+		t.Fatalf("Failed to open saved file: %v", err)
+	}
+
+	if !strings.Contains(infoOutput, "32") {
+		t.Error("Saved file doesn't have expected dimensions")
+	}
+
+	t.Logf("✓ Saved sprite to new file successfully (%d bytes)", fileInfo.Size())
+}

@@ -2233,3 +2233,172 @@ print("Outline applied successfully")`,
 		escapedName, frameNumber,
 		FormatColor(color), thickness)
 }
+
+// ExportSpritesheet generates a Lua script to export animation frames as a spritesheet.
+func (g *LuaGenerator) ExportSpritesheet(outputPath string, layout string, padding int, includeJSON bool) string {
+	escapedOutput := EscapeString(outputPath)
+
+	// Map layout to Aseprite's sheet type
+	var sheetType string
+	switch layout {
+	case "horizontal":
+		sheetType = "horizontal"
+	case "vertical":
+		sheetType = "vertical"
+	case "rows":
+		sheetType = "rows"
+	case "columns":
+		sheetType = "columns"
+	case "packed":
+		sheetType = "packed"
+	default:
+		sheetType = "horizontal"
+	}
+
+	dataFormat := ""
+	if includeJSON {
+		dataFormat = `dataFormat = "json",`
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Export spritesheet
+local outputPath = "%s"
+local dataPath = nil
+
+app.command.ExportSpriteSheet{
+	type = "%s",
+	textureFilename = outputPath,
+	%s
+	dataFilename = outputPath:gsub("%.%w+$", ".json"),
+	borderPadding = %d,
+	shapePadding = %d,
+	innerPadding = %d,
+	trim = false,
+	extrude = false
+}
+
+-- Build output JSON
+local result = string.format('{"spritesheet_path":"%%s","frame_count":%%d', outputPath, #spr.frames)
+if %t then
+	local jsonPath = outputPath:gsub("%.%w+$", ".json")
+	result = result .. string.format(',"metadata_path":"%%s"', jsonPath)
+end
+result = result .. "}"
+print(result)`, escapedOutput, sheetType, dataFormat, padding, padding, padding, includeJSON)
+}
+
+// ImportImage generates a Lua script to import an external image as a layer.
+func (g *LuaGenerator) ImportImage(imagePath, layerName string, frameNumber int, x, y *int) string {
+	escapedImage := EscapeString(imagePath)
+	escapedLayer := EscapeString(layerName)
+
+	posX := 0
+	posY := 0
+	if x != nil {
+		posX = *x
+	}
+	if y != nil {
+		posY = *y
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Load external image
+local img = Image{ fromFile = "%s" }
+if not img then
+	error("Failed to load image: %s")
+end
+
+-- Find or create layer
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	-- Create new layer
+	layer = spr:newLayer()
+	layer.name = "%s"
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+app.transaction(function()
+	-- Create cel in the layer at specified frame
+	local cel = spr:newCel(layer, frame)
+
+	-- Set cel image
+	cel.image = img
+
+	-- Set position if specified
+	cel.position = Point(%d, %d)
+end)
+
+spr:saveAs(spr.filename)
+print("Image imported successfully")`,
+		escapedImage, escapedImage,
+		escapedLayer,
+		escapedLayer,
+		frameNumber, frameNumber,
+		posX, posY)
+}
+
+// SaveAs generates a Lua script to save the sprite to a new file path.
+func (g *LuaGenerator) SaveAs(newPath string) string {
+	escapedPath := EscapeString(newPath)
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+local newPath = "%s"
+
+-- Save to new path
+spr:saveAs(newPath)
+
+print(string.format('{"success":true,"file_path":"%%s"}', newPath))`, escapedPath)
+}
+
+// DeleteTag generates a Lua script to delete an animation tag.
+func (g *LuaGenerator) DeleteTag(tagName string) string {
+	escapedName := EscapeString(tagName)
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find tag by name
+local tag = nil
+for i, t in ipairs(spr.tags) do
+	if t.name == "%s" then
+		tag = t
+		break
+	end
+end
+
+if not tag then
+	error("Tag not found: %s")
+end
+
+app.transaction(function()
+	spr:deleteTag(tag)
+end)
+
+spr:saveAs(spr.filename)
+print("Tag deleted successfully")`, escapedName, escapedName)
+}

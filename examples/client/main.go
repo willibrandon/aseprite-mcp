@@ -1186,6 +1186,190 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	logger.Information("  ✓ Result saved to: {OutputPath}", selectionOutputPath)
 	logger.Information("  Note: Selection tools work within single Lua scripts but don't persist across tool calls")
 
+	// Step 22: Demonstrate advanced export tools
+	logger.Information("")
+	logger.Information("Step 22: Demonstrating advanced export tools (spritesheet, import, save_as, delete_tag)...")
+
+	// Create an animated sprite for spritesheet export
+	logger.Information("  Creating 16x16 animated sprite with 4 frames...")
+	output, err = callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      16,
+		"height":     16,
+		"color_mode": "rgb",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for spritesheet failed: %w", err)
+	}
+
+	var sheetCreateOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(output), &sheetCreateOutput); err != nil {
+		return fmt.Errorf("failed to parse create_canvas output: %w", err)
+	}
+	sheetSpritePath := sheetCreateOutput.FilePath
+	defer os.Remove(sheetSpritePath)
+
+	// Add 3 more frames (total 4)
+	for i := 0; i < 3; i++ {
+		_, err = callTool(ctx, session, "add_frame", map[string]any{
+			"sprite_path": sheetSpritePath,
+			"duration_ms": 100,
+		})
+		if err != nil {
+			return fmt.Errorf("add_frame failed: %w", err)
+		}
+	}
+
+	// Draw different colored circles on each frame
+	colors2 := []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00"}
+	for i := 0; i < 4; i++ {
+		_, err = callTool(ctx, session, "draw_circle", map[string]any{
+			"sprite_path":  sheetSpritePath,
+			"layer_name":   "Layer 1",
+			"frame_number": i + 1,
+			"center_x":     8,
+			"center_y":     8,
+			"radius":       4 + i,
+			"color":        colors2[i],
+			"filled":       true,
+		})
+		if err != nil {
+			return fmt.Errorf("draw_circle frame %d failed: %w", i+1, err)
+		}
+	}
+
+	// Create animation tags
+	logger.Information("  Creating animation tags...")
+	_, err = callTool(ctx, session, "create_tag", map[string]any{
+		"sprite_path": sheetSpritePath,
+		"tag_name":    "grow",
+		"from_frame":  1,
+		"to_frame":    4,
+		"direction":   "forward",
+	})
+	if err != nil {
+		return fmt.Errorf("create_tag failed: %w", err)
+	}
+
+	_, err = callTool(ctx, session, "create_tag", map[string]any{
+		"sprite_path": sheetSpritePath,
+		"tag_name":    "temp_tag",
+		"from_frame":  1,
+		"to_frame":    2,
+		"direction":   "pingpong",
+	})
+	if err != nil {
+		return fmt.Errorf("create second tag failed: %w", err)
+	}
+
+	// Export as spritesheet with JSON metadata
+	sheetPath := filepath.Join(outputDir, "animation-spritesheet.png")
+	logger.Information("  Exporting as horizontal spritesheet with JSON metadata...")
+	sheetOutput, err := callTool(ctx, session, "export_spritesheet", map[string]any{
+		"sprite_path":  sheetSpritePath,
+		"output_path":  sheetPath,
+		"layout":       "horizontal",
+		"padding":      2,
+		"include_json": true,
+	})
+	if err != nil {
+		return fmt.Errorf("export_spritesheet failed: %w", err)
+	}
+
+	var sheetResult struct {
+		SpritesheetPath string  `json:"spritesheet_path"`
+		MetadataPath    *string `json:"metadata_path"`
+		FrameCount      int     `json:"frame_count"`
+	}
+	if err := json.Unmarshal([]byte(sheetOutput), &sheetResult); err != nil {
+		return fmt.Errorf("failed to parse export_spritesheet output: %w", err)
+	}
+	logger.Information("  ✓ Exported spritesheet: {Path} ({Count} frames)", sheetResult.SpritesheetPath, sheetResult.FrameCount)
+	if sheetResult.MetadataPath != nil {
+		logger.Information("  ✓ JSON metadata: {Path}", *sheetResult.MetadataPath)
+	}
+
+	// Delete the temporary tag
+	logger.Information("  Deleting temporary tag 'temp_tag'...")
+	_, err = callTool(ctx, session, "delete_tag", map[string]any{
+		"sprite_path": sheetSpritePath,
+		"tag_name":    "temp_tag",
+	})
+	if err != nil {
+		return fmt.Errorf("delete_tag failed: %w", err)
+	}
+	logger.Information("  ✓ Tag deleted successfully")
+
+	// Save the sprite to a new location
+	savedSpritePath := filepath.Join(outputDir, "saved-animation.aseprite")
+	logger.Information("  Saving sprite to new location...")
+	saveOutput, err := callTool(ctx, session, "save_as", map[string]any{
+		"sprite_path": sheetSpritePath,
+		"output_path": savedSpritePath,
+	})
+	if err != nil {
+		return fmt.Errorf("save_as failed: %w", err)
+	}
+
+	var saveResult struct {
+		Success  bool   `json:"success"`
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(saveOutput), &saveResult); err != nil {
+		return fmt.Errorf("failed to parse save_as output: %w", err)
+	}
+	logger.Information("  ✓ Sprite saved to: {Path}", saveResult.FilePath)
+
+	// Import the spritesheet back into a new sprite
+	logger.Information("  Creating new sprite to import spritesheet...")
+	output, err = callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      64,
+		"height":     32,
+		"color_mode": "rgb",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for import failed: %w", err)
+	}
+
+	var importCreateOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(output), &importCreateOutput); err != nil {
+		return fmt.Errorf("failed to parse create_canvas output: %w", err)
+	}
+	importSpritePath := importCreateOutput.FilePath
+	defer os.Remove(importSpritePath)
+
+	logger.Information("  Importing spritesheet as a layer...")
+	_, err = callTool(ctx, session, "import_image", map[string]any{
+		"sprite_path":  importSpritePath,
+		"image_path":   sheetPath,
+		"layer_name":   "Spritesheet",
+		"frame_number": 1,
+		"position": map[string]any{
+			"x": 0,
+			"y": 0,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("import_image failed: %w", err)
+	}
+	logger.Information("  ✓ Spritesheet imported as layer")
+
+	// Export the result
+	importResultPath := filepath.Join(outputDir, "imported-spritesheet.png")
+	_, err = callTool(ctx, session, "export_sprite", map[string]any{
+		"sprite_path":  importSpritePath,
+		"output_path":  importResultPath,
+		"format":       "png",
+		"frame_number": 0,
+	})
+	if err != nil {
+		return fmt.Errorf("export imported sprite failed: %w", err)
+	}
+	logger.Information("  ✓ Exported imported result: {Path}", importResultPath)
+
 	return nil
 }
 

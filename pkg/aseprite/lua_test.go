@@ -920,3 +920,140 @@ func TestLuaGenerator_ApplyOutline(t *testing.T) {
 		t.Error("script missing success message")
 	}
 }
+
+func TestLuaGenerator_ExportSpritesheet(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	t.Run("export with horizontal layout", func(t *testing.T) {
+		script := gen.ExportSpritesheet("/tmp/output.png", "horizontal", 2, false)
+
+		if !strings.Contains(script, `type = "horizontal"`) {
+			t.Error("script missing horizontal layout")
+		}
+
+		if !strings.Contains(script, `textureFilename = outputPath`) {
+			t.Error("script missing texture filename")
+		}
+
+		if !strings.Contains(script, "borderPadding = 2") {
+			t.Error("script missing padding")
+		}
+
+		if !strings.Contains(script, "app.command.ExportSpriteSheet") {
+			t.Error("script missing ExportSpriteSheet command")
+		}
+	})
+
+	t.Run("export with JSON metadata", func(t *testing.T) {
+		script := gen.ExportSpritesheet("/tmp/output.png", "packed", 0, true)
+
+		if !strings.Contains(script, `dataFormat = "json"`) {
+			t.Error("script missing JSON data format")
+		}
+
+		if !strings.Contains(script, `metadata_path`) {
+			t.Error("script missing metadata path in output")
+		}
+	})
+
+	t.Run("invalid layout defaults to horizontal", func(t *testing.T) {
+		script := gen.ExportSpritesheet("/tmp/output.png", "invalid", 0, false)
+
+		if !strings.Contains(script, `type = "horizontal"`) {
+			t.Error("invalid layout should default to horizontal")
+		}
+	})
+}
+
+func TestLuaGenerator_ImportImage(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	t.Run("import with default position", func(t *testing.T) {
+		script := gen.ImportImage("/tmp/image.png", "Imported Layer", 1, nil, nil)
+
+		if !strings.Contains(script, `Image{ fromFile = "/tmp/image.png" }`) {
+			t.Error("script missing image load")
+		}
+
+		if !strings.Contains(script, `if lyr.name == "Imported Layer"`) {
+			t.Error("script missing layer name check")
+		}
+
+		if !strings.Contains(script, "Point(0, 0)") {
+			t.Error("script missing default position")
+		}
+
+		if !strings.Contains(script, "spr:newCel(layer, frame)") {
+			t.Error("script missing cel creation")
+		}
+	})
+
+	t.Run("import with custom position", func(t *testing.T) {
+		x := 50
+		y := 100
+		script := gen.ImportImage("/tmp/image.png", "Layer 1", 2, &x, &y)
+
+		if !strings.Contains(script, "Point(50, 100)") {
+			t.Error("script missing custom position")
+		}
+
+		if !strings.Contains(script, "spr.frames[2]") {
+			t.Error("script missing frame number")
+		}
+	})
+}
+
+func TestLuaGenerator_SaveAs(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.SaveAs("/tmp/new-sprite.aseprite")
+
+	if !strings.Contains(script, `local newPath = "/tmp/new-sprite.aseprite"`) {
+		t.Error("script missing escaped path")
+	}
+
+	if !strings.Contains(script, "spr:saveAs(newPath)") {
+		t.Error("script missing saveAs call")
+	}
+
+	if !strings.Contains(script, `"success":true`) {
+		t.Error("script missing success flag")
+	}
+
+	if !strings.Contains(script, `"file_path"`) {
+		t.Error("script missing file_path in output")
+	}
+}
+
+func TestLuaGenerator_DeleteTag(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.DeleteTag("walk")
+
+	// Check tag iteration
+	if !strings.Contains(script, "for i, t in ipairs(spr.tags)") {
+		t.Error("script missing tag iteration")
+	}
+
+	if !strings.Contains(script, `if t.name == "walk"`) {
+		t.Error("script missing tag name check")
+	}
+
+	// Check error handling
+	if !strings.Contains(script, `error("Tag not found: walk")`) {
+		t.Error("script missing tag not found error")
+	}
+
+	// Check deletion
+	if !strings.Contains(script, "spr:deleteTag(tag)") {
+		t.Error("script missing tag deletion")
+	}
+
+	if !strings.Contains(script, "app.transaction") {
+		t.Error("script missing transaction wrapper")
+	}
+
+	if !strings.Contains(script, "Tag deleted successfully") {
+		t.Error("script missing success message")
+	}
+}

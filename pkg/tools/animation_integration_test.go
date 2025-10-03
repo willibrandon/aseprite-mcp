@@ -522,3 +522,88 @@ func TestIntegration_LinkCel_InvalidFrame(t *testing.T) {
 
 	t.Logf("✓ Correctly rejected invalid source frame")
 }
+
+func TestIntegration_DeleteTag(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create test sprite with multiple frames
+	spritePath := testutil.TempSpritePath(t, "test-delete-tag.aseprite")
+	createScript := gen.CreateCanvas(32, 32, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Add frames
+	for i := 0; i < 3; i++ {
+		addFrameScript := gen.AddFrame(100)
+		_, err = client.ExecuteLua(ctx, addFrameScript, spritePath)
+		if err != nil {
+			t.Fatalf("Failed to add frame: %v", err)
+		}
+	}
+
+	// Create a tag
+	createTagScript := gen.CreateTag("walk", 1, 3, "forward")
+	output, err := client.ExecuteLua(ctx, createTagScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to create tag: %v", err)
+	}
+
+	if !strings.Contains(output, "Tag created successfully") {
+		t.Fatalf("Tag creation failed: %s", output)
+	}
+
+	// Delete the tag
+	deleteScript := gen.DeleteTag("walk")
+	output, err = client.ExecuteLua(ctx, deleteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to delete tag: %v", err)
+	}
+
+	if !strings.Contains(output, "Tag deleted successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	// Verify tag is gone by trying to delete it again (should fail)
+	deleteAgainScript := gen.DeleteTag("walk")
+	_, err = client.ExecuteLua(ctx, deleteAgainScript, spritePath)
+	if err == nil {
+		t.Error("Expected error when deleting already-deleted tag, got nil")
+	}
+
+	t.Logf("✓ Tag deleted successfully")
+}
+
+func TestIntegration_DeleteTag_NotFound(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create test sprite
+	spritePath := testutil.TempSpritePath(t, "test-delete-tag-notfound.aseprite")
+	createScript := gen.CreateCanvas(32, 32, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Try to delete a tag that doesn't exist
+	deleteScript := gen.DeleteTag("nonexistent")
+	_, err = client.ExecuteLua(ctx, deleteScript, spritePath)
+	if err == nil {
+		t.Error("Expected error for non-existent tag, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "Tag not found") {
+		t.Errorf("Expected 'Tag not found' error, got: %v", err)
+	}
+
+	t.Logf("✓ Correctly rejected deletion of non-existent tag")
+}

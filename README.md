@@ -148,6 +148,7 @@ Then use natural language to create sprites:
 | `delete_frame` | Delete a frame from the sprite (cannot delete last frame) |
 | `set_frame_duration` | Set the duration of an animation frame in milliseconds |
 | `create_tag` | Create an animation tag with playback direction |
+| `delete_tag` | Delete an animation tag by name |
 | `duplicate_frame` | Duplicate an existing frame with all cels |
 | `link_cel` | Create a linked cel that shares image data |
 
@@ -156,6 +157,9 @@ Then use natural language to create sprites:
 |------|-------------|
 | `get_pixels` | Read pixel data from a rectangular region (paginated, for verification) |
 | `export_sprite` | Export sprite to PNG/GIF/JPG/BMP |
+| `export_spritesheet` | Export animation frames as spritesheet (horizontal/vertical/rows/columns/packed layout, optional JSON metadata) |
+| `import_image` | Import external image file as a layer in the sprite |
+| `save_as` | Save sprite to a new .aseprite file path |
 
 ## Examples
 

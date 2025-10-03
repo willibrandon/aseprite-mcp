@@ -87,13 +87,13 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
   - `canvas.go` - Sprite/layer/frame management (create_sprite, add_layer, add_frame, delete_layer with protection, delete_frame with protection)
   - `drawing.go` - Drawing primitives (pixels, lines, rectangles, circles, fill, contours for polylines/polygons)
   - `selection.go` - Selection and clipboard operations (8 tools)
-  - `animation.go` - Animation and timeline operations
+  - `animation.go` - Animation and timeline operations (frame duration, tags, tag deletion, duplication, linked cels)
   - `inspection.go` - Pixel data inspection and reading
   - `analysis.go` - Reference image analysis (palette extraction, edge detection, composition)
   - `dithering.go` - Dithering patterns for gradients and textures (15 patterns)
   - `palette_tools.go` - Palette management (set_palette, apply_shading, analyze_palette_harmonies)
   - `transform.go` - Transform operations (flip, rotate, scale, crop, resize canvas, outline, downsampling)
-  - `export.go` - Export and import operations
+  - `export.go` - Export and import operations (export_sprite, export_spritesheet, import_image, save_as)
 - `internal/testutil/` - Testing utilities (no mocks)
 
 ### Core Workflow
@@ -126,7 +126,7 @@ Core functionality implemented and tested:
   - Select all, deselect, move selection
   - Cut, copy, paste operations
   - **Important limitation**: Selections are transient and do NOT persist in .aseprite files - they only exist in memory during script execution
-- Animation tools (frame duration, tags, duplication, linked cels)
+- Animation tools (frame duration, tags, tag deletion, duplication, linked cels)
 - Inspection tools (pixel data reading with pagination for verification and analysis)
 - **Professional Pixel Art Tools:**
   - Reference image analysis (k-means palette extraction, brightness maps, Sobel edge detection)
@@ -150,7 +150,11 @@ Core functionality implemented and tested:
     - `crop_sprite`: Crop to rectangular region
     - `resize_canvas`: Resize canvas with anchor positioning (5 anchor points)
     - `apply_outline`: Apply outline effect with color and thickness
-- Sprite export (PNG, GIF, JPG, BMP)
+- **Export & Import Tools (4 tools):**
+  - `export_sprite`: Export to PNG/GIF/JPG/BMP formats
+  - `export_spritesheet`: Export animation frames as spritesheet with 5 layout options (horizontal/vertical/rows/columns/packed), configurable padding, and optional JSON metadata
+  - `import_image`: Import external images as layers with optional positioning
+  - `save_as`: Save sprite to new .aseprite file path
 - Metadata retrieval
 - Example client implementation (examples/client/main.go)
 - Integration test suite with real Aseprite

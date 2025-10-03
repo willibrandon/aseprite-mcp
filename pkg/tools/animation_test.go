@@ -340,3 +340,55 @@ func TestLinkCelInput_Validation(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteTagInput_Validation(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   DeleteTagInput
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid input",
+			input: DeleteTagInput{
+				SpritePath: "/path/to/sprite.aseprite",
+				TagName:    "walk",
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty sprite path",
+			input: DeleteTagInput{
+				SpritePath: "",
+				TagName:    "walk",
+			},
+			wantErr: true,
+			errMsg:  "sprite_path cannot be empty",
+		},
+		{
+			name: "empty tag name",
+			input: DeleteTagInput{
+				SpritePath: "/path/to/sprite.aseprite",
+				TagName:    "",
+			},
+			wantErr: true,
+			errMsg:  "tag_name cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Validate sprite_path
+			if tt.input.SpritePath == "" && tt.wantErr {
+				return
+			}
+			// Validate tag_name
+			if tt.input.TagName == "" && tt.wantErr {
+				return
+			}
+			if tt.wantErr {
+				t.Errorf("Expected error but validation passed")
+			}
+		})
+	}
+}

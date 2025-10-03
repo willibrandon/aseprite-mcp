@@ -57,6 +57,17 @@ type LinkCelInput struct {
 	TargetFrame int    `json:"target_frame" jsonschema:"Target frame where linked cel will be created (1-based)"`
 }
 
+// DeleteTagInput defines the input parameters for the delete_tag tool.
+type DeleteTagInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	TagName    string `json:"tag_name" jsonschema:"Name of the tag to delete"`
+}
+
+// DeleteTagOutput defines the output for the delete_tag tool.
+type DeleteTagOutput struct {
+	Success bool `json:"success" jsonschema:"Deletion success status"`
+}
+
 // LinkCelOutput defines the output for the link_cel tool.
 type LinkCelOutput struct {
 	Success bool `json:"success" jsonschema:"Whether the cel was linked successfully"`
@@ -245,6 +256,46 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			logger.Information("Cel linked successfully", "sprite", input.SpritePath, "layer", input.LayerName, "source_frame", input.SourceFrame, "target_frame", input.TargetFrame)
 
 			return nil, &LinkCelOutput{Success: true}, nil
+		},
+	)
+
+	// Register delete_tag tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "delete_tag",
+			Description: "Delete an animation tag by name.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input DeleteTagInput) (*mcp.CallToolResult, *DeleteTagOutput, error) {
+			logger.Debug("delete_tag tool called", "sprite_path", input.SpritePath, "tag_name", input.TagName)
+
+			// Validate inputs
+			if input.SpritePath == "" {
+				return nil, nil, fmt.Errorf("sprite_path cannot be empty")
+			}
+
+			if input.TagName == "" {
+				return nil, nil, fmt.Errorf("tag_name cannot be empty")
+			}
+
+			// Generate Lua script
+			script := gen.DeleteTag(input.TagName)
+
+			// Execute Lua script with the sprite
+			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to delete tag", "error", err)
+				return nil, nil, fmt.Errorf("failed to delete tag: %w", err)
+			}
+
+			// Check for success message
+			if !strings.Contains(output, "Tag deleted successfully") {
+				logger.Warning("Unexpected output from delete_tag", "output", output)
+			}
+
+			logger.Information("Tag deleted successfully", "sprite", input.SpritePath, "tag", input.TagName)
+
+			return nil, &DeleteTagOutput{Success: true}, nil
 		},
 	)
 }

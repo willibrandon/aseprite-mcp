@@ -63,6 +63,10 @@ The example creates:
 - `../sprites/antialiasing-before.png` - Jagged diagonal line (stair-step pattern)
 - `../sprites/antialiasing-after.png` - Smoothed diagonal with intermediate colors applied
 - `../sprites/transform-demo.png` - Transform operations: triangle flipped, rotated, and scaled 2x
+- `../sprites/animation-spritesheet.png` - 4-frame horizontal spritesheet with growing colored circles
+- `../sprites/animation-spritesheet.json` - JSON metadata for spritesheet
+- `../sprites/saved-animation.aseprite` - Sprite saved with save_as tool
+- `../sprites/imported-spritesheet.png` - Result of importing spritesheet as layer
 - `/tmp/selection-demo.png` - Drawing demo showing red squares and blue circle
 
 ## Example Output
@@ -105,6 +109,10 @@ Available tools:
   - crop_sprite: Crop sprite to rectangular region
   - resize_canvas: Resize canvas with anchor positioning
   - apply_outline: Apply outline effect to layer with thickness
+  - export_spritesheet: Export animation frames as spritesheet with layout options
+  - import_image: Import external image file as a layer
+  - save_as: Save sprite to a new .aseprite file path
+  - delete_tag: Delete an animation tag by name
   - select_rectangle: Create rectangular selection with mode (replace/add/subtract/intersect)
   - select_ellipse: Create elliptical selection with mode
   - select_all: Select entire canvas
@@ -231,6 +239,21 @@ Step 21: Demonstrating selection and clipboard operations...
   ✓ Drawing operations completed successfully
   ✓ Result saved to: /tmp/selection-demo.png
   Note: Selection tools work within single Lua scripts but don't persist across tool calls
+
+Step 22: Demonstrating advanced export tools (spritesheet, import, save_as, delete_tag)...
+  Creating 16x16 animated sprite with 4 frames...
+  Creating animation tags...
+  Exporting as horizontal spritesheet with JSON metadata...
+  ✓ Exported spritesheet: ../sprites/animation-spritesheet.png (4 frames)
+  ✓ JSON metadata: ../sprites/animation-spritesheet.json
+  Deleting temporary tag 'temp_tag'...
+  ✓ Tag deleted successfully
+  Saving sprite to new location...
+  ✓ Sprite saved to: ../sprites/saved-animation.aseprite
+  Creating new sprite to import spritesheet...
+  Importing spritesheet as a layer...
+  ✓ Spritesheet imported as layer
+  ✓ Exported imported result: ../sprites/imported-spritesheet.png
 
 Example completed successfully!
 ```
