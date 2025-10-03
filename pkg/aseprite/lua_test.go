@@ -208,3 +208,49 @@ func TestLuaGenerator_ExportSprite(t *testing.T) {
 		}
 	})
 }
+
+func TestLuaGenerator_DeleteLayer(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.DeleteLayer("Background")
+
+	// Verify script contains expected elements
+	if !strings.Contains(script, `if #spr.layers == 1 then`) {
+		t.Error("script missing last layer check")
+	}
+
+	if !strings.Contains(script, `if lyr.name == "Background"`) {
+		t.Error("script missing layer name check")
+	}
+
+	if !strings.Contains(script, `spr:deleteLayer(layer)`) {
+		t.Error("script missing deleteLayer call")
+	}
+
+	if !strings.Contains(script, "app.transaction(function()") {
+		t.Error("script not wrapped in transaction")
+	}
+}
+
+func TestLuaGenerator_DeleteFrame(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.DeleteFrame(2)
+
+	// Verify script contains expected elements
+	if !strings.Contains(script, `if #spr.frames == 1 then`) {
+		t.Error("script missing last frame check")
+	}
+
+	if !strings.Contains(script, "spr.frames[2]") {
+		t.Error("script missing frame reference")
+	}
+
+	if !strings.Contains(script, `spr:deleteFrame(frame)`) {
+		t.Error("script missing deleteFrame call")
+	}
+
+	if !strings.Contains(script, "app.transaction(function()") {
+		t.Error("script not wrapped in transaction")
+	}
+}

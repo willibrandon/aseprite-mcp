@@ -216,11 +216,11 @@ func TestAnalyzePaletteHarmoniesInput_Validation(t *testing.T) {
 
 func TestHexToHSL(t *testing.T) {
 	tests := []struct {
-		name     string
-		hexColor string
-		wantH    float64
-		wantS    float64
-		wantL    float64
+		name      string
+		hexColor  string
+		wantH     float64
+		wantS     float64
+		wantL     float64
 		tolerance float64
 	}{
 		{
@@ -324,23 +324,23 @@ func TestAnalyzePaletteHarmonies_Complementary(t *testing.T) {
 
 func TestAnalyzePaletteHarmonies_Temperature(t *testing.T) {
 	tests := []struct {
-		name     string
-		palette  []string
+		name         string
+		palette      []string
 		wantDominant string
 	}{
 		{
-			name:     "warm palette",
-			palette:  []string{"#FF0000", "#FF8000", "#FFFF00"}, // Red, Orange, Yellow
+			name:         "warm palette",
+			palette:      []string{"#FF0000", "#FF8000", "#FFFF00"}, // Red, Orange, Yellow
 			wantDominant: "warm",
 		},
 		{
-			name:     "cool palette",
-			palette:  []string{"#0000FF", "#0080FF", "#00FFFF"}, // Blue, Light Blue, Cyan
+			name:         "cool palette",
+			palette:      []string{"#0000FF", "#0080FF", "#00FFFF"}, // Blue, Light Blue, Cyan
 			wantDominant: "cool",
 		},
 		{
-			name:     "neutral palette",
-			palette:  []string{"#808080", "#A0A0A0", "#C0C0C0"}, // Grays
+			name:         "neutral palette",
+			palette:      []string{"#808080", "#A0A0A0", "#C0C0C0"}, // Grays
 			wantDominant: "neutral",
 		},
 	}

@@ -88,6 +88,7 @@ Then use natural language to create sprites:
 |------|-------------|
 | `create_canvas` | Create new sprite with specified dimensions and color mode |
 | `add_layer` | Add a new layer to the sprite |
+| `delete_layer` | Delete a layer from the sprite (cannot delete last layer) |
 | `get_sprite_info` | Get sprite metadata (size, layers, frames) |
 
 ### Drawing & Painting
@@ -114,6 +115,7 @@ Then use natural language to create sprites:
 | Tool | Description |
 |------|-------------|
 | `add_frame` | Add a new animation frame |
+| `delete_frame` | Delete a frame from the sprite (cannot delete last frame) |
 | `set_frame_duration` | Set the duration of an animation frame in milliseconds |
 | `create_tag` | Create an animation tag with playback direction |
 | `duplicate_frame` | Duplicate an existing frame with all cels |

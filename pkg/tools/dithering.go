@@ -12,14 +12,14 @@ import (
 
 // DrawWithDitherInput defines the input parameters for the draw_with_dither tool.
 type DrawWithDitherInput struct {
-	SpritePath  string         `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
-	LayerName   string         `json:"layer_name" jsonschema:"Name of the layer to draw on"`
-	FrameNumber int            `json:"frame_number" jsonschema:"Frame number to draw on (1-based)"`
-	Region      RegionInput    `json:"region" jsonschema:"Rectangular region to fill with dithering"`
-	Color1      string         `json:"color1" jsonschema:"First color (hex #RRGGBB or #RRGGBBAA)"`
-	Color2      string         `json:"color2" jsonschema:"Second color (hex #RRGGBB or #RRGGBBAA)"`
-	Pattern     string         `json:"pattern" jsonschema:"Dithering pattern: bayer_2x2|bayer_4x4|bayer_8x8|checkerboard|grass|water|stone|cloud|brick|dots|diagonal|cross|noise|horizontal_lines|vertical_lines"`
-	Density     float64        `json:"density,omitempty" jsonschema:"Ratio of color1 to color2 (0.0-1.0, default: 0.5)"`
+	SpritePath  string      `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	LayerName   string      `json:"layer_name" jsonschema:"Name of the layer to draw on"`
+	FrameNumber int         `json:"frame_number" jsonschema:"Frame number to draw on (1-based)"`
+	Region      RegionInput `json:"region" jsonschema:"Rectangular region to fill with dithering"`
+	Color1      string      `json:"color1" jsonschema:"First color (hex #RRGGBB or #RRGGBBAA)"`
+	Color2      string      `json:"color2" jsonschema:"Second color (hex #RRGGBB or #RRGGBBAA)"`
+	Pattern     string      `json:"pattern" jsonschema:"Dithering pattern: bayer_2x2|bayer_4x4|bayer_8x8|checkerboard|grass|water|stone|cloud|brick|dots|diagonal|cross|noise|horizontal_lines|vertical_lines"`
+	Density     float64     `json:"density,omitempty" jsonschema:"Ratio of color1 to color2 (0.0-1.0, default: 0.5)"`
 }
 
 // RegionInput defines a rectangular region.

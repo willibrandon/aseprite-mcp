@@ -172,6 +172,67 @@ spr:saveAs(spr.filename)
 print(#spr.frames)`, durationSec)
 }
 
+// DeleteLayer generates a Lua script to delete a layer.
+// Returns an error if the layer is not found or if attempting to delete the last layer.
+func (g *LuaGenerator) DeleteLayer(layerName string) string {
+	escapedName := EscapeString(layerName)
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Check if this is the last layer
+if #spr.layers == 1 then
+	error("Cannot delete the last layer")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+app.transaction(function()
+	spr:deleteLayer(layer)
+end)
+
+spr:saveAs(spr.filename)
+print("Layer deleted successfully")`, escapedName, escapedName)
+}
+
+// DeleteFrame generates a Lua script to delete a frame.
+// Returns an error if the frame is not found or if attempting to delete the last frame.
+func (g *LuaGenerator) DeleteFrame(frameNumber int) string {
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Check if this is the last frame
+if #spr.frames == 1 then
+	error("Cannot delete the last frame")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+app.transaction(function()
+	spr:deleteFrame(frame)
+end)
+
+spr:saveAs(spr.filename)
+print("Frame deleted successfully")`, frameNumber, frameNumber)
+}
+
 // DrawPixels generates a Lua script to draw multiple pixels.
 func (g *LuaGenerator) DrawPixels(layerName string, frameNumber int, pixels []Pixel, usePalette bool) string {
 	var sb strings.Builder

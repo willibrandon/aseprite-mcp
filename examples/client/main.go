@@ -690,7 +690,7 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 		"layer_name":   "Layer 1",
 		"frame_number": 1,
 		"threshold":    128,
-		"auto_apply":   true,  // Apply smoothing automatically
+		"auto_apply":   true, // Apply smoothing automatically
 		"use_palette":  false,
 	}); err != nil {
 		return fmt.Errorf("suggest_antialiasing with auto_apply failed: %w", err)
@@ -710,6 +710,87 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	logger.Information("  Antialiasing applied: jagged diagonal smoothed")
 	logger.Information("  Exported before: {JaggedPng}", jaggedPngPath)
 	logger.Information("  Exported after: {SmoothPng}", smoothPngPath)
+
+	// Step 17: Demonstrate layer and frame deletion
+	logger.Information("")
+	logger.Information("Step 17: Demonstrating layer and frame deletion...")
+
+	// Create a test sprite with multiple layers and frames
+	deleteResp, err := callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      32,
+		"height":     32,
+		"color_mode": "rgb",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for deletion demo failed: %w", err)
+	}
+	var deleteResult struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(deleteResp), &deleteResult); err != nil {
+		return fmt.Errorf("failed to parse deletion canvas result: %w", err)
+	}
+	deleteSprite := deleteResult.FilePath
+	logger.Information("  Created: {DeleteSprite}", deleteSprite)
+
+	// Add two extra layers
+	if _, err := callTool(ctx, session, "add_layer", map[string]any{
+		"sprite_path": deleteSprite,
+		"layer_name":  "Layer 2",
+	}); err != nil {
+		return fmt.Errorf("add_layer Layer 2 failed: %w", err)
+	}
+
+	if _, err := callTool(ctx, session, "add_layer", map[string]any{
+		"sprite_path": deleteSprite,
+		"layer_name":  "Layer 3",
+	}); err != nil {
+		return fmt.Errorf("add_layer Layer 3 failed: %w", err)
+	}
+	logger.Information("  Added 2 extra layers (3 total)")
+
+	// Add two extra frames
+	if _, err := callTool(ctx, session, "add_frame", map[string]any{
+		"sprite_path": deleteSprite,
+		"duration_ms": 100,
+	}); err != nil {
+		return fmt.Errorf("add_frame for deletion demo failed: %w", err)
+	}
+
+	if _, err := callTool(ctx, session, "add_frame", map[string]any{
+		"sprite_path": deleteSprite,
+		"duration_ms": 100,
+	}); err != nil {
+		return fmt.Errorf("add_frame for deletion demo failed: %w", err)
+	}
+	logger.Information("  Added 2 extra frames (3 total)")
+
+	// Delete Layer 2
+	if _, err := callTool(ctx, session, "delete_layer", map[string]any{
+		"sprite_path": deleteSprite,
+		"layer_name":  "Layer 2",
+	}); err != nil {
+		return fmt.Errorf("delete_layer failed: %w", err)
+	}
+	logger.Information("  Deleted Layer 2 (2 layers remaining)")
+
+	// Delete frame 2
+	if _, err := callTool(ctx, session, "delete_frame", map[string]any{
+		"sprite_path":  deleteSprite,
+		"frame_number": 2,
+	}); err != nil {
+		return fmt.Errorf("delete_frame failed: %w", err)
+	}
+	logger.Information("  Deleted frame 2 (2 frames remaining)")
+
+	// Verify final state
+	finalInfoResp, err := callTool(ctx, session, "get_sprite_info", map[string]any{
+		"sprite_path": deleteSprite,
+	})
+	if err != nil {
+		return fmt.Errorf("get_sprite_info after deletion failed: %w", err)
+	}
+	logger.Information("  Final state: {Info}", finalInfoResp)
 
 	return nil
 }

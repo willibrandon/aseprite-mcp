@@ -8,7 +8,7 @@ The `client/` directory contains a complete example MCP client that demonstrates
 
 - Connecting to the Aseprite MCP server via stdio transport
 - Creating a 64x64 RGB sprite
-- Adding layers and frames
+- Adding and deleting layers and frames
 - Drawing animated content (growing circles)
 - Filling areas with colors
 - Reading pixels for verification (using get_pixels with pagination)
@@ -70,7 +70,9 @@ Connected!
 Available tools:
   - create_canvas: Create a new Aseprite sprite
   - add_layer: Add a new layer to the sprite
+  - delete_layer: Delete a layer from the sprite
   - add_frame: Add a new frame to the sprite timeline
+  - delete_frame: Delete a frame from the sprite
   - get_sprite_info: Get metadata about a sprite
   - get_pixels: Read pixel data from a rectangular region (with pagination)
   - draw_pixels: Draw individual pixels on a layer
@@ -152,6 +154,14 @@ Step 17: Demonstrating antialiasing suggestions...
   Antialiasing applied: jagged diagonal smoothed
   Exported before: ../sprites/antialiasing-before.png
   Exported after: ../sprites/antialiasing-after.png
+
+Step 18: Demonstrating layer and frame deletion...
+  Created: /tmp/aseprite-mcp/sprite-...
+  Added 2 extra layers (3 total)
+  Added 2 extra frames (3 total)
+  Deleted Layer 2 (2 layers remaining)
+  Deleted frame 2 (2 frames remaining)
+  Final state: {"width":32,"height":32,"color_mode":"RGB","frame_count":2,"layer_count":2,"layers":["Layer 1","Layer 3"]}
 
 Example completed successfully!
 ```

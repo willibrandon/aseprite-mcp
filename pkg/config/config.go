@@ -59,6 +59,14 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
+// configJSON is a temporary struct for unmarshaling JSON with timeout as int (seconds)
+type configJSON struct {
+	AsepritePath string `json:"aseprite_path"`
+	TempDir      string `json:"temp_dir"`
+	Timeout      int    `json:"timeout"` // timeout in seconds
+	LogLevel     string `json:"log_level"`
+}
+
 // loadFromFile loads configuration from the default config file location.
 func (c *Config) loadFromFile() error {
 	configPath := getConfigFilePath()
@@ -68,7 +76,19 @@ func (c *Config) loadFromFile() error {
 		return err
 	}
 
-	return json.Unmarshal(data, c)
+	// Unmarshal into temporary struct
+	var cj configJSON
+	if err := json.Unmarshal(data, &cj); err != nil {
+		return err
+	}
+
+	// Convert to Config with proper timeout conversion
+	c.AsepritePath = cj.AsepritePath
+	c.TempDir = cj.TempDir
+	c.Timeout = time.Duration(cj.Timeout) * time.Second
+	c.LogLevel = cj.LogLevel
+
+	return nil
 }
 
 // setDefaults sets default values for unset configuration fields.

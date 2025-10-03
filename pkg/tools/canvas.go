@@ -211,6 +211,80 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			return nil, &info, nil
 		},
 	)
+
+	// Register delete_layer tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "delete_layer",
+			Description: "Delete a layer from an existing sprite. Cannot delete the last remaining layer.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input DeleteLayerInput) (*mcp.CallToolResult, *DeleteLayerOutput, error) {
+			logger.Debug("delete_layer tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName)
+
+			// Generate Lua script
+			script := gen.DeleteLayer(input.LayerName)
+
+			// Execute Lua script with the sprite
+			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to delete layer", "error", err)
+				return nil, nil, fmt.Errorf("failed to delete layer: %w", err)
+			}
+
+			logger.Information("Layer deleted successfully", "sprite", input.SpritePath, "layer", input.LayerName)
+
+			return nil, &DeleteLayerOutput{Success: true}, nil
+		},
+	)
+
+	// Register delete_frame tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "delete_frame",
+			Description: "Delete a frame from an existing sprite. Cannot delete the last remaining frame.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input DeleteFrameInput) (*mcp.CallToolResult, *DeleteFrameOutput, error) {
+			logger.Debug("delete_frame tool called", "sprite_path", input.SpritePath, "frame_number", input.FrameNumber)
+
+			// Generate Lua script
+			script := gen.DeleteFrame(input.FrameNumber)
+
+			// Execute Lua script with the sprite
+			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to delete frame", "error", err)
+				return nil, nil, fmt.Errorf("failed to delete frame: %w", err)
+			}
+
+			logger.Information("Frame deleted successfully", "sprite", input.SpritePath, "frame_number", input.FrameNumber)
+
+			return nil, &DeleteFrameOutput{Success: true}, nil
+		},
+	)
+}
+
+// DeleteLayerInput defines the input parameters for the delete_layer tool.
+type DeleteLayerInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the sprite file"`
+	LayerName  string `json:"layer_name" jsonschema:"Name of the layer to delete"`
+}
+
+// DeleteLayerOutput defines the output for the delete_layer tool.
+type DeleteLayerOutput struct {
+	Success bool `json:"success" jsonschema:"Whether the layer was deleted successfully"`
+}
+
+// DeleteFrameInput defines the input parameters for the delete_frame tool.
+type DeleteFrameInput struct {
+	SpritePath  string `json:"sprite_path" jsonschema:"Path to the sprite file"`
+	FrameNumber int    `json:"frame_number" jsonschema:"Frame number to delete (1-based)"`
+}
+
+// DeleteFrameOutput defines the output for the delete_frame tool.
+type DeleteFrameOutput struct {
+	Success bool `json:"success" jsonschema:"Whether the frame was deleted successfully"`
 }
 
 // generateTimestamp returns a Unix timestamp in nanoseconds suitable for unique filenames.

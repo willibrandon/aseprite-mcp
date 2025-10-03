@@ -73,11 +73,11 @@ type AnalogousSet struct {
 
 // TemperatureAnalysis contains color temperature analysis.
 type TemperatureAnalysis struct {
-	WarmColors  []string `json:"warm_colors"`
-	CoolColors  []string `json:"cool_colors"`
+	WarmColors    []string `json:"warm_colors"`
+	CoolColors    []string `json:"cool_colors"`
 	NeutralColors []string `json:"neutral_colors"`
-	Dominant    string   `json:"dominant"`
-	Description string   `json:"description"`
+	Dominant      string   `json:"dominant"`
+	Description   string   `json:"description"`
 }
 
 // RegisterPaletteTools registers all palette management tools with the MCP server.
@@ -275,8 +275,8 @@ func analyzePaletteHarmonies(palette []string) PaletteHarmonyResult {
 
 	// Convert hex colors to HSL
 	type ColorHSL struct {
-		Hex        string
-		H, S, L    float64
+		Hex     string
+		H, S, L float64
 	}
 	colors := make([]ColorHSL, 0, len(palette))
 
