@@ -45,15 +45,18 @@ end
 -- Create a new sprite with the same dimensions and color mode
 local tempSpr = Sprite(spr.width, spr.height, spr.colorMode)
 
--- Copy the specific frame
+-- Delete the default layer that comes with new sprites
+if #tempSpr.layers > 0 then
+	tempSpr:deleteLayer(tempSpr.layers[1])
+end
+
+-- Copy the specific frame, preserving layer structure
 local targetFrame = spr.frames[%d]
 for _, layer in ipairs(spr.layers) do
 	local cel = layer:cel(targetFrame)
 	if cel then
-		local tempLayer = tempSpr.layers[1]
-		if not tempLayer then
-			tempLayer = tempSpr:newLayer()
-		end
+		-- Create a new layer for each source layer
+		local tempLayer = tempSpr:newLayer()
 		tempSpr:newCel(tempLayer, 1, cel.image, cel.position)
 	end
 end
