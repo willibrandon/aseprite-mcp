@@ -51,6 +51,29 @@ type DrawLineOutput struct {
 	Success bool `json:"success" jsonschema:"Whether the line was drawn successfully"`
 }
 
+// PointInput represents a point in the contour.
+type PointInput struct {
+	X int `json:"x" jsonschema:"X coordinate of the point"`
+	Y int `json:"y" jsonschema:"Y coordinate of the point"`
+}
+
+// DrawContourInput defines the input parameters for the draw_contour tool.
+type DrawContourInput struct {
+	SpritePath  string       `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	LayerName   string       `json:"layer_name" jsonschema:"Name of the layer to draw on"`
+	FrameNumber int          `json:"frame_number" jsonschema:"Frame number to draw on (1-based)"`
+	Points      []PointInput `json:"points" jsonschema:"Array of points to connect (minimum 2 points)"`
+	Color       string       `json:"color" jsonschema:"Hex color string in format #RRGGBB or #RRGGBBAA"`
+	Thickness   int          `json:"thickness" jsonschema:"Line thickness in pixels (1-100)"`
+	Closed      bool         `json:"closed" jsonschema:"Connect last point to first to form a closed polygon (default: false)"`
+	UsePalette  bool         `json:"use_palette,omitempty" jsonschema:"Snap colors to nearest palette color (default: false)"`
+}
+
+// DrawContourOutput defines the output for the draw_contour tool.
+type DrawContourOutput struct {
+	Success bool `json:"success" jsonschema:"Whether the contour was drawn successfully"`
+}
+
 // DrawRectangleInput defines the input parameters for the draw_rectangle tool.
 type DrawRectangleInput struct {
 	SpritePath  string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
@@ -212,6 +235,66 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			logger.Information("Line drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber)
 
 			return nil, &DrawLineOutput{Success: true}, nil
+		},
+	)
+
+	// Register draw_contour tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "draw_contour",
+			Description: "Draw a polyline or polygon by connecting multiple points. Supports both open paths and closed shapes.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input DrawContourInput) (*mcp.CallToolResult, *DrawContourOutput, error) {
+			logger.Debug("draw_contour tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "points", len(input.Points), "closed", input.Closed)
+
+			// Validate inputs
+			if input.LayerName == "" {
+				return nil, nil, fmt.Errorf("layer_name cannot be empty")
+			}
+
+			if input.FrameNumber < 1 {
+				return nil, nil, fmt.Errorf("frame_number must be at least 1, got %d", input.FrameNumber)
+			}
+
+			if len(input.Points) < 2 {
+				return nil, nil, fmt.Errorf("at least 2 points are required, got %d", len(input.Points))
+			}
+
+			if input.Thickness < 1 || input.Thickness > 100 {
+				return nil, nil, fmt.Errorf("thickness must be between 1 and 100, got %d", input.Thickness)
+			}
+
+			// Parse color
+			var color aseprite.Color
+			if err := color.FromHex(input.Color); err != nil {
+				return nil, nil, fmt.Errorf("invalid color format: %w", err)
+			}
+
+			// Convert PointInput to aseprite.Point
+			points := make([]aseprite.Point, len(input.Points))
+			for i, p := range input.Points {
+				points[i] = aseprite.Point{X: p.X, Y: p.Y}
+			}
+
+			// Generate Lua script
+			script := gen.DrawContour(input.LayerName, input.FrameNumber, points, color, input.Thickness, input.Closed, input.UsePalette)
+
+			// Execute Lua script with the sprite
+			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to draw contour", "error", err)
+				return nil, nil, fmt.Errorf("failed to draw contour: %w", err)
+			}
+
+			// Check for success message
+			if !strings.Contains(output, "Contour drawn successfully") {
+				logger.Warning("Unexpected output from draw_contour", "output", output)
+			}
+
+			logger.Information("Contour drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "points", len(points), "closed", input.Closed)
+
+			return nil, &DrawContourOutput{Success: true}, nil
 		},
 	)
 

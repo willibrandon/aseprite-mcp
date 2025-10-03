@@ -254,3 +254,77 @@ func TestLuaGenerator_DeleteFrame(t *testing.T) {
 		t.Error("script not wrapped in transaction")
 	}
 }
+
+func TestLuaGenerator_DrawContour(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	points := []Point{
+		{X: 10, Y: 10},
+		{X: 50, Y: 10},
+		{X: 50, Y: 50},
+		{X: 10, Y: 50},
+	}
+	color := Color{R: 255, G: 0, B: 0, A: 255}
+
+	t.Run("open contour", func(t *testing.T) {
+		script := gen.DrawContour("Layer 1", 1, points, color, 2, false, false)
+
+		// Verify script contains expected elements
+		if !strings.Contains(script, `lyr.name == "Layer 1"`) {
+			t.Error("script missing layer name check")
+		}
+
+		if !strings.Contains(script, "Brush(2)") {
+			t.Error("script missing brush thickness")
+		}
+
+		if !strings.Contains(script, "Color(255, 0, 0, 255)") {
+			t.Error("script missing color")
+		}
+
+		if !strings.Contains(script, "Point(10, 10)") {
+			t.Error("script missing first point")
+		}
+
+		if !strings.Contains(script, "Point(50, 50)") {
+			t.Error("script missing last point")
+		}
+
+		if !strings.Contains(script, "app.transaction(function()") {
+			t.Error("script not wrapped in transaction")
+		}
+
+		// Should NOT have closing line for open contour
+		if strings.Contains(script, "-- Close the contour") {
+			t.Error("open contour should not have closing line")
+		}
+	})
+
+	t.Run("closed contour (polygon)", func(t *testing.T) {
+		script := gen.DrawContour("Layer 1", 1, points, color, 2, true, false)
+
+		// Should have closing line connecting last to first
+		if !strings.Contains(script, "-- Close the contour") {
+			t.Error("closed contour missing closing line comment")
+		}
+
+		// Verify it connects last point back to first
+		if !strings.Contains(script, "Point(10, 50)") || !strings.Contains(script, "Point(10, 10)") {
+			t.Error("closed contour should connect last point to first")
+		}
+	})
+
+	t.Run("with palette", func(t *testing.T) {
+		script := gen.DrawContour("Layer 1", 1, points, color, 2, false, true)
+
+		// Should include palette snapper helper
+		if !strings.Contains(script, "function snapToPalette") {
+			t.Error("script with use_palette missing snapToPalette helper")
+		}
+
+		// The color variable should be assigned the result of snapToPalette (with RGBA values, not Color())
+		if !strings.Contains(script, "local color = snapToPalette(255, 0, 0, 255)") {
+			t.Error("script should use snapToPalette for color assignment")
+		}
+	})
+}

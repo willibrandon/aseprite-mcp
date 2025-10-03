@@ -96,6 +96,7 @@ Then use natural language to create sprites:
 |------|-------------|
 | `draw_pixels` | Draw individual pixels (supports batch operations, optional palette snapping) |
 | `draw_line` | Draw a line between two points (optional palette snapping) |
+| `draw_contour` | Draw a polyline or polygon by connecting multiple points (optional palette snapping) |
 | `draw_rectangle` | Draw a rectangle (filled or outline, optional palette snapping) |
 | `draw_circle` | Draw a circle/ellipse (filled or outline, optional palette snapping) |
 | `fill_area` | Flood fill from a point (paint bucket, optional palette snapping) |

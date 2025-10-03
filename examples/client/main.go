@@ -792,6 +792,78 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Final state: {Info}", finalInfoResp)
 
+	// Step 18: Demonstrate drawing polylines and polygons
+	logger.Information("")
+	logger.Information("Step 18: Demonstrating polylines and polygons...")
+
+	// Draw a zigzag polyline (open contour) on frame 1
+	logger.Information("  Drawing zigzag polyline on frame 1...")
+	_, err = callTool(ctx, session, "draw_contour", map[string]any{
+		"sprite_path":  spritePath,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"points": []map[string]any{
+			{"x": 10, "y": 10},
+			{"x": 30, "y": 30},
+			{"x": 50, "y": 10},
+			{"x": 70, "y": 30},
+			{"x": 54, "y": 54},
+		},
+		"color":     "#FF0000",
+		"thickness": 2,
+		"closed":    false,
+	})
+	if err != nil {
+		return fmt.Errorf("draw_contour (zigzag) failed: %w", err)
+	}
+
+	// Draw a triangle (closed polygon) on frame 2
+	logger.Information("  Drawing triangle on frame 2...")
+	_, err = callTool(ctx, session, "draw_contour", map[string]any{
+		"sprite_path":  spritePath,
+		"layer_name":   "Layer 1",
+		"frame_number": 2,
+		"points": []map[string]any{
+			{"x": 32, "y": 10},
+			{"x": 54, "y": 54},
+			{"x": 10, "y": 54},
+		},
+		"color":     "#00FF00",
+		"thickness": 3,
+		"closed":    true,
+	})
+	if err != nil {
+		return fmt.Errorf("draw_contour (triangle) failed: %w", err)
+	}
+
+	// Draw a star shape on frame 3 with palette snapping
+	logger.Information("  Drawing star on frame 3 with palette snapping...")
+	_, err = callTool(ctx, session, "draw_contour", map[string]any{
+		"sprite_path":  spritePath,
+		"layer_name":   "Layer 1",
+		"frame_number": 3,
+		"points": []map[string]any{
+			{"x": 32, "y": 5},
+			{"x": 36, "y": 22},
+			{"x": 54, "y": 22},
+			{"x": 40, "y": 33},
+			{"x": 46, "y": 50},
+			{"x": 32, "y": 40},
+			{"x": 18, "y": 50},
+			{"x": 24, "y": 33},
+			{"x": 10, "y": 22},
+			{"x": 28, "y": 22},
+		},
+		"color":       "#FFFF00", // Yellow
+		"thickness":   1,
+		"closed":      true,
+		"use_palette": false, // No palette snapping for now
+	})
+	if err != nil {
+		return fmt.Errorf("draw_contour (star) failed: %w", err)
+	}
+	logger.Information("  ✓ Drew polylines and polygons successfully")
+
 	return nil
 }
 

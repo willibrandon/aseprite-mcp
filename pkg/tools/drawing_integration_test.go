@@ -463,3 +463,122 @@ func TestIntegration_FillArea_EmptyCanvas(t *testing.T) {
 
 	t.Logf("✓ Filled empty canvas successfully")
 }
+
+func TestIntegration_DrawContour_OpenPolyline(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-contour-open.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw an open polyline (zigzag pattern)
+	points := []aseprite.Point{
+		{X: 10, Y: 10},
+		{X: 30, Y: 30},
+		{X: 50, Y: 10},
+		{X: 70, Y: 30},
+		{X: 90, Y: 10},
+	}
+	color := aseprite.Color{R: 255, G: 0, B: 0, A: 255}
+
+	drawScript := gen.DrawContour("Layer 1", 1, points, color, 2, false, false)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawContour) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Contour drawn successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Drew open polyline with %d points", len(points))
+}
+
+func TestIntegration_DrawContour_ClosedPolygon(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-contour-closed.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw a closed triangle
+	points := []aseprite.Point{
+		{X: 50, Y: 20},
+		{X: 80, Y: 70},
+		{X: 20, Y: 70},
+	}
+	color := aseprite.Color{R: 0, G: 255, B: 0, A: 255}
+
+	drawScript := gen.DrawContour("Layer 1", 1, points, color, 3, true, false)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawContour) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Contour drawn successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Drew closed polygon (triangle) with %d points", len(points))
+}
+
+func TestIntegration_DrawContour_WithPalette(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-contour-palette.aseprite")
+	createScript := gen.CreateCanvas(100, 100, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Set a simple palette
+	setPaletteScript := gen.SetPalette([]string{"#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFFFF"})
+	_, err = client.ExecuteLua(ctx, setPaletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to set palette: %v", err)
+	}
+
+	// Draw a square with palette snapping (color should snap to pure red)
+	points := []aseprite.Point{
+		{X: 20, Y: 20},
+		{X: 80, Y: 20},
+		{X: 80, Y: 80},
+		{X: 20, Y: 80},
+	}
+	// Use slightly off-red color that should snap to #FF0000
+	color := aseprite.Color{R: 250, G: 10, B: 10, A: 255}
+
+	drawScript := gen.DrawContour("Layer 1", 1, points, color, 2, true, true)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawContour) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Contour drawn successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Drew closed polygon with palette snapping")
+}

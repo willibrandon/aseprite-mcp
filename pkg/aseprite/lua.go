@@ -350,6 +350,90 @@ print("Line drawn successfully")`,
 	return sb.String()
 }
 
+// DrawContour generates a Lua script to draw a polyline or polygon by connecting multiple points.
+// If closed is true, connects the last point back to the first to form a polygon.
+func (g *LuaGenerator) DrawContour(layerName string, frameNumber int, points []Point, color Color, thickness int, closed bool, usePalette bool) string {
+	var sb strings.Builder
+
+	// Add palette snapper helper if needed
+	if usePalette {
+		sb.WriteString(GeneratePaletteSnapperHelper())
+		sb.WriteString("\n")
+	}
+
+	escapedName := EscapeString(layerName)
+	sb.WriteString(fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+app.transaction(function()
+	app.activeLayer = layer
+	app.activeFrame = frame
+
+	local brush = Brush(%d)
+	local color = %s
+
+	-- Draw lines connecting each point`,
+		escapedName, escapedName,
+		frameNumber, frameNumber,
+		thickness,
+		FormatColorWithPalette(color, usePalette)))
+
+	// Draw line segments between consecutive points
+	for i := 0; i < len(points)-1; i++ {
+		sb.WriteString(fmt.Sprintf(`
+	app.useTool{
+		tool = "line",
+		color = color,
+		brush = brush,
+		points = {%s, %s}
+	}`,
+			FormatPoint(points[i]),
+			FormatPoint(points[i+1])))
+	}
+
+	// If closed, connect last point back to first
+	if closed && len(points) > 0 {
+		sb.WriteString(fmt.Sprintf(`
+	-- Close the contour
+	app.useTool{
+		tool = "line",
+		color = color,
+		brush = brush,
+		points = {%s, %s}
+	}`,
+			FormatPoint(points[len(points)-1]),
+			FormatPoint(points[0])))
+	}
+
+	sb.WriteString(`
+end)
+
+spr:saveAs(spr.filename)
+print("Contour drawn successfully")`)
+
+	return sb.String()
+}
+
 // DrawRectangle generates a Lua script to draw a rectangle.
 func (g *LuaGenerator) DrawRectangle(layerName string, frameNumber int, x, y, width, height int, color Color, filled bool, usePalette bool) string {
 	var sb strings.Builder

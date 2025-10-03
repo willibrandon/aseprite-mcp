@@ -10,6 +10,7 @@ The `client/` directory contains a complete example MCP client that demonstrates
 - Creating a 64x64 RGB sprite
 - Adding and deleting layers and frames
 - Drawing animated content (growing circles)
+- Drawing polylines and polygons (zigzag, triangle, star)
 - Filling areas with colors
 - Reading pixels for verification (using get_pixels with pagination)
 - Applying dithering patterns for professional gradients
@@ -77,6 +78,7 @@ Available tools:
   - get_pixels: Read pixel data from a rectangular region (with pagination)
   - draw_pixels: Draw individual pixels on a layer
   - draw_line: Draw a line on a layer
+  - draw_contour: Draw polylines and polygons by connecting points
   - draw_rectangle: Draw a rectangle on a layer
   - draw_circle: Draw a circle on a layer
   - fill_area: Fill an area with a color (paint bucket tool)
@@ -155,13 +157,19 @@ Step 17: Demonstrating antialiasing suggestions...
   Exported before: ../sprites/antialiasing-before.png
   Exported after: ../sprites/antialiasing-after.png
 
-Step 18: Demonstrating layer and frame deletion...
+Step 17: Demonstrating layer and frame deletion...
   Created: /tmp/aseprite-mcp/sprite-...
   Added 2 extra layers (3 total)
   Added 2 extra frames (3 total)
   Deleted Layer 2 (2 layers remaining)
   Deleted frame 2 (2 frames remaining)
   Final state: {"width":32,"height":32,"color_mode":"RGB","frame_count":2,"layer_count":2,"layers":["Layer 1","Layer 3"]}
+
+Step 18: Demonstrating polylines and polygons...
+  Drawing zigzag polyline on frame 1...
+  Drawing triangle on frame 2...
+  Drawing star on frame 3 with palette snapping...
+  ✓ Drew polylines and polygons successfully
 
 Example completed successfully!
 ```
