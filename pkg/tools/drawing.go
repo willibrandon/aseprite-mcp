@@ -12,24 +12,32 @@ import (
 )
 
 // PixelInput represents a single pixel to be drawn.
+//
+// Used by draw_pixels to specify individual pixel positions and colors.
 type PixelInput struct {
-	X     int    `json:"x" jsonschema:"X coordinate of the pixel"`
-	Y     int    `json:"y" jsonschema:"Y coordinate of the pixel"`
-	Color string `json:"color" jsonschema:"Hex color string in format #RRGGBB or #RRGGBBAA"`
+	X     int    `json:"x" jsonschema:"X coordinate of the pixel"`                           // X coordinate in sprite pixel space
+	Y     int    `json:"y" jsonschema:"Y coordinate of the pixel"`                           // Y coordinate in sprite pixel space
+	Color string `json:"color" jsonschema:"Hex color string in format #RRGGBB or #RRGGBBAA"` // Color in hex format (#RRGGBB or #RRGGBBAA)
 }
 
 // DrawPixelsInput defines the input parameters for the draw_pixels tool.
+//
+// Draws individual pixels at specified coordinates. Supports batch drawing
+// for efficient bulk pixel operations. When UsePalette is true, colors are
+// snapped to the nearest palette color using LAB color space distance.
 type DrawPixelsInput struct {
-	SpritePath  string       `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
-	LayerName   string       `json:"layer_name" jsonschema:"Name of the layer to draw on"`
-	FrameNumber int          `json:"frame_number" jsonschema:"Frame number to draw on (1-based)"`
-	Pixels      []PixelInput `json:"pixels" jsonschema:"Array of pixels to draw"`
-	UsePalette  bool         `json:"use_palette,omitempty" jsonschema:"Snap colors to nearest palette color (default: false)"`
+	SpritePath  string       `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`                                // Path to the sprite file to modify
+	LayerName   string       `json:"layer_name" jsonschema:"Name of the layer to draw on"`                                     // Target layer name
+	FrameNumber int          `json:"frame_number" jsonschema:"Frame number to draw on (1-based)"`                              // 1-based frame index
+	Pixels      []PixelInput `json:"pixels" jsonschema:"Array of pixels to draw"`                                              // Pixels to draw with positions and colors
+	UsePalette  bool         `json:"use_palette,omitempty" jsonschema:"Snap colors to nearest palette color (default: false)"` // Snap to palette if true
 }
 
 // DrawPixelsOutput defines the output for the draw_pixels tool.
+//
+// Reports the number of pixels successfully drawn.
 type DrawPixelsOutput struct {
-	PixelsDrawn int `json:"pixels_drawn" jsonschema:"Number of pixels successfully drawn"`
+	PixelsDrawn int `json:"pixels_drawn" jsonschema:"Number of pixels successfully drawn"` // Count of pixels drawn
 }
 
 // DrawLineInput defines the input parameters for the draw_line tool.
@@ -129,6 +137,17 @@ type FillAreaOutput struct {
 }
 
 // RegisterDrawingTools registers all drawing tools with the MCP server.
+//
+// Registers the following drawing primitives:
+//   - draw_pixels: Draw individual pixels (bulk operations)
+//   - draw_line: Draw straight lines with thickness control
+//   - draw_contour: Draw multi-segment polylines (open or closed)
+//   - draw_rectangle: Draw rectangles (filled or outline)
+//   - draw_ellipse: Draw ellipses and circles (filled or outline)
+//   - fill: Flood fill with color replacement
+//
+// All drawing tools support palette-aware color snapping via the UsePalette flag,
+// which snaps arbitrary colors to the nearest palette color using LAB color space.
 func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *aseprite.LuaGenerator, cfg *config.Config, logger core.Logger) {
 	// Register draw_pixels tool
 	mcp.AddTool(

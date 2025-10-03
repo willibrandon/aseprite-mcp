@@ -1,3 +1,28 @@
+// Package tools implements MCP tool handlers for Aseprite sprite manipulation.
+//
+// This package provides the bridge between MCP (Model Context Protocol) tool requests
+// and Aseprite operations. Tools are organized by category:
+//
+//   - Canvas tools (canvas.go): Sprite/layer/frame creation and management
+//   - Drawing tools (drawing.go): Pixel, line, shape rendering with palette support
+//   - Animation tools (animation.go): Frame timing, tags, and linked cels
+//   - Inspection tools (inspection.go): Reading pixel data and sprite metadata
+//   - Analysis tools (analysis.go): Reference image palette extraction and edge detection
+//   - Dithering tools (dithering.go): 15 dithering patterns for gradients and textures
+//   - Palette tools (palette_tools.go): Palette management and color harmony analysis
+//   - Transform tools (transform.go): Image downsampling for pixel art conversion
+//   - Export tools (export.go): Sprite export to PNG, GIF, and other formats
+//   - Selection tools (selection.go): Selection mask creation and manipulation
+//   - Antialiasing tools (antialiasing.go): Edge detection and smoothing suggestions
+//
+// All tools follow a common pattern:
+//  1. Input struct defines tool parameters with JSON schema annotations
+//  2. Output struct defines tool results
+//  3. Register function creates MCP tool descriptor with schema
+//  4. Handler function executes the Aseprite operation via Client
+//
+// Tools use Aseprite's Lua API through generated scripts for all operations.
+// No GUI automation or screen scraping is used.
 package tools
 
 import (
@@ -15,55 +40,82 @@ import (
 )
 
 // CreateCanvasInput defines the input parameters for the create_canvas tool.
+//
+// Creates a new sprite file with the specified dimensions and color mode.
+// The sprite is saved as a .aseprite file in the configured temp directory.
 type CreateCanvasInput struct {
-	Width     int    `json:"width" jsonschema:"Canvas width in pixels (1-65535)"`
-	Height    int    `json:"height" jsonschema:"Canvas height in pixels (1-65535)"`
-	ColorMode string `json:"color_mode" jsonschema:"Color mode: rgb, grayscale, or indexed"`
+	Width     int    `json:"width" jsonschema:"Canvas width in pixels (1-65535)"`            // Sprite width in pixels (1-65535)
+	Height    int    `json:"height" jsonschema:"Canvas height in pixels (1-65535)"`          // Sprite height in pixels (1-65535)
+	ColorMode string `json:"color_mode" jsonschema:"Color mode: rgb, grayscale, or indexed"` // Color mode: "rgb", "grayscale", or "indexed"
 }
 
 // CreateCanvasOutput defines the output for the create_canvas tool.
+//
+// Returns the absolute path to the newly created sprite file.
 type CreateCanvasOutput struct {
-	FilePath string `json:"file_path" jsonschema:"Absolute path to the created Aseprite file"`
+	FilePath string `json:"file_path" jsonschema:"Absolute path to the created Aseprite file"` // Absolute path to the created .aseprite file
 }
 
 // AddLayerInput defines the input parameters for the add_layer tool.
+//
+// Adds a new layer to an existing sprite. The layer is created above all existing layers.
 type AddLayerInput struct {
-	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
-	LayerName  string `json:"layer_name" jsonschema:"Name for the new layer"`
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"` // Path to the sprite file to modify
+	LayerName  string `json:"layer_name" jsonschema:"Name for the new layer"`            // Name for the new layer
 }
 
 // AddLayerOutput defines the output for the add_layer tool.
+//
+// Indicates whether the layer was successfully added.
 type AddLayerOutput struct {
-	Success bool `json:"success" jsonschema:"Whether the layer was added successfully"`
+	Success bool `json:"success" jsonschema:"Whether the layer was added successfully"` // True if the layer was added successfully
 }
 
 // AddFrameInput defines the input parameters for the add_frame tool.
+//
+// Adds a new animation frame to the sprite with the specified duration.
 type AddFrameInput struct {
-	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
-	DurationMs int    `json:"duration_ms" jsonschema:"Frame duration in milliseconds (1-65535)"`
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`         // Path to the sprite file to modify
+	DurationMs int    `json:"duration_ms" jsonschema:"Frame duration in milliseconds (1-65535)"` // Frame duration in milliseconds (1-65535)
 }
 
 // AddFrameOutput defines the output for the add_frame tool.
+//
+// Returns the 1-based index of the newly created frame.
 type AddFrameOutput struct {
-	FrameNumber int `json:"frame_number" jsonschema:"Index of the created frame (1-based)"`
+	FrameNumber int `json:"frame_number" jsonschema:"Index of the created frame (1-based)"` // 1-based index of the created frame
 }
 
 // GetSpriteInfoInput defines the input parameters for the get_sprite_info tool.
+//
+// Retrieves metadata about an existing sprite file.
 type GetSpriteInfoInput struct {
-	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"` // Path to the sprite file to inspect
 }
 
 // GetSpriteInfoOutput defines the output for the get_sprite_info tool.
+//
+// Contains complete metadata about a sprite including dimensions, color mode,
+// and animation/layer information.
 type GetSpriteInfoOutput struct {
-	Width      int      `json:"width" jsonschema:"Sprite width in pixels"`
-	Height     int      `json:"height" jsonschema:"Sprite height in pixels"`
-	ColorMode  string   `json:"color_mode" jsonschema:"Color mode (rgb, grayscale, or indexed)"`
-	FrameCount int      `json:"frame_count" jsonschema:"Number of frames in the sprite"`
-	LayerCount int      `json:"layer_count" jsonschema:"Number of layers in the sprite"`
-	Layers     []string `json:"layers" jsonschema:"Names of all layers in the sprite"`
+	Width      int      `json:"width" jsonschema:"Sprite width in pixels"`                       // Sprite width in pixels
+	Height     int      `json:"height" jsonschema:"Sprite height in pixels"`                     // Sprite height in pixels
+	ColorMode  string   `json:"color_mode" jsonschema:"Color mode (rgb, grayscale, or indexed)"` // Color mode: "rgb", "grayscale", or "indexed"
+	FrameCount int      `json:"frame_count" jsonschema:"Number of frames in the sprite"`         // Total number of animation frames
+	LayerCount int      `json:"layer_count" jsonschema:"Number of layers in the sprite"`         // Total number of layers
+	Layers     []string `json:"layers" jsonschema:"Names of all layers in the sprite"`           // Names of all layers from bottom to top
 }
 
 // RegisterCanvasTools registers all canvas management tools with the MCP server.
+//
+// Registers the following tools:
+//   - create_canvas: Create new sprites with specified dimensions and color mode
+//   - add_layer: Add layers to existing sprites
+//   - add_frame: Add animation frames with duration control
+//   - get_sprite_info: Retrieve sprite metadata and structure
+//
+// All tools operate on sprite files saved to disk. Canvas creation generates
+// a new .aseprite file in the configured temp directory.
 func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *aseprite.LuaGenerator, cfg *config.Config, logger core.Logger) {
 	// Register create_canvas tool
 	mcp.AddTool(

@@ -11,14 +11,29 @@ import (
 	"time"
 )
 
-// Client executes Aseprite commands and Lua scripts.
+// Client executes Aseprite commands and Lua scripts in batch mode.
+// It provides a high-level interface for sprite manipulation through
+// Aseprite's command-line interface and Lua scripting API.
+//
+// All operations execute with a configurable timeout and automatic
+// temporary file cleanup. The client is safe for concurrent use from
+// multiple goroutines.
 type Client struct {
 	execPath string
 	tempDir  string
 	timeout  time.Duration
 }
 
-// NewClient creates a new Aseprite client.
+// NewClient creates a new Aseprite client with the specified configuration.
+//
+// Parameters:
+//   - execPath: absolute path to the Aseprite executable
+//   - tempDir: directory for temporary script files
+//   - timeout: maximum duration for command execution
+//
+// The client will create the temp directory if it doesn't exist.
+// All Lua scripts are written to temp files with restricted permissions (0600)
+// and automatically cleaned up after execution.
 func NewClient(execPath, tempDir string, timeout time.Duration) *Client {
 	return &Client{
 		execPath: execPath,
@@ -27,7 +42,13 @@ func NewClient(execPath, tempDir string, timeout time.Duration) *Client {
 	}
 }
 
-// ExecuteCommand runs an Aseprite command with the given arguments.
+// ExecuteCommand runs an Aseprite command with the given arguments in batch mode.
+//
+// The command executes with the configured timeout. If the timeout is exceeded,
+// the command is terminated and an error is returned.
+//
+// Returns the stdout output from Aseprite, or an error if execution fails.
+// Stderr output is included in the error message for debugging.
 func (c *Client) ExecuteCommand(ctx context.Context, args []string) (string, error) {
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
@@ -63,7 +84,20 @@ func (c *Client) ExecuteCommand(ctx context.Context, args []string) (string, err
 }
 
 // ExecuteLua executes a Lua script in Aseprite batch mode.
-// If spritePath is non-empty, the sprite will be opened before running the script.
+//
+// The script is written to a temporary file with restricted permissions (0600)
+// and automatically cleaned up after execution. Script execution respects the
+// configured timeout.
+//
+// Parameters:
+//   - ctx: context for cancellation and timeout control
+//   - script: Lua script code to execute
+//   - spritePath: path to sprite file to open (empty string to create new sprite)
+//
+// If spritePath is non-empty, the sprite will be opened before running the script
+// and the sprite file must exist. The script will have access to app.activeSprite.
+//
+// Returns the stdout output from Aseprite, or an error if execution fails.
 func (c *Client) ExecuteLua(ctx context.Context, script string, spritePath string) (string, error) {
 	// Create temporary script file
 	scriptPath, cleanup, err := c.createTempScript(script)
@@ -91,7 +125,13 @@ func (c *Client) ExecuteLua(ctx context.Context, script string, spritePath strin
 	return c.ExecuteCommand(ctx, args)
 }
 
-// GetVersion retrieves the Aseprite version.
+// GetVersion retrieves the Aseprite version string.
+//
+// Executes "aseprite --version" and parses the version from the output.
+// The version string typically has the format "Aseprite 1.3.x".
+//
+// Returns the version string, or an error if the command fails or
+// the version cannot be parsed from the output.
 func (c *Client) GetVersion(ctx context.Context) (string, error) {
 	output, err := c.ExecuteCommand(ctx, []string{"--version"})
 	if err != nil {
@@ -107,8 +147,18 @@ func (c *Client) GetVersion(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("failed to parse version from output: %s", output)
 }
 
-// createTempScript creates a temporary Lua script file.
-// Returns the script path and a cleanup function.
+// createTempScript creates a temporary Lua script file with restricted permissions.
+//
+// The script is written to a file in the temp directory with permissions 0600
+// to prevent unauthorized access. The file has a .lua extension and a unique
+// random name.
+//
+// Returns:
+//   - scriptPath: absolute path to the created script file
+//   - cleanup: function to remove the script file (always call this with defer)
+//   - error: any error that occurred during file creation
+//
+// The cleanup function is safe to call multiple times and will not return an error.
 func (c *Client) createTempScript(script string) (string, func(), error) {
 	// Ensure temp directory exists
 	if err := os.MkdirAll(c.tempDir, 0755); err != nil {
@@ -144,7 +194,17 @@ func (c *Client) createTempScript(script string) (string, func(), error) {
 	return scriptPath, cleanup, nil
 }
 
-// CleanupOldTempFiles removes temporary files older than the specified duration.
+// CleanupOldTempFiles removes temporary Lua script files older than the specified duration.
+//
+// This method scans the temp directory for files matching the pattern "script-*.lua"
+// and removes those with modification times older than maxAge. Files are removed
+// silently - errors accessing individual files are ignored.
+//
+// The temp directory itself is not removed, even if empty. If the directory doesn't
+// exist, this method returns nil.
+//
+// This is useful for periodic cleanup of leftover temp files from crashed or
+// interrupted operations.
 func (c *Client) CleanupOldTempFiles(maxAge time.Duration) error {
 	entries, err := os.ReadDir(c.tempDir)
 	if err != nil {

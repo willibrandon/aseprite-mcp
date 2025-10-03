@@ -4,16 +4,20 @@ A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and anim
 
 ## Features
 
-- **Canvas & Layer Management:** RGB, Grayscale, and Indexed color modes with multi-layer support
-- **Drawing Primitives:** Pixels, lines, rectangles, circles, flood fill with batch operations
+- **Canvas & Layer Management:** RGB, Grayscale, and Indexed color modes with multi-layer support and layer deletion
+- **Drawing Primitives:** Pixels, lines, rectangles, circles, polylines, flood fill with batch operations and palette-aware drawing
+- **Selection Tools:** Rectangle, ellipse, select all, copy, cut, paste, move selections with multiple blend modes (replace/add/subtract/intersect)
 - **Professional Pixel Art Tools:**
   - **Reference Analysis:** Extract palettes, brightness maps, edge detection, and composition guides from images
-  - **Dithering:** Bayer matrix (2x2, 4x4, 8x8) and checkerboard patterns for smooth gradients and textures
-  - **Palette Extraction:** K-means clustering in LAB color space for perceptually accurate color reduction
-  - **Transform Operations:** Flip, rotate, scale, crop, resize canvas, and apply outlines
-- **Animation Tools:** Frame durations, tags, frame duplication, linked cels
+  - **Dithering:** 15 patterns including Bayer matrices (2x2, 4x4, 8x8), checkerboard, and textures (grass, water, stone, cloud, brick, dots, diagonal, cross, noise, lines)
+  - **Palette Management:** Set custom palettes (1-256 colors), sort by hue/luminance, analyze color harmonies (complementary/triadic/analogous), and extract from reference images
+  - **Shading Tools:** Apply palette-constrained shading with smooth, hard, or pillow styles and 8 light directions
+  - **Antialiasing:** Detect jagged diagonal edges and suggest intermediate colors for smoother curves (manual or auto-apply)
+  - **Transform Operations:** Flip, rotate, scale, crop, resize canvas, apply outlines, and downsample for pixel art conversion
+  - **Palette-Aware Drawing:** All drawing tools support snapping to nearest palette color using LAB color space
+- **Animation Tools:** Frame durations, tags, frame duplication/deletion, linked cels
 - **Inspection Tools:** Read pixel data with pagination for verification and analysis
-- **Export Formats:** PNG, GIF, JPG, and BMP
+- **Export Formats:** PNG, GIF, JPG, BMP, and spritesheet export (horizontal/vertical/grid layouts)
 - **Cross-platform:** Windows, macOS, Linux
 - **MCP Integration:** Works with Claude Desktop and other MCP clients
 

@@ -5,16 +5,30 @@ import (
 	"strings"
 )
 
-// LuaGenerator provides utilities for generating Lua scripts for Aseprite.
+// LuaGenerator provides utilities for generating Lua scripts for Aseprite batch operations.
+//
+// All generated scripts are designed to run in Aseprite's batch mode (--batch --script).
+// Scripts include proper error handling, transactions for atomicity, and sprite saving.
+//
+// The generator is stateless and safe for concurrent use.
 type LuaGenerator struct{}
 
 // NewLuaGenerator creates a new Lua script generator.
+//
+// The generator is stateless and can be reused for multiple script generation operations.
 func NewLuaGenerator() *LuaGenerator {
 	return &LuaGenerator{}
 }
 
-// EscapeString escapes a string for use in Lua code.
-// It handles quotes, newlines, and other special characters.
+// EscapeString escapes a string for safe use in Lua code.
+//
+// Handles special characters that could break Lua syntax or introduce injection vulnerabilities:
+//   - Backslashes (\) are escaped to (\\)
+//   - Double quotes (") are escaped to (\")
+//   - Newlines (\n), carriage returns (\r), and tabs (\t) are escaped
+//
+// Always use this function when embedding user-provided strings in generated Lua code
+// to prevent script injection attacks.
 func EscapeString(s string) string {
 	// Replace backslashes first
 	s = strings.ReplaceAll(s, `\`, `\\`)
@@ -31,13 +45,20 @@ func EscapeString(s string) string {
 }
 
 // FormatColor formats a Color as a Lua Color constructor call.
+//
+// Returns a string like "Color(255, 0, 0, 255)" suitable for embedding in Lua scripts.
+// The generated code creates an Aseprite Color object with RGBA values.
 func FormatColor(c Color) string {
 	return fmt.Sprintf("Color(%d, %d, %d, %d)", c.R, c.G, c.B, c.A)
 }
 
 // FormatColorWithPalette formats a Color with optional palette snapping.
-// If usePalette is true, wraps the color in a call to snapToPalette().
-// Returns the color expression as a string.
+//
+// If usePalette is false, returns a direct Color constructor call.
+// If usePalette is true, wraps the color in snapToPalette() to find the nearest palette color.
+//
+// The snapToPalette function must be defined in the script (use GeneratePaletteSnapperHelper).
+// This is useful for palette-constrained pixel art to ensure all colors match the palette.
 func FormatColorWithPalette(c Color, usePalette bool) string {
 	if !usePalette {
 		return FormatColor(c)
@@ -45,8 +66,13 @@ func FormatColorWithPalette(c Color, usePalette bool) string {
 	return fmt.Sprintf("snapToPalette(%d, %d, %d, %d)", c.R, c.G, c.B, c.A)
 }
 
-// GeneratePaletteSnapperHelper returns Lua code that defines a snapToPalette helper function.
-// This function snaps an RGBA color to the nearest color in the sprite's active palette.
+// GeneratePaletteSnapperHelper returns Lua code defining a snapToPalette helper function.
+//
+// The generated function snaps an arbitrary RGBA color to the nearest color in the
+// sprite's active palette using LAB color space distance for perceptual accuracy.
+//
+// Include this helper at the start of scripts that use palette-aware drawing (use_palette=true).
+// The function signature is: snapToPalette(r, g, b, a) -> Color
 func GeneratePaletteSnapperHelper() string {
 	return `
 -- Helper: Snap color to nearest palette color
@@ -80,16 +106,32 @@ end
 }
 
 // FormatPoint formats a Point as a Lua Point constructor call.
+//
+// Returns a string like "Point(10, 20)" suitable for embedding in Lua scripts.
+// The generated code creates an Aseprite Point object with X, Y coordinates.
 func FormatPoint(p Point) string {
 	return fmt.Sprintf("Point(%d, %d)", p.X, p.Y)
 }
 
 // FormatRectangle formats a Rectangle as a Lua Rectangle constructor call.
+//
+// Returns a string like "Rectangle(10, 20, 30, 40)" suitable for embedding in Lua scripts.
+// The generated code creates an Aseprite Rectangle object with X, Y, Width, Height.
 func FormatRectangle(r Rectangle) string {
 	return fmt.Sprintf("Rectangle(%d, %d, %d, %d)", r.X, r.Y, r.Width, r.Height)
 }
 
 // WrapInTransaction wraps Lua code in an app.transaction for atomicity.
+//
+// Aseprite transactions ensure that sprite modifications are atomic - either all
+// changes succeed or all fail. This is important for undo/redo functionality.
+//
+// All mutation operations should be wrapped in transactions. The generated code
+// has the form:
+//
+//	app.transaction(function()
+//	  <your code here>
+//	end)
 func WrapInTransaction(code string) string {
 	return fmt.Sprintf(`app.transaction(function()
 %s
@@ -2117,9 +2159,10 @@ if %d + %d > spr.width or %d + %d > spr.height then
 end
 
 app.transaction(function()
-	app.command.CropSprite{
-		bounds = Rectangle(%d, %d, %d, %d)
-	}
+	-- Select the crop region
+	spr.selection = Selection(Rectangle(%d, %d, %d, %d))
+	-- Crop to selection
+	app.command.CropSprite()
 end)
 
 spr:saveAs(spr.filename)
@@ -2133,27 +2176,37 @@ print("Sprite cropped successfully")`,
 
 // ResizeCanvas generates a Lua script to resize the canvas without scaling content.
 func (g *LuaGenerator) ResizeCanvas(width, height int, anchor string) string {
-	// Calculate anchor offset based on anchor position
-	var leftOffset, topOffset string
+	// Calculate padding amounts based on anchor position
+	var leftPad, topPad, rightPad, bottomPad string
 
 	switch anchor {
 	case "top_left":
-		leftOffset = "0"
-		topOffset = "0"
+		leftPad = "0"
+		topPad = "0"
+		rightPad = "newWidth - oldWidth"
+		bottomPad = "newHeight - oldHeight"
 	case "top_right":
-		leftOffset = "newWidth - oldWidth"
-		topOffset = "0"
+		leftPad = "newWidth - oldWidth"
+		topPad = "0"
+		rightPad = "0"
+		bottomPad = "newHeight - oldHeight"
 	case "bottom_left":
-		leftOffset = "0"
-		topOffset = "newHeight - oldHeight"
+		leftPad = "0"
+		topPad = "newHeight - oldHeight"
+		rightPad = "newWidth - oldWidth"
+		bottomPad = "0"
 	case "bottom_right":
-		leftOffset = "newWidth - oldWidth"
-		topOffset = "newHeight - oldHeight"
+		leftPad = "newWidth - oldWidth"
+		topPad = "newHeight - oldHeight"
+		rightPad = "0"
+		bottomPad = "0"
 	case "center":
 		fallthrough
 	default:
-		leftOffset = "math.floor((newWidth - oldWidth) / 2)"
-		topOffset = "math.floor((newHeight - oldHeight) / 2)"
+		leftPad = "math.floor((newWidth - oldWidth) / 2)"
+		topPad = "math.floor((newHeight - oldHeight) / 2)"
+		rightPad = "math.ceil((newWidth - oldWidth) / 2)"
+		bottomPad = "math.ceil((newHeight - oldHeight) / 2)"
 	}
 
 	return fmt.Sprintf(`local spr = app.activeSprite
@@ -2170,15 +2223,13 @@ app.transaction(function()
 	app.command.CanvasSize{
 		left = %s,
 		top = %s,
-		right = 0,
-		bottom = 0,
-		width = newWidth,
-		height = newHeight
+		right = %s,
+		bottom = %s
 	}
 end)
 
 spr:saveAs(spr.filename)
-print("Canvas resized successfully")`, width, height, leftOffset, topOffset)
+print("Canvas resized successfully")`, width, height, leftPad, topPad, rightPad, bottomPad)
 }
 
 // ApplyOutline generates a Lua script to apply an outline effect to a layer.

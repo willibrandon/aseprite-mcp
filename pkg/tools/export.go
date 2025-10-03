@@ -69,7 +69,16 @@ type SaveAsOutput struct {
 	FilePath string `json:"file_path" jsonschema:"Path to saved file"`
 }
 
-// RegisterExportTools registers all export tools with the MCP server.
+// RegisterExportTools registers all export and import tools with the MCP server.
+//
+// Registers the following tools:
+//   - export_sprite: Export individual frames to PNG, GIF, JPG, or BMP
+//   - export_spritesheet: Export all frames as a spritesheet (horizontal/vertical/grid layout)
+//   - import_image: Import images as new layers or cels
+//   - save_as: Save sprite to a different path
+//
+// Export tools support multiple output formats and frame selection.
+// Import tools can create new layers or merge into existing ones.
 func RegisterExportTools(server *mcp.Server, client *aseprite.Client, gen *aseprite.LuaGenerator, cfg *config.Config, logger core.Logger) {
 	// Register export_sprite tool
 	mcp.AddTool(

@@ -809,8 +809,9 @@ func TestLuaGenerator_CropSprite(t *testing.T) {
 		t.Error("script missing CropSprite command")
 	}
 
-	if !strings.Contains(script, "bounds = Rectangle(10, 20, 100, 80)") {
-		t.Error("script missing Rectangle bounds")
+	// Check that selection is set to crop region
+	if !strings.Contains(script, "spr.selection = Selection(Rectangle(10, 20, 100, 80))") {
+		t.Error("script missing selection setup")
 	}
 
 	if !strings.Contains(script, "Sprite cropped successfully") {
@@ -833,11 +834,19 @@ func TestLuaGenerator_ResizeCanvas(t *testing.T) {
 		}
 
 		if !strings.Contains(script, "left = math.floor((newWidth - oldWidth) / 2)") {
-			t.Error("script missing center left offset")
+			t.Error("script missing center left padding")
 		}
 
 		if !strings.Contains(script, "top = math.floor((newHeight - oldHeight) / 2)") {
-			t.Error("script missing center top offset")
+			t.Error("script missing center top padding")
+		}
+
+		if !strings.Contains(script, "right = math.ceil((newWidth - oldWidth) / 2)") {
+			t.Error("script missing center right padding")
+		}
+
+		if !strings.Contains(script, "bottom = math.ceil((newHeight - oldHeight) / 2)") {
+			t.Error("script missing center bottom padding")
 		}
 
 		if !strings.Contains(script, "app.command.CanvasSize") {
@@ -849,11 +858,19 @@ func TestLuaGenerator_ResizeCanvas(t *testing.T) {
 		script := gen.ResizeCanvas(200, 150, "top_left")
 
 		if !strings.Contains(script, "left = 0") {
-			t.Error("script missing top_left left offset")
+			t.Error("script missing top_left left padding")
 		}
 
 		if !strings.Contains(script, "top = 0") {
-			t.Error("script missing top_left top offset")
+			t.Error("script missing top_left top padding")
+		}
+
+		if !strings.Contains(script, "right = newWidth - oldWidth") {
+			t.Error("script missing top_left right padding")
+		}
+
+		if !strings.Contains(script, "bottom = newHeight - oldHeight") {
+			t.Error("script missing top_left bottom padding")
 		}
 	})
 
@@ -861,11 +878,19 @@ func TestLuaGenerator_ResizeCanvas(t *testing.T) {
 		script := gen.ResizeCanvas(200, 150, "bottom_right")
 
 		if !strings.Contains(script, "left = newWidth - oldWidth") {
-			t.Error("script missing bottom_right left offset")
+			t.Error("script missing bottom_right left padding")
 		}
 
 		if !strings.Contains(script, "top = newHeight - oldHeight") {
-			t.Error("script missing bottom_right top offset")
+			t.Error("script missing bottom_right top padding")
+		}
+
+		if !strings.Contains(script, "right = 0") {
+			t.Error("script missing bottom_right right padding")
+		}
+
+		if !strings.Contains(script, "bottom = 0") {
+			t.Error("script missing bottom_right bottom padding")
 		}
 	})
 

@@ -13,33 +13,45 @@ import (
 )
 
 // GetPixelsInput defines the input parameters for the get_pixels tool.
+//
+// Reads pixel data from a rectangular region. Supports pagination for large regions
+// to avoid memory/bandwidth issues. Default page size is 1000 pixels, max 10000.
 type GetPixelsInput struct {
-	SpritePath  string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
-	LayerName   string `json:"layer_name" jsonschema:"Name of the layer to read from"`
-	FrameNumber int    `json:"frame_number" jsonschema:"Frame number to read from (1-based)"`
-	X           int    `json:"x" jsonschema:"X coordinate of top-left corner of region"`
-	Y           int    `json:"y" jsonschema:"Y coordinate of top-left corner of region"`
-	Width       int    `json:"width" jsonschema:"Width of region to read"`
-	Height      int    `json:"height" jsonschema:"Height of region to read"`
-	Cursor      string `json:"cursor,omitempty" jsonschema:"Pagination cursor for fetching next page (optional)"`
-	PageSize    int    `json:"page_size,omitempty" jsonschema:"Number of pixels to return per page (default: 1000, max: 10000)"`
+	SpritePath  string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`                                        // Path to the sprite file to read
+	LayerName   string `json:"layer_name" jsonschema:"Name of the layer to read from"`                                           // Layer to read from
+	FrameNumber int    `json:"frame_number" jsonschema:"Frame number to read from (1-based)"`                                    // 1-based frame index
+	X           int    `json:"x" jsonschema:"X coordinate of top-left corner of region"`                                         // Top-left X coordinate
+	Y           int    `json:"y" jsonschema:"Y coordinate of top-left corner of region"`                                         // Top-left Y coordinate
+	Width       int    `json:"width" jsonschema:"Width of region to read"`                                                       // Region width in pixels
+	Height      int    `json:"height" jsonschema:"Height of region to read"`                                                     // Region height in pixels
+	Cursor      string `json:"cursor,omitempty" jsonschema:"Pagination cursor for fetching next page (optional)"`                // Cursor for next page (empty for first page)
+	PageSize    int    `json:"page_size,omitempty" jsonschema:"Number of pixels to return per page (default: 1000, max: 10000)"` // Page size (default 1000, max 10000)
 }
 
 // PixelData represents a single pixel with coordinates and color.
+//
+// Used by get_pixels to return pixel information from sprite inspection.
 type PixelData struct {
-	X     int    `json:"x"`
-	Y     int    `json:"y"`
-	Color string `json:"color"`
+	X     int    `json:"x"`     // X coordinate in sprite space
+	Y     int    `json:"y"`     // Y coordinate in sprite space
+	Color string `json:"color"` // Color in hex format (#RRGGBBAA)
 }
 
 // GetPixelsOutput defines the output for the get_pixels tool.
+//
+// Returns pixel data with pagination support. NextCursor is empty when no more pages exist.
 type GetPixelsOutput struct {
-	Pixels      []PixelData `json:"pixels" jsonschema:"Array of pixels with coordinates and colors"`
-	NextCursor  string      `json:"next_cursor,omitempty" jsonschema:"Cursor for fetching next page (empty if no more pages)"`
-	TotalPixels int         `json:"total_pixels" jsonschema:"Total number of pixels in the region"`
+	Pixels      []PixelData `json:"pixels" jsonschema:"Array of pixels with coordinates and colors"`                           // Pixel data for current page
+	NextCursor  string      `json:"next_cursor,omitempty" jsonschema:"Cursor for fetching next page (empty if no more pages)"` // Pagination cursor (empty if done)
+	TotalPixels int         `json:"total_pixels" jsonschema:"Total number of pixels in the region"`                            // Total pixels in queried region
 }
 
 // RegisterInspectionTools registers all inspection tools with the MCP server.
+//
+// Registers the following tools:
+//   - get_pixels: Read pixel data from rectangular regions with pagination support
+//
+// Inspection tools are read-only and do not modify sprite files.
 func RegisterInspectionTools(server *mcp.Server, client *aseprite.Client, gen *aseprite.LuaGenerator, cfg *config.Config, logger core.Logger) {
 	// Register get_pixels tool
 	mcp.AddTool(

@@ -1,4 +1,19 @@
 // Package config provides configuration management for the Aseprite MCP server.
+//
+// Configuration is loaded exclusively from a JSON file at ~/.config/aseprite-mcp/config.json.
+// No environment variables or auto-discovery mechanisms are used - all paths must be
+// explicitly configured.
+//
+// Example config file:
+//
+//	{
+//	  "aseprite_path": "/absolute/path/to/aseprite",
+//	  "temp_dir": "/tmp/aseprite-mcp",
+//	  "timeout": 30,
+//	  "log_level": "info"
+//	}
+//
+// The aseprite_path field is required and must point to a real Aseprite executable.
 package config
 
 import (
@@ -9,29 +24,53 @@ import (
 	"time"
 )
 
-// Config holds the server configuration.
+// Config holds the Aseprite MCP server configuration.
+//
+// All fields must be explicitly set in the config file, except:
+//   - TempDir defaults to /tmp/aseprite-mcp if not specified
+//   - Timeout defaults to 30 seconds if not specified
+//   - LogLevel defaults to "info" if not specified
+//
+// The AsepritePath is REQUIRED and must be an absolute path to a real executable.
 type Config struct {
-	// AsepritePath is the path to the Aseprite executable.
+	// AsepritePath is the absolute path to the Aseprite executable.
+	// REQUIRED. Must point to a real, executable file.
 	AsepritePath string `json:"aseprite_path"`
 
-	// TempDir is the directory for temporary files.
+	// TempDir is the directory for temporary Lua script files.
+	// Defaults to /tmp/aseprite-mcp if not specified.
 	TempDir string `json:"temp_dir"`
 
-	// Timeout is the maximum duration for operations.
+	// Timeout is the maximum duration for Aseprite command execution.
+	// Defaults to 30 seconds if not specified.
 	Timeout time.Duration `json:"timeout"`
 
 	// LogLevel is the logging verbosity level.
+	// Valid values: "debug", "info", "warn", "error"
+	// Defaults to "info" if not specified.
 	LogLevel string `json:"log_level"`
 }
 
-// Default configuration values.
+// Default configuration values applied when fields are not specified in the config file.
 const (
-	DefaultTimeout  = 30 * time.Second
+	// DefaultTimeout is the default maximum duration for Aseprite operations (30 seconds)
+	DefaultTimeout = 30 * time.Second
+
+	// DefaultLogLevel is the default logging verbosity ("info")
 	DefaultLogLevel = "info"
 )
 
-// Load loads configuration from the default config file.
-// The config file MUST contain an explicit aseprite_path.
+// Load loads configuration from the default config file at ~/.config/aseprite-mcp/config.json.
+//
+// The config file MUST exist and MUST contain an explicit aseprite_path field.
+// No environment variables or auto-discovery mechanisms are used.
+//
+// Returns an error if:
+//   - Config file doesn't exist
+//   - Config file is malformed JSON
+//   - aseprite_path is not set
+//   - aseprite_path doesn't point to a real executable
+//   - Validation fails for any other field
 func Load() (*Config, error) {
 	cfg := &Config{
 		Timeout:  DefaultTimeout,
@@ -92,6 +131,16 @@ func (c *Config) loadFromFile() error {
 }
 
 // setDefaults sets default values for unset configuration fields.
+//
+// This method is called after loading from file to fill in any missing values.
+// The aseprite_path field MUST be explicitly set and cannot be defaulted.
+//
+// Defaults applied:
+//   - TempDir: /tmp/aseprite-mcp (or OS temp dir + "aseprite-mcp")
+//   - Timeout: 30 seconds
+//   - LogLevel: "info"
+//
+// Also creates the temp directory if it doesn't exist.
 func (c *Config) setDefaults() error {
 	// Aseprite path must be explicitly set in config file
 	if c.AsepritePath == "" {
@@ -121,7 +170,16 @@ func (c *Config) setDefaults() error {
 	return nil
 }
 
-// Validate checks if the configuration is valid.
+// Validate checks if the configuration is valid and usable.
+//
+// Validation checks:
+//   - Aseprite executable exists at the configured path
+//   - Temp directory is writable
+//   - Timeout is positive
+//   - LogLevel is one of: debug, info, warn, error
+//
+// Returns an error if any validation check fails.
+// This method is automatically called by Load() before returning the config.
 func (c *Config) Validate() error {
 	// Check if Aseprite executable exists
 	if _, err := os.Stat(c.AsepritePath); os.IsNotExist(err) {
