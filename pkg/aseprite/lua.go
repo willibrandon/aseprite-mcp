@@ -1182,6 +1182,217 @@ spr:saveAs(spr.filename)
 print("Palette set successfully")`, len(colors), colorList)
 }
 
+// GetPalette generates a Lua script to retrieve the sprite's current palette.
+// Returns a JSON object with colors array and size.
+func (g *LuaGenerator) GetPalette() string {
+	return `local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Get palette
+local palette = spr.palettes[1]
+if not palette then
+	error("No palette found")
+end
+
+-- Extract colors as hex strings
+local colors = {}
+for i = 0, #palette - 1 do
+	local color = palette:getColor(i)
+	local hex = string.format("#%02X%02X%02X", color.red, color.green, color.blue)
+	table.insert(colors, hex)
+end
+
+-- Format as JSON
+local colorList = '["' .. table.concat(colors, '","') .. '"]'
+local output = string.format('{"colors":%s,"size":%d}', colorList, #palette)
+
+print(output)`
+}
+
+// SetPaletteColor generates a Lua script to set a specific palette color at an index.
+func (g *LuaGenerator) SetPaletteColor(index int, hexColor string) string {
+	// Parse hex color #RRGGBB
+	hexColor = strings.TrimPrefix(hexColor, "#")
+
+	var red, green, blue, alpha int
+	// Parse hex color components (errors ignored as format is validated by caller)
+	_, _ = fmt.Sscanf(hexColor[:2], "%x", &red)
+	_, _ = fmt.Sscanf(hexColor[2:4], "%x", &green)
+	_, _ = fmt.Sscanf(hexColor[4:6], "%x", &blue)
+	if len(hexColor) == 8 {
+		_, _ = fmt.Sscanf(hexColor[6:8], "%x", &alpha)
+	} else {
+		alpha = 255
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Get palette
+local palette = spr.palettes[1]
+if not palette then
+	error("No palette found")
+end
+
+-- Validate index
+if %d < 0 or %d >= #palette then
+	error(string.format("Palette index %%d out of range (palette has %%d colors)", %d, #palette))
+end
+
+-- Set color at index
+palette:setColor(%d, Color{r=%d, g=%d, b=%d, a=%d})
+
+spr:saveAs(spr.filename)
+print("Palette color set successfully")`, index, index, index, index, red, green, blue, alpha)
+}
+
+// AddPaletteColor generates a Lua script to add a new color to the palette.
+// Returns the index of the newly added color.
+func (g *LuaGenerator) AddPaletteColor(hexColor string) string {
+	// Parse hex color #RRGGBB
+	hexColor = strings.TrimPrefix(hexColor, "#")
+
+	var red, green, blue, alpha int
+	// Parse hex color components (errors ignored as format is validated by caller)
+	_, _ = fmt.Sscanf(hexColor[:2], "%x", &red)
+	_, _ = fmt.Sscanf(hexColor[2:4], "%x", &green)
+	_, _ = fmt.Sscanf(hexColor[4:6], "%x", &blue)
+	if len(hexColor) == 8 {
+		_, _ = fmt.Sscanf(hexColor[6:8], "%x", &alpha)
+	} else {
+		alpha = 255
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Get palette
+local palette = spr.palettes[1]
+if not palette then
+	error("No palette found")
+end
+
+-- Check if palette is at maximum size
+if #palette >= 256 then
+	error("Palette is already at maximum size (256 colors)")
+end
+
+-- Add new color to palette
+local newIndex = #palette
+palette:resize(#palette + 1)
+palette:setColor(newIndex, Color{r=%d, g=%d, b=%d, a=%d})
+
+spr:saveAs(spr.filename)
+
+-- Output JSON with color_index
+local output = string.format('{"color_index":%%d}', newIndex)
+print(output)`, red, green, blue, alpha)
+}
+
+// SortPalette generates a Lua script to sort the palette by a specified method.
+// Methods: "hue", "saturation", "brightness", "luminance"
+func (g *LuaGenerator) SortPalette(method string, ascending bool) string {
+	// Helper function to convert RGB to HSL in Lua
+	rgbToHSL := `-- Convert RGB to HSL
+local function rgbToHSL(r, g, b)
+	r, g, b = r / 255, g / 255, b / 255
+	local max = math.max(r, g, b)
+	local min = math.min(r, g, b)
+	local delta = max - min
+
+	local h, s, l = 0, 0, (max + min) / 2
+
+	if delta ~= 0 then
+		-- Calculate saturation
+		if l < 0.5 then
+			s = delta / (max + min)
+		else
+			s = delta / (2.0 - max - min)
+		end
+
+		-- Calculate hue
+		if max == r then
+			h = ((g - b) / delta)
+			if g < b then
+				h = h + 6.0
+			end
+		elseif max == g then
+			h = ((b - r) / delta) + 2.0
+		elseif max == b then
+			h = ((r - g) / delta) + 4.0
+		end
+
+		h = h * 60.0
+	end
+
+	return h, s, l
+end`
+
+	// Sort function based on method
+	var sortKey string
+	switch method {
+	case "hue":
+		sortKey = "h"
+	case "saturation":
+		sortKey = "s"
+	case "brightness", "luminance":
+		sortKey = "l"
+	default:
+		sortKey = "h"
+	}
+
+	sortDirection := ">"
+	if ascending {
+		sortDirection = "<"
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Get palette
+local palette = spr.palettes[1]
+if not palette then
+	error("No palette found")
+end
+
+%s
+
+-- Extract colors with HSL values
+local colors = {}
+for i = 0, #palette - 1 do
+	local color = palette:getColor(i)
+	local h, s, l = rgbToHSL(color.red, color.green, color.blue)
+	table.insert(colors, {
+		index = i,
+		color = color,
+		h = h,
+		s = s,
+		l = l
+	})
+end
+
+-- Sort colors by %s
+table.sort(colors, function(a, b)
+	return a.%s %s b.%s
+end)
+
+-- Apply sorted colors back to palette
+for i, entry in ipairs(colors) do
+	palette:setColor(i - 1, entry.color)
+end
+
+spr:saveAs(spr.filename)
+print("Palette sorted by %s successfully")`, rgbToHSL, method, sortKey, sortDirection, sortKey, method)
+}
+
 // DrawWithDither generates a Lua script to fill a region with a dithering pattern.
 func (g *LuaGenerator) DrawWithDither(layerName string, frameNumber int, x, y, width, height int, color1, color2 string, pattern string, density float64) string {
 	escapedLayerName := EscapeString(layerName)

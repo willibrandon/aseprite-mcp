@@ -2,7 +2,9 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
@@ -80,8 +82,203 @@ type TemperatureAnalysis struct {
 	Description   string   `json:"description"`
 }
 
+// GetPaletteInput defines the input parameters for the get_palette tool.
+type GetPaletteInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+}
+
+// GetPaletteOutput defines the output for the get_palette tool.
+type GetPaletteOutput struct {
+	Colors []string `json:"colors" jsonschema:"Array of hex colors in the palette"`
+	Size   int      `json:"size" jsonschema:"Number of colors in the palette"`
+}
+
+// SetPaletteColorInput defines the input parameters for the set_palette_color tool.
+type SetPaletteColorInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	Index      int    `json:"index" jsonschema:"Palette index (0-255)"`
+	Color      string `json:"color" jsonschema:"Hex color to set (#RRGGBB format)"`
+}
+
+// AddPaletteColorInput defines the input parameters for the add_palette_color tool.
+type AddPaletteColorInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	Color      string `json:"color" jsonschema:"Hex color to add (#RRGGBB format)"`
+}
+
+// AddPaletteColorOutput defines the output for the add_palette_color tool.
+type AddPaletteColorOutput struct {
+	ColorIndex int `json:"color_index" jsonschema:"Index of the newly added color"`
+}
+
+// SortPaletteInput defines the input parameters for the sort_palette tool.
+type SortPaletteInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"`
+	Method     string `json:"method" jsonschema:"Sort method: hue, saturation, brightness, or luminance"`
+	Ascending  bool   `json:"ascending" jsonschema:"Sort in ascending order (default: true)"`
+}
+
 // RegisterPaletteTools registers all palette management tools with the MCP server.
 func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *aseprite.LuaGenerator, cfg *config.Config, logger core.Logger) {
+	// Register get_palette tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "get_palette",
+			Description: "Retrieve the current sprite palette as an array of hex colors. Returns both the color array and palette size. Useful for inspecting existing palettes before modification.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input GetPaletteInput) (*mcp.CallToolResult, *GetPaletteOutput, error) {
+			logger.Debug("get_palette tool called",
+				"sprite", input.SpritePath)
+
+			// Generate Lua script to get palette
+			script := gen.GetPalette()
+
+			// Execute Lua script
+			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to get palette", "error", err)
+				return nil, nil, fmt.Errorf("failed to get palette: %w", err)
+			}
+
+			// Parse JSON output
+			var result GetPaletteOutput
+			if err := parseJSON(output, &result); err != nil {
+				return nil, nil, fmt.Errorf("failed to parse palette output: %w", err)
+			}
+
+			logger.Information("Palette retrieved successfully",
+				"sprite", input.SpritePath,
+				"colors", result.Size)
+
+			return nil, &result, nil
+		},
+	)
+
+	// Register set_palette_color tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "set_palette_color",
+			Description: "Set a specific palette index to a color. Index must be within the current palette range (0 to palette size - 1). Useful for modifying individual palette entries.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input SetPaletteColorInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
+			logger.Debug("set_palette_color tool called",
+				"sprite", input.SpritePath,
+				"index", input.Index,
+				"color", input.Color)
+
+			// Validate index
+			if input.Index < 0 || input.Index > 255 {
+				return nil, nil, fmt.Errorf("index must be between 0 and 255, got %d", input.Index)
+			}
+
+			// Validate hex color format
+			if !isValidHexColor(input.Color) {
+				return nil, nil, fmt.Errorf("invalid color: %s (expected #RRGGBB format)", input.Color)
+			}
+
+			// Generate Lua script to set palette color
+			script := gen.SetPaletteColor(input.Index, input.Color)
+
+			// Execute Lua script
+			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to set palette color", "error", err)
+				return nil, nil, fmt.Errorf("failed to set palette color: %w", err)
+			}
+
+			logger.Information("Palette color set successfully",
+				"sprite", input.SpritePath,
+				"index", input.Index,
+				"color", input.Color)
+
+			return nil, &struct{ Success bool }{Success: true}, nil
+		},
+	)
+
+	// Register add_palette_color tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "add_palette_color",
+			Description: "Add a new color to the palette. The palette will be resized to accommodate the new color. Returns the index of the newly added color. Maximum palette size is 256 colors.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input AddPaletteColorInput) (*mcp.CallToolResult, *AddPaletteColorOutput, error) {
+			logger.Debug("add_palette_color tool called",
+				"sprite", input.SpritePath,
+				"color", input.Color)
+
+			// Validate hex color format
+			if !isValidHexColor(input.Color) {
+				return nil, nil, fmt.Errorf("invalid color: %s (expected #RRGGBB format)", input.Color)
+			}
+
+			// Generate Lua script to add palette color
+			script := gen.AddPaletteColor(input.Color)
+
+			// Execute Lua script
+			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to add palette color", "error", err)
+				return nil, nil, fmt.Errorf("failed to add palette color: %w", err)
+			}
+
+			// Parse JSON output
+			var result AddPaletteColorOutput
+			if err := parseJSON(output, &result); err != nil {
+				return nil, nil, fmt.Errorf("failed to parse add color output: %w", err)
+			}
+
+			logger.Information("Palette color added successfully",
+				"sprite", input.SpritePath,
+				"color", input.Color,
+				"index", result.ColorIndex)
+
+			return nil, &result, nil
+		},
+	)
+
+	// Register sort_palette tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "sort_palette",
+			Description: "Sort the palette by hue, saturation, brightness, or luminance. Can sort in ascending or descending order. Useful for organizing palettes for easier color selection.",
+		},
+		func(ctx context.Context, req *mcp.CallToolRequest, input SortPaletteInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
+			logger.Debug("sort_palette tool called",
+				"sprite", input.SpritePath,
+				"method", input.Method,
+				"ascending", input.Ascending)
+
+			// Validate sort method
+			validMethods := map[string]bool{
+				"hue": true, "saturation": true, "brightness": true, "luminance": true,
+			}
+			if !validMethods[input.Method] {
+				return nil, nil, fmt.Errorf("invalid sort method: %s (must be one of: hue, saturation, brightness, luminance)", input.Method)
+			}
+
+			// Generate Lua script to sort palette
+			script := gen.SortPalette(input.Method, input.Ascending)
+
+			// Execute Lua script
+			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				logger.Error("Failed to sort palette", "error", err)
+				return nil, nil, fmt.Errorf("failed to sort palette: %w", err)
+			}
+
+			logger.Information("Palette sorted successfully",
+				"sprite", input.SpritePath,
+				"method", input.Method,
+				"ascending", input.Ascending)
+
+			return nil, &struct{ Success bool }{Success: true}, nil
+		},
+	)
+
 	// Register set_palette tool
 	mcp.AddTool(
 		server,
@@ -492,4 +689,27 @@ func minFloat(a, b, c float64) float64 {
 		return b
 	}
 	return c
+}
+
+// parseJSON parses JSON output from Lua scripts.
+func parseJSON(output string, result interface{}) error {
+	// Trim whitespace and find JSON in output
+	output = strings.TrimSpace(output)
+
+	// Find JSON object in output (may have other text before/after)
+	start := strings.Index(output, "{")
+	end := strings.LastIndex(output, "}")
+
+	if start == -1 || end == -1 {
+		return fmt.Errorf("no JSON object found in output: %s", output)
+	}
+
+	jsonStr := output[start : end+1]
+
+	// Unmarshal JSON
+	if err := json.Unmarshal([]byte(jsonStr), result); err != nil {
+		return fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	return nil
 }

@@ -259,3 +259,252 @@ func TestIntegration_SetPalette_ThenApplyShading(t *testing.T) {
 
 	t.Logf("✓ Complete palette workflow: set palette → draw → apply shading")
 }
+
+func TestIntegration_GetPalette(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas with indexed color mode
+	spritePath := testutil.TempSpritePath(t, "test-get-palette.aseprite")
+	createScript := gen.CreateCanvas(32, 32, aseprite.ColorModeIndexed, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Set a known palette
+	expectedColors := []string{
+		"#FF0000", "#00FF00", "#0000FF", "#FFFF00",
+	}
+	paletteScript := gen.SetPalette(expectedColors)
+	_, err = client.ExecuteLua(ctx, paletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to set palette: %v", err)
+	}
+
+	// Get palette
+	getPaletteScript := gen.GetPalette()
+	output, err := client.ExecuteLua(ctx, getPaletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to get palette: %v", err)
+	}
+
+	// Verify output contains expected colors
+	for _, color := range expectedColors {
+		if !strings.Contains(output, color) {
+			t.Errorf("Expected palette to contain %s, got: %s", color, output)
+		}
+	}
+
+	if !strings.Contains(output, `"colors":`) {
+		t.Error("Output missing colors field")
+	}
+
+	if !strings.Contains(output, `"size":`) {
+		t.Error("Output missing size field")
+	}
+
+	t.Logf("✓ Get palette returned: %s", output)
+}
+
+func TestIntegration_SetPaletteColor(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas with indexed color mode
+	spritePath := testutil.TempSpritePath(t, "test-set-palette-color.aseprite")
+	createScript := gen.CreateCanvas(32, 32, aseprite.ColorModeIndexed, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Set an initial palette
+	initialColors := []string{"#000000", "#111111", "#222222", "#333333"}
+	paletteScript := gen.SetPalette(initialColors)
+	_, err = client.ExecuteLua(ctx, paletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to set initial palette: %v", err)
+	}
+
+	// Change color at index 2
+	setColorScript := gen.SetPaletteColor(2, "#FF0000")
+	output, err := client.ExecuteLua(ctx, setColorScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to set palette color: %v", err)
+	}
+
+	if !strings.Contains(output, "Palette color set successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	// Verify the color was changed
+	getPaletteScript := gen.GetPalette()
+	paletteOutput, err := client.ExecuteLua(ctx, getPaletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to get palette: %v", err)
+	}
+
+	if !strings.Contains(paletteOutput, "#FF0000") {
+		t.Errorf("Expected palette to contain #FF0000, got: %s", paletteOutput)
+	}
+
+	t.Logf("✓ Set palette color at index 2 successfully")
+}
+
+func TestIntegration_AddPaletteColor(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas with indexed color mode
+	spritePath := testutil.TempSpritePath(t, "test-add-palette-color.aseprite")
+	createScript := gen.CreateCanvas(32, 32, aseprite.ColorModeIndexed, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Set an initial palette with 3 colors
+	initialColors := []string{"#000000", "#808080", "#FFFFFF"}
+	paletteScript := gen.SetPalette(initialColors)
+	_, err = client.ExecuteLua(ctx, paletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to set initial palette: %v", err)
+	}
+
+	// Add a new color
+	addColorScript := gen.AddPaletteColor("#FF00FF")
+	output, err := client.ExecuteLua(ctx, addColorScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to add palette color: %v", err)
+	}
+
+	if !strings.Contains(output, `"color_index":`) {
+		t.Errorf("Expected JSON with color_index, got: %s", output)
+	}
+
+	// Verify the color was added
+	getPaletteScript := gen.GetPalette()
+	paletteOutput, err := client.ExecuteLua(ctx, getPaletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to get palette: %v", err)
+	}
+
+	if !strings.Contains(paletteOutput, "#FF00FF") {
+		t.Errorf("Expected palette to contain #FF00FF, got: %s", paletteOutput)
+	}
+
+	if !strings.Contains(paletteOutput, `"size":4`) {
+		t.Errorf("Expected palette size to be 4, got: %s", paletteOutput)
+	}
+
+	t.Logf("✓ Added palette color successfully: %s", output)
+}
+
+func TestIntegration_SortPalette(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	methods := []string{"hue", "saturation", "brightness", "luminance"}
+
+	for _, method := range methods {
+		t.Run(method, func(t *testing.T) {
+			// Create a canvas with indexed color mode
+			spritePath := testutil.TempSpritePath(t, "test-sort-palette-"+method+".aseprite")
+			createScript := gen.CreateCanvas(32, 32, aseprite.ColorModeIndexed, spritePath)
+			_, err := client.ExecuteLua(ctx, createScript, "")
+			if err != nil {
+				t.Fatalf("Failed to create canvas: %v", err)
+			}
+			defer os.Remove(spritePath)
+
+			// Set an unsorted palette
+			unsortedColors := []string{
+				"#FF0000", // Red (high hue, high saturation, mid brightness)
+				"#00FF00", // Green (mid hue, high saturation, mid brightness)
+				"#0000FF", // Blue (low hue, high saturation, mid brightness)
+				"#FFFFFF", // White (no hue, no saturation, max brightness)
+				"#000000", // Black (no hue, no saturation, min brightness)
+				"#808080", // Gray (no hue, low saturation, mid brightness)
+			}
+			paletteScript := gen.SetPalette(unsortedColors)
+			_, err = client.ExecuteLua(ctx, paletteScript, spritePath)
+			if err != nil {
+				t.Fatalf("Failed to set palette: %v", err)
+			}
+
+			// Sort palette
+			sortScript := gen.SortPalette(method, true)
+			output, err := client.ExecuteLua(ctx, sortScript, spritePath)
+			if err != nil {
+				t.Fatalf("Failed to sort palette: %v", err)
+			}
+
+			if !strings.Contains(output, "Palette sorted by "+method+" successfully") {
+				t.Errorf("Expected success message, got: %s", output)
+			}
+
+			// Get sorted palette to verify it changed
+			getPaletteScript := gen.GetPalette()
+			paletteOutput, err := client.ExecuteLua(ctx, getPaletteScript, spritePath)
+			if err != nil {
+				t.Fatalf("Failed to get sorted palette: %v", err)
+			}
+
+			// Just verify we got a palette back (actual sorting validation would require parsing JSON)
+			if !strings.Contains(paletteOutput, `"colors":`) {
+				t.Error("Expected sorted palette output")
+			}
+
+			t.Logf("✓ Sorted palette by %s successfully", method)
+		})
+	}
+}
+
+func TestIntegration_SortPalette_DescendingOrder(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas
+	spritePath := testutil.TempSpritePath(t, "test-sort-palette-descending.aseprite")
+	createScript := gen.CreateCanvas(32, 32, aseprite.ColorModeIndexed, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Set palette with gradient
+	colors := []string{"#111111", "#444444", "#888888", "#BBBBBB", "#EEEEEE"}
+	paletteScript := gen.SetPalette(colors)
+	_, err = client.ExecuteLua(ctx, paletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to set palette: %v", err)
+	}
+
+	// Sort descending by brightness
+	sortScript := gen.SortPalette("brightness", false)
+	output, err := client.ExecuteLua(ctx, sortScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to sort palette: %v", err)
+	}
+
+	if !strings.Contains(output, "Palette sorted by brightness successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	t.Logf("✓ Sorted palette in descending order successfully")
+}

@@ -133,7 +133,12 @@ Core functionality implemented and tested:
   - Composition analysis (rule of thirds, focal points)
   - Dithering with 15 patterns: Bayer matrices (2x2, 4x4, 8x8), checkerboard, and texture patterns (grass, water, stone, cloud, brick, dots, diagonal, cross, noise, horizontal_lines, vertical_lines)
   - Image downsampling with box filter for pixel art conversion
-  - Palette management (set_palette with 1-256 colors)
+  - **Palette Management Tools (5 tools):**
+    - `get_palette`: Retrieve current palette as hex color array with size
+    - `set_palette`: Set entire palette with 1-256 colors
+    - `set_palette_color`: Modify specific palette index (0-255)
+    - `add_palette_color`: Add new color to palette (returns index)
+    - `sort_palette`: Sort by hue/saturation/brightness/luminance (ascending/descending)
   - Palette-constrained shading (smooth, hard, pillow styles with 8 light directions)
   - Palette harmony analysis (complementary, triadic, analogous relationships, color temperature)
   - Palette-aware drawing: All drawing tools support `use_palette` flag to snap arbitrary colors to nearest palette color

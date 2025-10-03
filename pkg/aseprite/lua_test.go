@@ -510,3 +510,137 @@ func TestLuaGenerator_PasteClipboard(t *testing.T) {
 		}
 	})
 }
+
+func TestLuaGenerator_GetPalette(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.GetPalette()
+
+	if !strings.Contains(script, "local palette = spr.palettes[1]") {
+		t.Error("script missing palette retrieval")
+	}
+
+	if !strings.Contains(script, "palette:getColor(i)") {
+		t.Error("script missing getColor call")
+	}
+
+	if !strings.Contains(script, `string.format("#%02X%02X%02X"`) {
+		t.Error("script missing hex color formatting")
+	}
+
+	if !strings.Contains(script, `"colors":`) {
+		t.Error("script missing JSON colors field")
+	}
+
+	if !strings.Contains(script, `"size":`) {
+		t.Error("script missing JSON size field")
+	}
+}
+
+func TestLuaGenerator_SetPaletteColor(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.SetPaletteColor(5, "#FF0000")
+
+	if !strings.Contains(script, "local palette = spr.palettes[1]") {
+		t.Error("script missing palette retrieval")
+	}
+
+	if !strings.Contains(script, "if 5 < 0 or 5 >= #palette then") {
+		t.Error("script missing index validation")
+	}
+
+	if !strings.Contains(script, "palette:setColor(5, Color{r=255, g=0, b=0, a=255})") {
+		t.Error("script missing setColor call with correct values")
+	}
+
+	if !strings.Contains(script, "Palette color set successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_AddPaletteColor(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.AddPaletteColor("#00FF00")
+
+	if !strings.Contains(script, "local palette = spr.palettes[1]") {
+		t.Error("script missing palette retrieval")
+	}
+
+	if !strings.Contains(script, "if #palette >= 256 then") {
+		t.Error("script missing maximum size check")
+	}
+
+	if !strings.Contains(script, "palette:resize(#palette + 1)") {
+		t.Error("script missing palette resize")
+	}
+
+	if !strings.Contains(script, "Color{r=0, g=255, b=0, a=255}") {
+		t.Error("script missing color with correct values")
+	}
+
+	if !strings.Contains(script, `"color_index":`) {
+		t.Error("script missing JSON color_index field")
+	}
+}
+
+func TestLuaGenerator_SortPalette(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	t.Run("sort by hue ascending", func(t *testing.T) {
+		script := gen.SortPalette("hue", true)
+
+		if !strings.Contains(script, "function rgbToHSL(r, g, b)") {
+			t.Error("script missing RGB to HSL conversion function")
+		}
+
+		if !strings.Contains(script, "local h, s, l = rgbToHSL") {
+			t.Error("script missing HSL calculation")
+		}
+
+		if !strings.Contains(script, "return a.h < b.h") {
+			t.Error("script missing hue comparison for ascending sort")
+		}
+
+		if !strings.Contains(script, "Palette sorted by hue successfully") {
+			t.Error("script missing success message")
+		}
+	})
+
+	t.Run("sort by saturation descending", func(t *testing.T) {
+		script := gen.SortPalette("saturation", false)
+
+		if !strings.Contains(script, "return a.s > b.s") {
+			t.Error("script missing saturation comparison for descending sort")
+		}
+
+		if !strings.Contains(script, "Palette sorted by saturation successfully") {
+			t.Error("script missing success message")
+		}
+	})
+
+	t.Run("sort by brightness ascending", func(t *testing.T) {
+		script := gen.SortPalette("brightness", true)
+
+		if !strings.Contains(script, "return a.l < b.l") {
+			t.Error("script missing lightness comparison for ascending sort")
+		}
+
+		if !strings.Contains(script, "Palette sorted by brightness successfully") {
+			t.Error("script missing success message")
+		}
+	})
+
+	t.Run("sort by luminance", func(t *testing.T) {
+		script := gen.SortPalette("luminance", true)
+
+		if !strings.Contains(script, "return a.l < b.l") {
+			t.Error("script missing lightness comparison")
+		}
+
+		if !strings.Contains(script, "Palette sorted by luminance successfully") {
+			t.Error("script missing success message")
+		}
+	})
+}

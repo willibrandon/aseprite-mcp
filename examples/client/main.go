@@ -864,13 +864,136 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  ✓ Drew polylines and polygons successfully")
 
-	// Step 19: Demonstrate selection and clipboard operations
+	// Step 19: Demonstrate palette management tools
 	logger.Information("")
-	logger.Information("Step 19: Demonstrating selection and clipboard operations...")
+	logger.Information("Step 19: Demonstrating palette management tools...")
+
+	// Create an indexed color sprite for palette operations
+	logger.Information("  Creating indexed color sprite for palette demo...")
+	output, err := callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      64,
+		"height":     64,
+		"color_mode": "indexed",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for palette failed: %w", err)
+	}
+
+	// Parse the output to get sprite path
+	var paletteCreateOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(output), &paletteCreateOutput); err != nil {
+		return fmt.Errorf("failed to parse create_canvas output: %w", err)
+	}
+	paletteSpritePath := paletteCreateOutput.FilePath
+	defer os.Remove(paletteSpritePath)
+
+	// Set a custom palette
+	logger.Information("  Setting custom 8-color palette...")
+	_, err = callTool(ctx, session, "set_palette", map[string]any{
+		"sprite_path": paletteSpritePath,
+		"colors": []string{
+			"#000000", // Black
+			"#FFFFFF", // White
+			"#FF0000", // Red
+			"#00FF00", // Green
+			"#0000FF", // Blue
+			"#FFFF00", // Yellow
+			"#FF00FF", // Magenta
+			"#00FFFF", // Cyan
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("set_palette failed: %w", err)
+	}
+	logger.Information("  ✓ Custom palette set successfully")
+
+	// Get the palette back
+	logger.Information("  Retrieving palette with get_palette...")
+	paletteOutput, err := callTool(ctx, session, "get_palette", map[string]any{
+		"sprite_path": paletteSpritePath,
+	})
+	if err != nil {
+		return fmt.Errorf("get_palette failed: %w", err)
+	}
+
+	var getPaletteResult struct {
+		Colors []string `json:"colors"`
+		Size   int      `json:"size"`
+	}
+	if err := json.Unmarshal([]byte(paletteOutput), &getPaletteResult); err != nil {
+		return fmt.Errorf("failed to parse get_palette output: %w", err)
+	}
+	logger.Information("  ✓ Retrieved palette with {Count} colors: {Colors}", getPaletteResult.Size, getPaletteResult.Colors)
+
+	// Modify a specific palette color
+	logger.Information("  Changing color at index 2 to orange (#FF8000)...")
+	_, err = callTool(ctx, session, "set_palette_color", map[string]any{
+		"sprite_path": paletteSpritePath,
+		"index":       2,
+		"color":       "#FF8000",
+	})
+	if err != nil {
+		return fmt.Errorf("set_palette_color failed: %w", err)
+	}
+	logger.Information("  ✓ Palette color updated successfully")
+
+	// Add a new color to the palette
+	logger.Information("  Adding new color (brown #8B4513) to palette...")
+	addColorOutput, err := callTool(ctx, session, "add_palette_color", map[string]any{
+		"sprite_path": paletteSpritePath,
+		"color":       "#8B4513",
+	})
+	if err != nil {
+		return fmt.Errorf("add_palette_color failed: %w", err)
+	}
+
+	var addColorResult struct {
+		ColorIndex int `json:"color_index"`
+	}
+	if err := json.Unmarshal([]byte(addColorOutput), &addColorResult); err != nil {
+		return fmt.Errorf("failed to parse add_palette_color output: %w", err)
+	}
+	logger.Information("  ✓ Added color at index {Index}", addColorResult.ColorIndex)
+
+	// Sort the palette by hue
+	logger.Information("  Sorting palette by hue (ascending)...")
+	_, err = callTool(ctx, session, "sort_palette", map[string]any{
+		"sprite_path": paletteSpritePath,
+		"method":      "hue",
+		"ascending":   true,
+	})
+	if err != nil {
+		return fmt.Errorf("sort_palette failed: %w", err)
+	}
+	logger.Information("  ✓ Palette sorted by hue")
+
+	// Get the sorted palette
+	logger.Information("  Retrieving sorted palette...")
+	sortedPaletteOutput, err := callTool(ctx, session, "get_palette", map[string]any{
+		"sprite_path": paletteSpritePath,
+	})
+	if err != nil {
+		return fmt.Errorf("get_palette (after sort) failed: %w", err)
+	}
+
+	var getSortedPaletteResult struct {
+		Colors []string `json:"colors"`
+		Size   int      `json:"size"`
+	}
+	if err := json.Unmarshal([]byte(sortedPaletteOutput), &getSortedPaletteResult); err != nil {
+		return fmt.Errorf("failed to parse sorted palette output: %w", err)
+	}
+	logger.Information("  ✓ Sorted palette has {Count} colors: {Colors}", getSortedPaletteResult.Size, getSortedPaletteResult.Colors)
+
+	// Step 20: Demonstrate selection and clipboard operations
+	logger.Information("")
+	logger.Information("Step 20: Demonstrating selection and clipboard operations...")
 
 	// Create a new sprite for selection demo
 	logger.Information("  Creating sprite for selection demo...")
-	output, err := callTool(ctx, session, "create_canvas", map[string]any{
+	output, err = callTool(ctx, session, "create_canvas", map[string]any{
 		"width":      100,
 		"height":     100,
 		"color_mode": "rgb",
@@ -880,13 +1003,13 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 
 	// Parse the output to get sprite path
-	var createOutput struct {
+	var selectionCreateOutput struct {
 		FilePath string `json:"file_path"`
 	}
-	if err := json.Unmarshal([]byte(output), &createOutput); err != nil {
+	if err := json.Unmarshal([]byte(output), &selectionCreateOutput); err != nil {
 		return fmt.Errorf("failed to parse create_canvas output: %w", err)
 	}
-	selectionSpritePath := createOutput.FilePath
+	selectionSpritePath := selectionCreateOutput.FilePath
 	defer os.Remove(selectionSpritePath)
 
 	// Draw some content to copy
