@@ -328,3 +328,185 @@ func TestLuaGenerator_DrawContour(t *testing.T) {
 		}
 	})
 }
+
+func TestLuaGenerator_SelectRectangle(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	t.Run("replace mode", func(t *testing.T) {
+		script := gen.SelectRectangle(10, 20, 30, 40, "replace")
+
+		if !strings.Contains(script, "Rectangle(10, 20, 30, 40)") {
+			t.Error("script missing rectangle coordinates")
+		}
+
+		if !strings.Contains(script, `if "replace" == "replace"`) {
+			t.Error("script missing replace mode check")
+		}
+
+		if !strings.Contains(script, "Rectangle selection created successfully") {
+			t.Error("script missing success message")
+		}
+	})
+
+	t.Run("add mode", func(t *testing.T) {
+		script := gen.SelectRectangle(5, 5, 10, 10, "add")
+
+		if !strings.Contains(script, `if "add" == "replace"`) {
+			t.Error("script missing mode check")
+		}
+	})
+}
+
+func TestLuaGenerator_SelectEllipse(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.SelectEllipse(10, 10, 50, 30, "replace")
+
+	// Check that it uses width/height for radii calculation
+	if !strings.Contains(script, "local rx = 50 / 2") {
+		t.Error("script missing rx calculation")
+	}
+
+	if !strings.Contains(script, "local ry = 30 / 2") {
+		t.Error("script missing ry calculation")
+	}
+
+	if !strings.Contains(script, "Ellipse selection created successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_SelectAll(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.SelectAll()
+
+	if !strings.Contains(script, "Rectangle(0, 0, spr.width, spr.height)") {
+		t.Error("script missing rectangle covering entire sprite")
+	}
+
+	if !strings.Contains(script, "spr.selection = sel") {
+		t.Error("script missing selection assignment")
+	}
+
+	if !strings.Contains(script, "Select all completed successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_Deselect(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.Deselect()
+
+	if !strings.Contains(script, "app.command.DeselectMask()") {
+		t.Error("script missing DeselectMask command")
+	}
+
+	if !strings.Contains(script, "Deselect completed successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_MoveSelection(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.MoveSelection(15, -10)
+
+	if !strings.Contains(script, "if spr.selection.isEmpty then") {
+		t.Error("script missing empty selection check")
+	}
+
+	if !strings.Contains(script, "bounds.x + 15") {
+		t.Error("script missing dx offset")
+	}
+
+	if !strings.Contains(script, "bounds.y + -10") {
+		t.Error("script missing dy offset")
+	}
+
+	if !strings.Contains(script, "Selection moved successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_CutSelection(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.CutSelection("Layer 1", 2)
+
+	if !strings.Contains(script, "if spr.selection.isEmpty then") {
+		t.Error("script missing empty selection check")
+	}
+
+	if !strings.Contains(script, `lyr.name == "Layer 1"`) {
+		t.Error("script missing layer name check")
+	}
+
+	if !strings.Contains(script, "spr.frames[2]") {
+		t.Error("script missing frame reference")
+	}
+
+	if !strings.Contains(script, "app.command.Cut()") {
+		t.Error("script missing Cut command")
+	}
+
+	if !strings.Contains(script, "Cut selection completed successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_CopySelection(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.CopySelection()
+
+	if !strings.Contains(script, "if spr.selection.isEmpty then") {
+		t.Error("script missing empty selection check")
+	}
+
+	if !strings.Contains(script, "app.command.Copy()") {
+		t.Error("script missing Copy command")
+	}
+
+	if !strings.Contains(script, "Copy selection completed successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_PasteClipboard(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	t.Run("without position", func(t *testing.T) {
+		script := gen.PasteClipboard("Layer 1", 1, nil, nil)
+
+		if !strings.Contains(script, `lyr.name == "Layer 1"`) {
+			t.Error("script missing layer name check")
+		}
+
+		if !strings.Contains(script, "app.command.Paste()") {
+			t.Error("script missing Paste command")
+		}
+
+		if strings.Contains(script, "Set paste position") {
+			t.Error("script should not set position when nil")
+		}
+
+		if !strings.Contains(script, "Paste completed successfully") {
+			t.Error("script missing success message")
+		}
+	})
+
+	t.Run("with position", func(t *testing.T) {
+		x, y := 25, 35
+		script := gen.PasteClipboard("Layer 1", 1, &x, &y)
+
+		if !strings.Contains(script, "app.command.Paste { x = 25, y = 35 }") {
+			t.Error("script missing Paste command with position parameters")
+		}
+
+		if !strings.Contains(script, "Paste completed successfully") {
+			t.Error("script missing success message")
+		}
+	})
+}

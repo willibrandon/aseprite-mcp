@@ -101,6 +101,20 @@ Then use natural language to create sprites:
 | `draw_circle` | Draw a circle/ellipse (filled or outline, optional palette snapping) |
 | `fill_area` | Flood fill from a point (paint bucket, optional palette snapping) |
 
+### Selection & Clipboard
+| Tool | Description |
+|------|-------------|
+| `select_rectangle` | Create a rectangular selection with mode (replace/add/subtract/intersect) |
+| `select_ellipse` | Create an elliptical selection with mode (replace/add/subtract/intersect) |
+| `select_all` | Select the entire canvas |
+| `deselect` | Clear the current selection |
+| `move_selection` | Move selection bounds by offset (does not move pixels) |
+| `cut_selection` | Cut selected pixels to clipboard |
+| `copy_selection` | Copy selected pixels to clipboard |
+| `paste_clipboard` | Paste clipboard content at specified position |
+
+**Important Note**: Selections are transient and exist only in memory during script execution. They do not persist when sprites are saved to disk. For workflows involving selections and clipboard operations (copy/paste), combine the operations in integration tests or custom Lua scripts rather than calling them as separate MCP tools.
+
 ### Professional Pixel Art
 | Tool | Description |
 |------|-------------|

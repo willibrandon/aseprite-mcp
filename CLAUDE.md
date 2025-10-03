@@ -84,8 +84,9 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
 - `pkg/config/` - Configuration management (file-based only)
 - `pkg/server/` - MCP server implementation
 - `pkg/tools/` - MCP tool implementations organized by category:
-  - `canvas.go` - Sprite/layer/frame management
-  - `drawing.go` - Drawing primitives (pixels, lines, shapes)
+  - `canvas.go` - Sprite/layer/frame management (create_sprite, add_layer, add_frame, delete_layer with protection, delete_frame with protection)
+  - `drawing.go` - Drawing primitives (pixels, lines, rectangles, circles, fill, contours for polylines/polygons)
+  - `selection.go` - Selection and clipboard operations (8 tools)
   - `animation.go` - Animation and timeline operations
   - `inspection.go` - Pixel data inspection and reading
   - `analysis.go` - Reference image analysis (palette extraction, edge detection, composition)
@@ -117,8 +118,14 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
 
 Core functionality implemented and tested:
 - Canvas creation and management (RGB, Grayscale, Indexed)
-- Layer and frame operations
+- Layer and frame operations (add, delete with last-layer/frame protection)
 - Drawing primitives (pixels, lines, rectangles, circles, fill) with optional palette-aware color snapping
+- Advanced drawing: Contour tool for drawing polylines and closed polygons with points arrays
+- **Selection and Clipboard Tools (8 tools):**
+  - Rectangular and elliptical selections with 4 modes (replace/add/subtract/intersect)
+  - Select all, deselect, move selection
+  - Cut, copy, paste operations
+  - **Important limitation**: Selections are transient and do NOT persist in .aseprite files - they only exist in memory during script execution
 - Animation tools (frame duration, tags, duplication, linked cels)
 - Inspection tools (pixel data reading with pagination for verification and analysis)
 - **Professional Pixel Art Tools:**
@@ -152,6 +159,7 @@ Lua script generation:
 - Wrap mutations in `app.transaction()` for atomicity
 - Include error checks in Lua: `if not spr then error("...") end`
 - Save sprite after mutations: `spr:saveAs(spr.filename)`
+- **Exception**: Do NOT save after selection operations - selections don't persist in .aseprite files
 
 ## Common Pitfalls
 
@@ -162,6 +170,9 @@ Lua script generation:
 5. **Don't skip transactions** - Wrap Lua mutations in `app.transaction()`
 6. **Don't assume sprite is open** - Check `app.activeSprite` in Lua scripts
 7. **Don't hardcode paths** - Use `filepath` package for cross-platform path handling
+8. **Don't delete last layer/frame** - Aseprite requires at least one layer and one frame; validate before deletion
+9. **Don't save after selections** - Selections are transient and lost on save; combine selection workflows in single scripts
+10. **Don't expect clipboard persistence** - Copy/Paste operations must be combined in single Lua scripts (clipboard doesn't persist across processes)
 
 ## Dependencies
 

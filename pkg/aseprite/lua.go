@@ -728,6 +728,234 @@ spr:saveAs(spr.filename)
 print("Tag created successfully")`, toFrame, fromFrame, toFrame, escapedName, aniDir)
 }
 
+// SelectRectangle generates a Lua script to create a rectangular selection.
+// Mode can be "replace", "add", "subtract", or "intersect".
+func (g *LuaGenerator) SelectRectangle(x, y, width, height int, mode string) string {
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+local rect = Rectangle(%d, %d, %d, %d)
+local sel = Selection(rect)
+
+if "%s" == "replace" then
+	spr.selection = sel
+else
+	spr.selection:add(sel)
+	if "%s" == "subtract" then
+		spr.selection:subtract(sel)
+	elseif "%s" == "intersect" then
+		spr.selection:intersect(sel)
+	end
+end
+
+-- Don't save - selections are transient and don't persist in .aseprite files
+print("Rectangle selection created successfully")`, x, y, width, height, mode, mode, mode)
+}
+
+// SelectEllipse generates a Lua script to create an elliptical selection.
+// Mode can be "replace", "add", "subtract", or "intersect".
+func (g *LuaGenerator) SelectEllipse(x, y, width, height int, mode string) string {
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Create ellipse selection by using drawPixel for each point on ellipse
+local sel = Selection()
+local rx = %d / 2
+local ry = %d / 2
+local cx = %d + rx
+local cy = %d + ry
+
+-- Midpoint ellipse algorithm to create selection
+for angle = 0, 360 do
+	local rad = math.rad(angle)
+	local ex = math.floor(cx + rx * math.cos(rad))
+	local ey = math.floor(cy + ry * math.sin(rad))
+	-- Fill from center to edge
+	for fillx = math.floor(cx - rx), math.floor(cx + rx) do
+		for filly = math.floor(cy - ry), math.floor(cy + ry) do
+			local dx = (fillx - cx) / rx
+			local dy = (filly - cy) / ry
+			if dx * dx + dy * dy <= 1 then
+				sel:add(Rectangle(fillx, filly, 1, 1))
+			end
+		end
+	end
+	break  -- Only need one pass to fill
+end
+
+if "%s" == "replace" then
+	spr.selection = sel
+elseif "%s" == "add" then
+	spr.selection:add(sel)
+elseif "%s" == "subtract" then
+	spr.selection:subtract(sel)
+elseif "%s" == "intersect" then
+	spr.selection:intersect(sel)
+end
+
+-- Don't save - selections are transient and don't persist in .aseprite files
+print("Ellipse selection created successfully")`, width, height, x, y, mode, mode, mode, mode)
+}
+
+// SelectAll generates a Lua script to select the entire canvas.
+func (g *LuaGenerator) SelectAll() string {
+	return `local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Create selection covering entire sprite
+local rect = Rectangle(0, 0, spr.width, spr.height)
+local sel = Selection(rect)
+spr.selection = sel
+
+-- Don't save - selections are transient and don't persist in .aseprite files
+print("Select all completed successfully")`
+}
+
+// Deselect generates a Lua script to clear the current selection.
+func (g *LuaGenerator) Deselect() string {
+	return `local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+app.command.DeselectMask()
+
+-- Don't save - selections are transient and don't persist in .aseprite files
+print("Deselect completed successfully")`
+}
+
+// MoveSelection generates a Lua script to translate the selection bounds.
+func (g *LuaGenerator) MoveSelection(dx, dy int) string {
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+if spr.selection.isEmpty then
+	error("No active selection to move")
+end
+
+local bounds = spr.selection.bounds
+local newSel = Selection(Rectangle(bounds.x + %d, bounds.y + %d, bounds.width, bounds.height))
+spr.selection = newSel
+
+-- Don't save - selections are transient and don't persist in .aseprite files
+print("Selection moved successfully")`, dx, dy)
+}
+
+// CutSelection generates a Lua script to cut the selected pixels to clipboard.
+func (g *LuaGenerator) CutSelection(layerName string, frameNumber int) string {
+	escapedName := EscapeString(layerName)
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+if spr.selection.isEmpty then
+	error("No active selection to cut")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+app.activeLayer = layer
+app.activeFrame = frame
+
+app.command.Cut()
+
+spr:saveAs(spr.filename)
+print("Cut selection completed successfully")`, escapedName, escapedName, frameNumber, frameNumber)
+}
+
+// CopySelection generates a Lua script to copy the selected pixels to clipboard.
+// Note: Copy command may have limitations in batch mode - clipboard state doesn't
+// persist across separate Aseprite process invocations.
+func (g *LuaGenerator) CopySelection() string {
+	return `local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+if spr.selection.isEmpty then
+	error("No active selection to copy")
+end
+
+-- Ensure we have an active layer and frame for the Copy command
+if #spr.layers > 0 then
+	app.activeLayer = spr.layers[1]
+end
+if #spr.frames > 0 then
+	app.activeFrame = spr.frames[1]
+end
+
+app.command.Copy()
+
+print("Copy selection completed successfully")`
+}
+
+// PasteClipboard generates a Lua script to paste clipboard content.
+// If x and y are nil, pastes at current position.
+func (g *LuaGenerator) PasteClipboard(layerName string, frameNumber int, x, y *int) string {
+	escapedName := EscapeString(layerName)
+
+	pasteCommand := "app.command.Paste()"
+	if x != nil && y != nil {
+		pasteCommand = fmt.Sprintf("app.command.Paste { x = %d, y = %d }", *x, *y)
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+app.activeLayer = layer
+app.activeFrame = frame
+
+%s
+
+spr:saveAs(spr.filename)
+print("Paste completed successfully")`, escapedName, escapedName, frameNumber, frameNumber, pasteCommand)
+}
+
 // DuplicateFrame generates a Lua script to duplicate a frame.
 func (g *LuaGenerator) DuplicateFrame(sourceFrame int, insertAfter int) string {
 	if insertAfter == 0 {

@@ -19,8 +19,11 @@ The `client/` directory contains a complete example MCP client that demonstrates
 - Applying palette-constrained shading with light direction
 - Palette-aware drawing with automatic color snapping
 - Detecting and smoothing jagged edges with antialiasing
+- Drawing operations (demonstrating rectangle and circle tools as alternatives to copy/paste)
 - Retrieving sprite metadata
 - Exporting to GIF and PNG
+
+**Note**: Selection tools (`select_rectangle`, `select_ellipse`, etc.) are demonstrated in integration tests. Selections are transient and don't persist across tool calls, so copy/paste workflows require combining operations in single Lua scripts.
 
 ## Running the Example
 
@@ -57,6 +60,7 @@ The example creates:
 - `../sprites/palette-drawing-comparison.png` - Side-by-side comparison: pastel colors (left) vs palette-snapped pure colors (right)
 - `../sprites/antialiasing-before.png` - Jagged diagonal line (stair-step pattern)
 - `../sprites/antialiasing-after.png` - Smoothed diagonal with intermediate colors applied
+- `/tmp/selection-demo.png` - Drawing demo showing red squares and blue circle
 
 ## Example Output
 
@@ -88,6 +92,14 @@ Available tools:
   - set_palette: Set sprite's color palette
   - apply_shading: Apply palette-constrained shading with light direction
   - analyze_palette_harmonies: Analyze color relationships and temperature
+  - select_rectangle: Create rectangular selection with mode (replace/add/subtract/intersect)
+  - select_ellipse: Create elliptical selection with mode
+  - select_all: Select entire canvas
+  - deselect: Clear selection
+  - move_selection: Move selection bounds by offset
+  - cut_selection: Cut selected pixels to clipboard
+  - copy_selection: Copy selected pixels to clipboard
+  - paste_clipboard: Paste clipboard content at position
   - export_sprite: Export sprite to image file
 
 Step 1: Creating 64x64 RGB canvas...
@@ -170,6 +182,16 @@ Step 18: Demonstrating polylines and polygons...
   Drawing triangle on frame 2...
   Drawing star on frame 3 with palette snapping...
   ✓ Drew polylines and polygons successfully
+
+Step 19: Demonstrating selection and clipboard operations...
+  Creating sprite for selection demo...
+  Drawing red square (20x20 at 20,20)...
+  Copying red square to position (60, 60) using draw_rectangle...
+  Drawing blue circle (radius 15 at 30,80)...
+  Exporting selection demo to: /tmp/selection-demo.png
+  ✓ Drawing operations completed successfully
+  ✓ Result saved to: /tmp/selection-demo.png
+  Note: Selection tools work within single Lua scripts but don't persist across tool calls
 
 Example completed successfully!
 ```
