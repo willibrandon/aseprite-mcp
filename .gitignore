@@ -18,7 +18,6 @@ coverage.html
 
 # Temporary files
 *.tmp
-*.aseprite
 *.png
 *.gif
 /tmp/
