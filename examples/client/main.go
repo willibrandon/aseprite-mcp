@@ -987,9 +987,112 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  ✓ Sorted palette has {Count} colors: {Colors}", getSortedPaletteResult.Size, getSortedPaletteResult.Colors)
 
-	// Step 20: Demonstrate selection and clipboard operations
+	// Step 20: Demonstrate transform operations
 	logger.Information("")
-	logger.Information("Step 20: Demonstrating selection and clipboard operations...")
+	logger.Information("Step 20: Demonstrating transform operations (flip, rotate, scale)...")
+
+	// Create a sprite with asymmetric content for transforms
+	logger.Information("  Creating sprite for transform demo...")
+	output, err = callTool(ctx, session, "create_canvas", map[string]any{
+		"width":      64,
+		"height":     64,
+		"color_mode": "rgb",
+	})
+	if err != nil {
+		return fmt.Errorf("create_canvas for transform failed: %w", err)
+	}
+
+	// Parse the output to get sprite path
+	var transformCreateOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	if err := json.Unmarshal([]byte(output), &transformCreateOutput); err != nil {
+		return fmt.Errorf("failed to parse create_canvas output: %w", err)
+	}
+	transformSpritePath := transformCreateOutput.FilePath
+	defer os.Remove(transformSpritePath)
+
+	// Draw an asymmetric shape (triangle pointing right)
+	logger.Information("  Drawing triangle pointing right...")
+	_, err = callTool(ctx, session, "draw_contour", map[string]any{
+		"sprite_path":  transformSpritePath,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"points": []map[string]any{
+			{"x": 20, "y": 10},
+			{"x": 50, "y": 32},
+			{"x": 20, "y": 54},
+		},
+		"color":     "#FF0000",
+		"thickness": 2,
+		"closed":    true,
+	})
+	if err != nil {
+		return fmt.Errorf("draw_contour for transform failed: %w", err)
+	}
+
+	// Flip horizontally
+	logger.Information("  Flipping sprite horizontally...")
+	_, err = callTool(ctx, session, "flip_sprite", map[string]any{
+		"sprite_path": transformSpritePath,
+		"direction":   "horizontal",
+		"target":      "sprite",
+	})
+	if err != nil {
+		return fmt.Errorf("flip_sprite failed: %w", err)
+	}
+	logger.Information("  ✓ Triangle now points left")
+
+	// Rotate 90 degrees
+	logger.Information("  Rotating sprite 90 degrees...")
+	_, err = callTool(ctx, session, "rotate_sprite", map[string]any{
+		"sprite_path": transformSpritePath,
+		"angle":       90,
+		"target":      "sprite",
+	})
+	if err != nil {
+		return fmt.Errorf("rotate_sprite failed: %w", err)
+	}
+	logger.Information("  ✓ Sprite rotated 90° clockwise")
+
+	// Scale 2x with nearest neighbor
+	logger.Information("  Scaling sprite 2x with nearest neighbor...")
+	scaleOutput, err := callTool(ctx, session, "scale_sprite", map[string]any{
+		"sprite_path": transformSpritePath,
+		"scale_x":     2.0,
+		"scale_y":     2.0,
+		"algorithm":   "nearest",
+	})
+	if err != nil {
+		return fmt.Errorf("scale_sprite failed: %w", err)
+	}
+
+	var scaleResult struct {
+		Success   bool `json:"success"`
+		NewWidth  int  `json:"new_width"`
+		NewHeight int  `json:"new_height"`
+	}
+	if err := json.Unmarshal([]byte(scaleOutput), &scaleResult); err != nil {
+		return fmt.Errorf("failed to parse scale result: %w", err)
+	}
+	logger.Information("  ✓ Scaled to {Width}x{Height}", scaleResult.NewWidth, scaleResult.NewHeight)
+
+	// Export transformed sprite
+	transformPngPath := filepath.Join(outputDir, "transform-demo.png")
+	_, err = callTool(ctx, session, "export_sprite", map[string]any{
+		"sprite_path":  transformSpritePath,
+		"output_path":  transformPngPath,
+		"format":       "png",
+		"frame_number": 0,
+	})
+	if err != nil {
+		return fmt.Errorf("export_sprite transform failed: %w", err)
+	}
+	logger.Information("  Exported: {TransformPng}", transformPngPath)
+
+	// Step 21: Demonstrate selection and clipboard operations
+	logger.Information("")
+	logger.Information("Step 21: Demonstrating selection and clipboard operations...")
 
 	// Create a new sprite for selection demo
 	logger.Information("  Creating sprite for selection demo...")

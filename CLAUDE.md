@@ -92,7 +92,7 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
   - `analysis.go` - Reference image analysis (palette extraction, edge detection, composition)
   - `dithering.go` - Dithering patterns for gradients and textures (15 patterns)
   - `palette_tools.go` - Palette management (set_palette, apply_shading, analyze_palette_harmonies)
-  - `transform.go` - Transform operations (downsampling)
+  - `transform.go` - Transform operations (flip, rotate, scale, crop, resize canvas, outline, downsampling)
   - `export.go` - Export and import operations
 - `internal/testutil/` - Testing utilities (no mocks)
 
@@ -143,6 +143,13 @@ Core functionality implemented and tested:
   - Palette harmony analysis (complementary, triadic, analogous relationships, color temperature)
   - Palette-aware drawing: All drawing tools support `use_palette` flag to snap arbitrary colors to nearest palette color
   - Antialiasing suggestions: Detect jagged diagonal edges and suggest intermediate colors to smooth curves (suggest_antialiasing tool with auto-apply option)
+  - **Transform & Filter Tools (6 tools):**
+    - `flip_sprite`: Flip horizontally/vertically (sprite/layer/cel targets)
+    - `rotate_sprite`: Rotate 90/180/270 degrees (sprite/layer/cel targets)
+    - `scale_sprite`: Scale with algorithm selection (nearest/bilinear/rotsprite), returns new dimensions
+    - `crop_sprite`: Crop to rectangular region
+    - `resize_canvas`: Resize canvas with anchor positioning (5 anchor points)
+    - `apply_outline`: Apply outline effect with color and thickness
 - Sprite export (PNG, GIF, JPG, BMP)
 - Metadata retrieval
 - Example client implementation (examples/client/main.go)

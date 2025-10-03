@@ -1985,3 +1985,251 @@ print("[" .. table.concat(pixels, ",") .. "]")`,
 		offset, limit,
 		y, y+height-1, x, x+width-1)
 }
+
+// FlipSprite generates a Lua script to flip a sprite, layer, or cel.
+func (g *LuaGenerator) FlipSprite(direction, target string) string {
+	// Validate direction
+	if direction != "horizontal" && direction != "vertical" {
+		direction = "horizontal"
+	}
+
+	// Map target to Aseprite's target enum
+	targetParam := ""
+	switch target {
+	case "sprite":
+		targetParam = "target = 'sprite'"
+	case "layer":
+		targetParam = "target = 'layer'"
+	case "cel":
+		targetParam = "target = 'cel'"
+	default:
+		targetParam = "target = 'sprite'"
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+app.transaction(function()
+	app.command.Flip{
+		orientation = "%s",
+		%s
+	}
+end)
+
+spr:saveAs(spr.filename)
+print("Sprite flipped %s successfully")`, direction, targetParam, direction)
+}
+
+// RotateSprite generates a Lua script to rotate a sprite, layer, or cel.
+func (g *LuaGenerator) RotateSprite(angle int, target string) string {
+	// Validate angle (must be 90, 180, or 270)
+	if angle != 90 && angle != 180 && angle != 270 {
+		angle = 90
+	}
+
+	// Map target to Aseprite's target enum
+	targetParam := ""
+	switch target {
+	case "sprite":
+		targetParam = "target = 'sprite'"
+	case "layer":
+		targetParam = "target = 'layer'"
+	case "cel":
+		targetParam = "target = 'cel'"
+	default:
+		targetParam = "target = 'sprite'"
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+app.transaction(function()
+	app.command.Rotate{
+		angle = %d,
+		%s
+	}
+end)
+
+spr:saveAs(spr.filename)
+print("Sprite rotated %d degrees successfully")`, angle, targetParam, angle)
+}
+
+// ScaleSprite generates a Lua script to scale a sprite with a specified algorithm.
+func (g *LuaGenerator) ScaleSprite(scaleX, scaleY float64, algorithm string) string {
+	// Validate algorithm
+	validAlgorithms := map[string]bool{
+		"nearest":   true,
+		"bilinear":  true,
+		"rotsprite": true,
+	}
+	if !validAlgorithms[algorithm] {
+		algorithm = "nearest"
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+local oldWidth = spr.width
+local oldHeight = spr.height
+local newWidth = math.floor(oldWidth * %.3f)
+local newHeight = math.floor(oldHeight * %.3f)
+
+app.transaction(function()
+	app.command.SpriteSize{
+		width = newWidth,
+		height = newHeight,
+		method = "%s"
+	}
+end)
+
+spr:saveAs(spr.filename)
+
+-- Output JSON with new dimensions
+local output = string.format('{"success":true,"new_width":%%d,"new_height":%%d}', spr.width, spr.height)
+print(output)`, scaleX, scaleY, algorithm)
+}
+
+// CropSprite generates a Lua script to crop a sprite to a rectangular region.
+func (g *LuaGenerator) CropSprite(x, y, width, height int) string {
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Validate crop bounds
+if %d < 0 or %d < 0 then
+	error("Crop position must be non-negative")
+end
+
+if %d <= 0 or %d <= 0 then
+	error("Crop dimensions must be positive")
+end
+
+if %d + %d > spr.width or %d + %d > spr.height then
+	error(string.format("Crop bounds exceed sprite dimensions (sprite: %%dx%%d, crop: %%d,%%d,%%dx%%d)",
+		spr.width, spr.height, %d, %d, %d, %d))
+end
+
+app.transaction(function()
+	app.command.CropSprite{
+		bounds = Rectangle(%d, %d, %d, %d)
+	}
+end)
+
+spr:saveAs(spr.filename)
+print("Sprite cropped successfully")`,
+		x, y,
+		width, height,
+		x, width, y, height,
+		x, y, width, height,
+		x, y, width, height)
+}
+
+// ResizeCanvas generates a Lua script to resize the canvas without scaling content.
+func (g *LuaGenerator) ResizeCanvas(width, height int, anchor string) string {
+	// Calculate anchor offset based on anchor position
+	var leftOffset, topOffset string
+
+	switch anchor {
+	case "top_left":
+		leftOffset = "0"
+		topOffset = "0"
+	case "top_right":
+		leftOffset = "newWidth - oldWidth"
+		topOffset = "0"
+	case "bottom_left":
+		leftOffset = "0"
+		topOffset = "newHeight - oldHeight"
+	case "bottom_right":
+		leftOffset = "newWidth - oldWidth"
+		topOffset = "newHeight - oldHeight"
+	case "center":
+		fallthrough
+	default:
+		leftOffset = "math.floor((newWidth - oldWidth) / 2)"
+		topOffset = "math.floor((newHeight - oldHeight) / 2)"
+	}
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+local oldWidth = spr.width
+local oldHeight = spr.height
+local newWidth = %d
+local newHeight = %d
+
+app.transaction(function()
+	app.command.CanvasSize{
+		left = %s,
+		top = %s,
+		right = 0,
+		bottom = 0,
+		width = newWidth,
+		height = newHeight
+	}
+end)
+
+spr:saveAs(spr.filename)
+print("Canvas resized successfully")`, width, height, leftOffset, topOffset)
+}
+
+// ApplyOutline generates a Lua script to apply an outline effect to a layer.
+func (g *LuaGenerator) ApplyOutline(layerName string, frameNumber int, color Color, thickness int) string {
+	escapedName := EscapeString(layerName)
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer by name
+local layer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "%s" then
+		layer = lyr
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+-- Set active layer and frame
+app.activeLayer = layer
+app.activeFrame = frame
+
+-- Check if cel exists
+local cel = layer:cel(frame)
+if not cel then
+	error("No cel found at layer '%s' frame %d")
+end
+
+app.transaction(function()
+	app.command.Outline{
+		color = %s,
+		size = %d,
+		bgColor = Color(0, 0, 0, 0)
+	}
+end)
+
+spr:saveAs(spr.filename)
+print("Outline applied successfully")`,
+		escapedName, escapedName,
+		frameNumber, frameNumber,
+		escapedName, frameNumber,
+		FormatColor(color), thickness)
+}

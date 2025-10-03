@@ -20,6 +20,7 @@ The `client/` directory contains a complete example MCP client that demonstrates
 - Applying palette-constrained shading with light direction
 - Palette-aware drawing with automatic color snapping
 - Detecting and smoothing jagged edges with antialiasing
+- **Transform Operations:** Flipping, rotating, and scaling sprites with algorithm selection
 - Drawing operations (demonstrating rectangle and circle tools as alternatives to copy/paste)
 - Retrieving sprite metadata
 - Exporting to GIF and PNG
@@ -61,6 +62,7 @@ The example creates:
 - `../sprites/palette-drawing-comparison.png` - Side-by-side comparison: pastel colors (left) vs palette-snapped pure colors (right)
 - `../sprites/antialiasing-before.png` - Jagged diagonal line (stair-step pattern)
 - `../sprites/antialiasing-after.png` - Smoothed diagonal with intermediate colors applied
+- `../sprites/transform-demo.png` - Transform operations: triangle flipped, rotated, and scaled 2x
 - `/tmp/selection-demo.png` - Drawing demo showing red squares and blue circle
 
 ## Example Output
@@ -97,6 +99,12 @@ Available tools:
   - sort_palette: Sort palette by hue, saturation, brightness, or luminance
   - apply_shading: Apply palette-constrained shading with light direction
   - analyze_palette_harmonies: Analyze color relationships and temperature
+  - flip_sprite: Flip sprite horizontally or vertically (sprite/layer/cel targets)
+  - rotate_sprite: Rotate sprite by 90, 180, or 270 degrees
+  - scale_sprite: Scale sprite with algorithm selection (nearest/bilinear/rotsprite)
+  - crop_sprite: Crop sprite to rectangular region
+  - resize_canvas: Resize canvas with anchor positioning
+  - apply_outline: Apply outline effect to layer with thickness
   - select_rectangle: Create rectangular selection with mode (replace/add/subtract/intersect)
   - select_ellipse: Create elliptical selection with mode
   - select_all: Select entire canvas
@@ -203,7 +211,18 @@ Step 19: Demonstrating palette management tools...
   Retrieving sorted palette...
   ✓ Sorted palette has 9 colors: [#000000 #FFFFFF #FF0000 #FF8000 #FFFF00 #00FF00 #00FFFF #0000FF #FF00FF]
 
-Step 20: Demonstrating selection and clipboard operations...
+Step 20: Demonstrating transform operations (flip, rotate, scale)...
+  Creating 64x64 sprite with asymmetric triangle...
+  Triangle drawn (pointing right)
+  Flipping sprite horizontally...
+  ✓ Triangle now points left
+  Rotating sprite 90 degrees clockwise...
+  ✓ Sprite rotated successfully
+  Scaling sprite 2x with nearest neighbor algorithm...
+  ✓ Sprite scaled from 64x64 to 128x128
+  Exported: ../sprites/transform-demo.png
+
+Step 21: Demonstrating selection and clipboard operations...
   Creating sprite for selection demo...
   Drawing red square (20x20 at 20,20)...
   Copying red square to position (60, 60) using draw_rectangle...

@@ -10,6 +10,7 @@ A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and anim
   - **Reference Analysis:** Extract palettes, brightness maps, edge detection, and composition guides from images
   - **Dithering:** Bayer matrix (2x2, 4x4, 8x8) and checkerboard patterns for smooth gradients and textures
   - **Palette Extraction:** K-means clustering in LAB color space for perceptually accurate color reduction
+  - **Transform Operations:** Flip, rotate, scale, crop, resize canvas, and apply outlines
 - **Animation Tools:** Frame durations, tags, frame duplication, linked cels
 - **Inspection Tools:** Read pixel data with pagination for verification and analysis
 - **Export Formats:** PNG, GIF, JPG, and BMP
@@ -129,6 +130,16 @@ Then use natural language to create sprites:
 | `apply_shading` | Apply palette-constrained shading based on light direction (smooth, hard, or pillow styles) |
 | `analyze_palette_harmonies` | Analyze palette for complementary, triadic, analogous relationships and color temperature |
 | `suggest_antialiasing` | Detect jagged diagonal edges and suggest intermediate colors for smooth curves (with optional auto-apply) |
+
+### Transform & Filter
+| Tool | Description |
+|------|-------------|
+| `flip_sprite` | Flip sprite, layer, or cel horizontally or vertically |
+| `rotate_sprite` | Rotate sprite, layer, or cel by 90, 180, or 270 degrees |
+| `scale_sprite` | Scale sprite with algorithm selection (nearest, bilinear, rotsprite) |
+| `crop_sprite` | Crop sprite to rectangular region |
+| `resize_canvas` | Resize canvas without scaling content (with anchor positioning) |
+| `apply_outline` | Apply outline effect to layer with configurable color and thickness |
 
 ### Animation
 | Tool | Description |

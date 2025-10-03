@@ -644,3 +644,279 @@ func TestLuaGenerator_SortPalette(t *testing.T) {
 		}
 	})
 }
+
+func TestLuaGenerator_FlipSprite(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	t.Run("flip horizontal sprite", func(t *testing.T) {
+		script := gen.FlipSprite("horizontal", "sprite")
+
+		if !strings.Contains(script, `orientation = "horizontal"`) {
+			t.Error("script missing horizontal orientation")
+		}
+
+		if !strings.Contains(script, `target = 'sprite'`) {
+			t.Error("script missing sprite target")
+		}
+
+		if !strings.Contains(script, "app.command.Flip") {
+			t.Error("script missing Flip command")
+		}
+
+		if !strings.Contains(script, "Sprite flipped horizontal successfully") {
+			t.Error("script missing success message")
+		}
+	})
+
+	t.Run("flip vertical layer", func(t *testing.T) {
+		script := gen.FlipSprite("vertical", "layer")
+
+		if !strings.Contains(script, `orientation = "vertical"`) {
+			t.Error("script missing vertical orientation")
+		}
+
+		if !strings.Contains(script, `target = 'layer'`) {
+			t.Error("script missing layer target")
+		}
+	})
+
+	t.Run("invalid direction defaults to horizontal", func(t *testing.T) {
+		script := gen.FlipSprite("invalid", "sprite")
+
+		if !strings.Contains(script, `orientation = "horizontal"`) {
+			t.Error("invalid direction should default to horizontal")
+		}
+	})
+}
+
+func TestLuaGenerator_RotateSprite(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	t.Run("rotate 90 degrees", func(t *testing.T) {
+		script := gen.RotateSprite(90, "sprite")
+
+		if !strings.Contains(script, "angle = 90") {
+			t.Error("script missing 90 degree angle")
+		}
+
+		if !strings.Contains(script, "app.command.Rotate") {
+			t.Error("script missing Rotate command")
+		}
+
+		if !strings.Contains(script, "Sprite rotated 90 degrees successfully") {
+			t.Error("script missing success message")
+		}
+	})
+
+	t.Run("rotate 180 degrees", func(t *testing.T) {
+		script := gen.RotateSprite(180, "sprite")
+
+		if !strings.Contains(script, "angle = 180") {
+			t.Error("script missing 180 degree angle")
+		}
+	})
+
+	t.Run("rotate 270 degrees with cel target", func(t *testing.T) {
+		script := gen.RotateSprite(270, "cel")
+
+		if !strings.Contains(script, "angle = 270") {
+			t.Error("script missing 270 degree angle")
+		}
+
+		if !strings.Contains(script, `target = 'cel'`) {
+			t.Error("script missing cel target")
+		}
+	})
+
+	t.Run("invalid angle defaults to 90", func(t *testing.T) {
+		script := gen.RotateSprite(45, "sprite")
+
+		if !strings.Contains(script, "angle = 90") {
+			t.Error("invalid angle should default to 90")
+		}
+	})
+}
+
+func TestLuaGenerator_ScaleSprite(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	t.Run("scale with nearest neighbor", func(t *testing.T) {
+		script := gen.ScaleSprite(2.0, 2.0, "nearest")
+
+		if !strings.Contains(script, "oldWidth * 2.000") {
+			t.Error("script missing scale factor calculation")
+		}
+
+		if !strings.Contains(script, `method = "nearest"`) {
+			t.Error("script missing nearest algorithm")
+		}
+
+		if !strings.Contains(script, "app.command.SpriteSize") {
+			t.Error("script missing SpriteSize command")
+		}
+
+		if !strings.Contains(script, `"success":true`) {
+			t.Error("script missing JSON output")
+		}
+	})
+
+	t.Run("scale with bilinear", func(t *testing.T) {
+		script := gen.ScaleSprite(0.5, 0.5, "bilinear")
+
+		if !strings.Contains(script, `method = "bilinear"`) {
+			t.Error("script missing bilinear algorithm")
+		}
+	})
+
+	t.Run("scale with rotsprite", func(t *testing.T) {
+		script := gen.ScaleSprite(1.5, 1.5, "rotsprite")
+
+		if !strings.Contains(script, `method = "rotsprite"`) {
+			t.Error("script missing rotsprite algorithm")
+		}
+	})
+
+	t.Run("invalid algorithm defaults to nearest", func(t *testing.T) {
+		script := gen.ScaleSprite(2.0, 2.0, "invalid")
+
+		if !strings.Contains(script, `method = "nearest"`) {
+			t.Error("invalid algorithm should default to nearest")
+		}
+	})
+}
+
+func TestLuaGenerator_CropSprite(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.CropSprite(10, 20, 100, 80)
+
+	// Check validation
+	if !strings.Contains(script, "if 10 < 0 or 20 < 0") {
+		t.Error("script missing position validation")
+	}
+
+	if !strings.Contains(script, "if 100 <= 0 or 80 <= 0") {
+		t.Error("script missing dimension validation")
+	}
+
+	// Check bounds checking
+	if !strings.Contains(script, "if 10 + 100 > spr.width or 20 + 80 > spr.height") {
+		t.Error("script missing bounds validation")
+	}
+
+	// Check command
+	if !strings.Contains(script, "app.command.CropSprite") {
+		t.Error("script missing CropSprite command")
+	}
+
+	if !strings.Contains(script, "bounds = Rectangle(10, 20, 100, 80)") {
+		t.Error("script missing Rectangle bounds")
+	}
+
+	if !strings.Contains(script, "Sprite cropped successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_ResizeCanvas(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	t.Run("resize with center anchor", func(t *testing.T) {
+		script := gen.ResizeCanvas(200, 150, "center")
+
+		if !strings.Contains(script, "local newWidth = 200") {
+			t.Error("script missing new width")
+		}
+
+		if !strings.Contains(script, "local newHeight = 150") {
+			t.Error("script missing new height")
+		}
+
+		if !strings.Contains(script, "left = math.floor((newWidth - oldWidth) / 2)") {
+			t.Error("script missing center left offset")
+		}
+
+		if !strings.Contains(script, "top = math.floor((newHeight - oldHeight) / 2)") {
+			t.Error("script missing center top offset")
+		}
+
+		if !strings.Contains(script, "app.command.CanvasSize") {
+			t.Error("script missing CanvasSize command")
+		}
+	})
+
+	t.Run("resize with top_left anchor", func(t *testing.T) {
+		script := gen.ResizeCanvas(200, 150, "top_left")
+
+		if !strings.Contains(script, "left = 0") {
+			t.Error("script missing top_left left offset")
+		}
+
+		if !strings.Contains(script, "top = 0") {
+			t.Error("script missing top_left top offset")
+		}
+	})
+
+	t.Run("resize with bottom_right anchor", func(t *testing.T) {
+		script := gen.ResizeCanvas(200, 150, "bottom_right")
+
+		if !strings.Contains(script, "left = newWidth - oldWidth") {
+			t.Error("script missing bottom_right left offset")
+		}
+
+		if !strings.Contains(script, "top = newHeight - oldHeight") {
+			t.Error("script missing bottom_right top offset")
+		}
+	})
+
+	t.Run("invalid anchor defaults to center", func(t *testing.T) {
+		script := gen.ResizeCanvas(200, 150, "invalid")
+
+		if !strings.Contains(script, "math.floor((newWidth - oldWidth) / 2)") {
+			t.Error("invalid anchor should default to center")
+		}
+	})
+}
+
+func TestLuaGenerator_ApplyOutline(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	color := Color{R: 255, G: 0, B: 0, A: 255}
+	script := gen.ApplyOutline("Layer 1", 1, color, 2)
+
+	// Check layer lookup
+	if !strings.Contains(script, `for i, lyr in ipairs(spr.layers)`) {
+		t.Error("script missing layer iteration")
+	}
+
+	if !strings.Contains(script, `if lyr.name == "Layer 1"`) {
+		t.Error("script missing layer name comparison")
+	}
+
+	// Check frame lookup
+	if !strings.Contains(script, "spr.frames[1]") {
+		t.Error("script missing frame lookup")
+	}
+
+	// Check cel existence check
+	if !strings.Contains(script, "if not cel then") {
+		t.Error("script missing cel existence check")
+	}
+
+	// Check Outline command
+	if !strings.Contains(script, "app.command.Outline") {
+		t.Error("script missing Outline command")
+	}
+
+	if !strings.Contains(script, "color = Color(255, 0, 0, 255)") {
+		t.Error("script missing color parameter")
+	}
+
+	if !strings.Contains(script, "size = 2") {
+		t.Error("script missing size parameter")
+	}
+
+	if !strings.Contains(script, "Outline applied successfully") {
+		t.Error("script missing success message")
+	}
+}
