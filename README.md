@@ -2,25 +2,6 @@
 
 A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and animation capabilities to AI assistants, enabling you to create and edit sprites using natural language.
 
-## Why Use This?
-
-**For Pixel Artists & Game Designers:**
-- Rapidly prototype sprite concepts by describing them to your AI assistant
-- Automate repetitive tasks like creating animation frames or color variations
-- Generate placeholder art for game development
-- Experiment with pixel art ideas without manual pixel pushing
-
-**For Game Developers:**
-- Integrate sprite generation into your game development workflow
-- Automate asset creation pipelines
-- Quickly iterate on visual concepts during prototyping
-- Generate test assets and mockups
-
-**For AI Assistant Users:**
-- Use Claude Desktop or other MCP clients to create pixel art through conversation
-- No need to learn Aseprite's UI - just describe what you want
-- Perfect for non-artists who need simple sprites and animations
-
 ## Features
 
 - **Canvas & Layer Management:** RGB, Grayscale, and Indexed color modes with multi-layer support
@@ -144,6 +125,10 @@ Then use natural language to create sprites:
 | `get_pixels` | Read pixel data from a rectangular region (paginated, for verification) |
 | `export_sprite` | Export sprite to PNG/GIF/JPG/BMP |
 
+## Examples
+
+See [examples/](examples/) for a complete working example client that demonstrates all features including canvas creation, animation, dithering, palette management, shading, and antialiasing.
+
 ## Development
 
 ```bash
@@ -165,13 +150,8 @@ make test-coverage
 
 ## Performance
 
-- Canvas creation: ~94ms
-- Drawing primitives: ~93-96ms
-- 10K pixel batch: ~109ms
-- Complete workflows: ~280-840ms
-
-See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for detailed benchmark results.
+All operations complete in under 100ms on typical hardware, with complete workflows finishing in 280-840ms. See [docs/BENCHMARKS.md](docs/BENCHMARKS.md) for detailed benchmark results.
 
 ## License
 
-MIT
+[MIT](LICENSE)
