@@ -37,6 +37,14 @@ if not spr then
 	error("No active sprite")
 end
 
+-- Map color mode enum to string
+local colorModeStr = "rgb"
+if spr.colorMode == ColorMode.GRAYSCALE then
+	colorModeStr = "grayscale"
+elseif spr.colorMode == ColorMode.INDEXED then
+	colorModeStr = "indexed"
+end
+
 -- Collect layer names
 local layers = {}
 for i, layer in ipairs(spr.layers) do
@@ -54,7 +62,7 @@ local output = string.format([[{
 }]],
 	spr.width,
 	spr.height,
-	tostring(spr.colorMode),
+	colorModeStr,
 	#spr.frames,
 	#spr.layers,
 	table.concat(layers, '","')

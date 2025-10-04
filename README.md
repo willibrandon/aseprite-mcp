@@ -126,7 +126,7 @@ Then use natural language to create sprites:
 | `copy_selection` | Copy selected pixels to clipboard |
 | `paste_clipboard` | Paste clipboard content at specified position |
 
-**Important Note**: Selections are transient and exist only in memory during script execution. They do not persist when sprites are saved to disk. For workflows involving selections and clipboard operations (copy/paste), combine the operations in integration tests or custom Lua scripts rather than calling them as separate MCP tools.
+**Note**: Selection and clipboard operations persist across MCP tool calls using sprite custom properties (`sprite.data`) and a hidden clipboard layer. This allows you to create a selection in one tool call, then copy/cut/paste in subsequent calls. Selection bounds are automatically saved and restored, and clipboard content is stored in a hidden `__mcp_clipboard__` layer.
 
 ### Professional Pixel Art
 | Tool | Description |

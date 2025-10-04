@@ -1,7 +1,17 @@
 package tools
 
 import (
+	"context"
+	"encoding/json"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
+	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
+	"github.com/willibrandon/mtlog"
+	"github.com/willibrandon/mtlog/core"
 )
 
 func TestGetPixelsInput_Validation(t *testing.T) {
@@ -299,4 +309,204 @@ func TestGetPixelsInput_Regions(t *testing.T) {
 			}
 		})
 	}
+}
+
+// createInspectionTestSession creates an MCP session with inspection tools registered
+func createInspectionTestSession(t *testing.T) (*mcp.Server, *mcp.ClientSession, *aseprite.Client) {
+	t.Helper()
+
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, cfg.Timeout)
+	gen := aseprite.NewLuaGenerator()
+	logger := mtlog.New(mtlog.WithMinimumLevel(core.ErrorLevel))
+
+	server := mcp.NewServer(&mcp.Implementation{
+		Name:    "aseprite-mcp-test",
+		Version: "1.0.0",
+	}, nil)
+
+	RegisterInspectionTools(server, client, gen, cfg, logger)
+	// Also register canvas and drawing tools for setup
+	RegisterCanvasTools(server, client, gen, cfg, logger)
+	RegisterDrawingTools(server, client, gen, cfg, logger)
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	_, err := server.Connect(context.Background(), serverTransport, nil)
+	require.NoError(t, err)
+
+	mcpClient := mcp.NewClient(&mcp.Implementation{
+		Name:    "test-client",
+		Version: "1.0.0",
+	}, nil)
+
+	session, err := mcpClient.Connect(context.Background(), clientTransport, nil)
+	require.NoError(t, err)
+
+	return server, session, client
+}
+
+func TestGetPixels_ViaMCP(t *testing.T) {
+	_, session, _ := createInspectionTestSession(t)
+	defer session.Close()
+
+	// Create a 10x10 sprite
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      10,
+			"height":     10,
+			"color_mode": "rgb",
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, createResult.IsError)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+
+	// Draw some known pixels
+	drawResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "draw_pixels",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"pixels": []map[string]any{
+				{"x": 0, "y": 0, "color": "#FF0000FF"}, // Red
+				{"x": 1, "y": 0, "color": "#00FF00FF"}, // Green
+				{"x": 2, "y": 0, "color": "#0000FFFF"}, // Blue
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, drawResult.IsError)
+
+	// Now read those pixels back
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_pixels",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x":            0,
+			"y":            0,
+			"width":        3,
+			"height":       1,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output GetPixelsOutput
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+
+	// Verify we got 3 pixels
+	assert.Equal(t, 3, len(output.Pixels), "Should return 3 pixels")
+	assert.Equal(t, 3, output.TotalPixels, "Total pixels should be 3")
+	assert.Empty(t, output.NextCursor, "Should have no next cursor for small region")
+
+	// Verify colors match (Aseprite returns uppercase hex)
+	assert.Equal(t, "#FF0000FF", output.Pixels[0].Color)
+	assert.Equal(t, "#00FF00FF", output.Pixels[1].Color)
+	assert.Equal(t, "#0000FFFF", output.Pixels[2].Color)
+
+	// Verify coordinates
+	assert.Equal(t, 0, output.Pixels[0].X)
+	assert.Equal(t, 0, output.Pixels[0].Y)
+	assert.Equal(t, 1, output.Pixels[1].X)
+	assert.Equal(t, 2, output.Pixels[2].X)
+}
+
+func TestGetPixelsPagination_ViaMCP(t *testing.T) {
+	_, session, _ := createInspectionTestSession(t)
+	defer session.Close()
+
+	// Create a 5x5 sprite (25 pixels)
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      5,
+			"height":     5,
+			"color_mode": "rgb",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+
+	// Get first page with page_size=10
+	result1, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_pixels",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x":            0,
+			"y":            0,
+			"width":        5,
+			"height":       5,
+			"page_size":    10,
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, result1.IsError)
+
+	var output1 GetPixelsOutput
+	json.Unmarshal([]byte(result1.Content[0].(*mcp.TextContent).Text), &output1)
+
+	assert.Equal(t, 10, len(output1.Pixels), "First page should have 10 pixels")
+	assert.Equal(t, 25, output1.TotalPixels, "Total should be 25 pixels")
+	assert.NotEmpty(t, output1.NextCursor, "Should have next cursor")
+
+	// Get second page using cursor
+	result2, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_pixels",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x":            0,
+			"y":            0,
+			"width":        5,
+			"height":       5,
+			"page_size":    10,
+			"cursor":       output1.NextCursor,
+		},
+	})
+	require.NoError(t, err)
+
+	var output2 GetPixelsOutput
+	json.Unmarshal([]byte(result2.Content[0].(*mcp.TextContent).Text), &output2)
+
+	assert.Equal(t, 10, len(output2.Pixels), "Second page should have 10 pixels")
+	assert.NotEmpty(t, output2.NextCursor, "Should have next cursor for third page")
+
+	// Get third page (last 5 pixels)
+	result3, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_pixels",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x":            0,
+			"y":            0,
+			"width":        5,
+			"height":       5,
+			"page_size":    10,
+			"cursor":       output2.NextCursor,
+		},
+	})
+	require.NoError(t, err)
+
+	var output3 GetPixelsOutput
+	json.Unmarshal([]byte(result3.Content[0].(*mcp.TextContent).Text), &output3)
+
+	assert.Equal(t, 5, len(output3.Pixels), "Third page should have remaining 5 pixels")
+	assert.Empty(t, output3.NextCursor, "Should have no next cursor on last page")
 }

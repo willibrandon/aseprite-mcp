@@ -1,7 +1,18 @@
 package tools
 
 import (
+	"context"
+	"encoding/json"
+	"os"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
+	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
+	"github.com/willibrandon/mtlog"
+	"github.com/willibrandon/mtlog/core"
 )
 
 func TestSetPaletteInput_Validation(t *testing.T) {
@@ -355,4 +366,369 @@ func TestAnalyzePaletteHarmonies_Temperature(t *testing.T) {
 			}
 		})
 	}
+}
+
+// createPaletteTestSession creates an MCP session with palette tools registered
+func createPaletteTestSession(t *testing.T) (*mcp.Server, *mcp.ClientSession, *aseprite.Client) {
+	t.Helper()
+
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, cfg.Timeout)
+	gen := aseprite.NewLuaGenerator()
+	logger := mtlog.New(mtlog.WithMinimumLevel(core.ErrorLevel))
+
+	server := mcp.NewServer(&mcp.Implementation{
+		Name:    "aseprite-mcp-test",
+		Version: "1.0.0",
+	}, nil)
+
+	RegisterPaletteTools(server, client, gen, cfg, logger)
+	// Also register canvas and drawing tools for setup
+	RegisterCanvasTools(server, client, gen, cfg, logger)
+	RegisterDrawingTools(server, client, gen, cfg, logger)
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	_, err := server.Connect(context.Background(), serverTransport, nil)
+	require.NoError(t, err)
+
+	mcpClient := mcp.NewClient(&mcp.Implementation{
+		Name:    "test-client",
+		Version: "1.0.0",
+	}, nil)
+
+	session, err := mcpClient.Connect(context.Background(), clientTransport, nil)
+	require.NoError(t, err)
+
+	return server, session, client
+}
+
+func TestGetPalette_ViaMCP(t *testing.T) {
+	_, session, _ := createPaletteTestSession(t)
+	defer session.Close()
+
+	// Create indexed sprite (has palette)
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      16,
+			"height":     16,
+			"color_mode": "indexed",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Get palette
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_palette",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Colors []string `json:"colors"`
+		Size   int      `json:"size"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+
+	assert.Greater(t, output.Size, 0, "Should have palette colors")
+	assert.Equal(t, output.Size, len(output.Colors), "Size should match colors length")
+}
+
+func TestSetPalette_ViaMCP(t *testing.T) {
+	_, session, _ := createPaletteTestSession(t)
+	defer session.Close()
+
+	// Create indexed sprite
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      16,
+			"height":     16,
+			"color_mode": "indexed",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Set custom palette
+	customPalette := []string{"#FF0000", "#00FF00", "#0000FF", "#FFFFFF", "#000000"}
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "set_palette",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+			"colors":      customPalette,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	// Verify palette was set
+	getResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_palette",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+		},
+	})
+	require.NoError(t, err)
+
+	var getOutput struct {
+		Colors []string `json:"colors"`
+	}
+	json.Unmarshal([]byte(getResult.Content[0].(*mcp.TextContent).Text), &getOutput)
+
+	assert.Equal(t, 5, len(getOutput.Colors), "Should have 5 palette colors")
+}
+
+func TestSetPaletteColor_ViaMCP(t *testing.T) {
+	_, session, _ := createPaletteTestSession(t)
+	defer session.Close()
+
+	// Create indexed sprite
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      16,
+			"height":     16,
+			"color_mode": "indexed",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Set color at index 0 to red
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "set_palette_color",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+			"index":       0,
+			"color":       "#FF0000",
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+}
+
+func TestAddPaletteColor_ViaMCP(t *testing.T) {
+	_, session, _ := createPaletteTestSession(t)
+	defer session.Close()
+
+	// Create indexed sprite
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      16,
+			"height":     16,
+			"color_mode": "indexed",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Set a smaller palette first (indexed sprites start with 256 colors)
+	session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "set_palette",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+			"colors":      []string{"#FF0000", "#00FF00", "#0000FF"},
+		},
+	})
+
+	// Now add a new color to palette
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "add_palette_color",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+			"color":       "#FF00FF",
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		ColorIndex int `json:"color_index"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+
+	assert.GreaterOrEqual(t, output.ColorIndex, 0, "Should return valid palette index")
+}
+
+func TestSortPalette_ViaMCP(t *testing.T) {
+	_, session, _ := createPaletteTestSession(t)
+	defer session.Close()
+
+	// Create indexed sprite
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      16,
+			"height":     16,
+			"color_mode": "indexed",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Set a known palette
+	session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "set_palette",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+			"colors":      []string{"#0000FF", "#FF0000", "#00FF00", "#FFFFFF", "#000000"},
+		},
+	})
+
+	// Sort by hue
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "sort_palette",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+			"method":      "hue",
+			"ascending":   true,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+}
+
+func TestAnalyzePaletteHarmonies_ViaMCP(t *testing.T) {
+	_, session, _ := createPaletteTestSession(t)
+	defer session.Close()
+
+	// Test with known complementary colors
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "analyze_palette_harmonies",
+		Arguments: map[string]any{
+			"palette": []string{"#FF0000", "#00FFFF", "#00FF00"},
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Complementary []struct {
+			Color1 string `json:"color1"`
+			Color2 string `json:"color2"`
+		} `json:"complementary"`
+		Triadic []struct {
+			Color1 string `json:"color1"`
+			Color2 string `json:"color2"`
+			Color3 string `json:"color3"`
+		} `json:"triadic"`
+		Analogous []struct {
+			Colors []string `json:"colors"`
+		} `json:"analogous"`
+		Temperature struct {
+			Warm    []string `json:"warm"`
+			Cool    []string `json:"cool"`
+			Neutral []string `json:"neutral"`
+		} `json:"temperature"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+
+	assert.NotNil(t, output.Complementary, "Should analyze complementary colors")
+	assert.NotNil(t, output.Temperature, "Should analyze color temperature")
+}
+
+func TestApplyShading_ViaMCP(t *testing.T) {
+	_, session, _ := createPaletteTestSession(t)
+	defer session.Close()
+
+	// Create RGB sprite for shading test
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      64,
+			"height":     64,
+			"color_mode": "rgb",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Draw a filled rectangle to apply shading to
+	_, err = session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "draw_rectangle",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x":            16,
+			"y":            16,
+			"width":        32,
+			"height":       32,
+			"color":        "#808080",
+			"filled":       true,
+		},
+	})
+	require.NoError(t, err)
+
+	// Apply smooth shading with top-left light
+	palette := []string{"#000000", "#404040", "#808080", "#C0C0C0", "#FFFFFF"}
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "apply_shading",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"region": map[string]any{
+				"x":      16,
+				"y":      16,
+				"width":  32,
+				"height": 32,
+			},
+			"palette":         palette,
+			"light_direction": "top_left",
+			"intensity":       0.8,
+			"style":           "smooth",
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success, "Apply shading should succeed")
 }

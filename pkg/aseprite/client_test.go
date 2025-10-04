@@ -96,5 +96,27 @@ func TestClient_ExecuteLua_MissingSprite(t *testing.T) {
 	}
 }
 
+func TestClient_GetVersion(t *testing.T) {
+	// Test with invalid executable path to check error handling
+	client := NewClient("/nonexistent/aseprite", "", 30*time.Second)
+
+	ctx := context.Background()
+	_, err := client.GetVersion(ctx)
+	if err == nil {
+		t.Error("GetVersion() with invalid path should return error")
+	}
+}
+
+func TestClient_ExecuteCommand(t *testing.T) {
+	// Test with invalid executable path to check error handling
+	client := NewClient("/nonexistent/aseprite", "", 30*time.Second)
+
+	ctx := context.Background()
+	_, err := client.ExecuteCommand(ctx, []string{"--version"})
+	if err == nil {
+		t.Error("ExecuteCommand() with invalid path should return error")
+	}
+}
+
 // Note: Additional tests that require actual Aseprite execution
 // should be placed in integration tests

@@ -447,8 +447,8 @@ func TestLuaGenerator_CutSelection(t *testing.T) {
 		t.Error("script missing frame reference")
 	}
 
-	if !strings.Contains(script, "app.command.Cut()") {
-		t.Error("script missing Cut command")
+	if !strings.Contains(script, "__mcp_clipboard__") {
+		t.Error("script missing clipboard layer reference")
 	}
 
 	if !strings.Contains(script, "Cut selection completed successfully") {
@@ -465,8 +465,8 @@ func TestLuaGenerator_CopySelection(t *testing.T) {
 		t.Error("script missing empty selection check")
 	}
 
-	if !strings.Contains(script, "app.command.Copy()") {
-		t.Error("script missing Copy command")
+	if !strings.Contains(script, "__mcp_clipboard__") {
+		t.Error("script missing clipboard layer reference")
 	}
 
 	if !strings.Contains(script, "Copy selection completed successfully") {
@@ -484,12 +484,12 @@ func TestLuaGenerator_PasteClipboard(t *testing.T) {
 			t.Error("script missing layer name check")
 		}
 
-		if !strings.Contains(script, "app.command.Paste()") {
-			t.Error("script missing Paste command")
+		if !strings.Contains(script, "__mcp_clipboard__") {
+			t.Error("script missing clipboard layer reference")
 		}
 
-		if strings.Contains(script, "Set paste position") {
-			t.Error("script should not set position when nil")
+		if !strings.Contains(script, "local pasteX, pasteY = 0, 0") {
+			t.Error("script missing default paste position")
 		}
 
 		if !strings.Contains(script, "Paste completed successfully") {
@@ -501,8 +501,12 @@ func TestLuaGenerator_PasteClipboard(t *testing.T) {
 		x, y := 25, 35
 		script := gen.PasteClipboard("Layer 1", 1, &x, &y)
 
-		if !strings.Contains(script, "app.command.Paste { x = 25, y = 35 }") {
-			t.Error("script missing Paste command with position parameters")
+		if !strings.Contains(script, "local pasteX, pasteY = 25, 35") {
+			t.Error("script missing paste position assignment")
+		}
+
+		if !strings.Contains(script, "__mcp_clipboard__") {
+			t.Error("script missing clipboard layer reference")
 		}
 
 		if !strings.Contains(script, "Paste completed successfully") {
@@ -1080,5 +1084,250 @@ func TestLuaGenerator_DeleteTag(t *testing.T) {
 
 	if !strings.Contains(script, "Tag deleted successfully") {
 		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_SetFrameDuration(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.SetFrameDuration(2, 150)
+
+	if !strings.Contains(script, "local frame = spr.frames[2]") {
+		t.Error("script missing frame retrieval")
+	}
+
+	if !strings.Contains(script, "frame.duration = 0.150") {
+		t.Error("script missing duration assignment")
+	}
+
+	if !strings.Contains(script, "Frame duration set successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_CreateTag(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.CreateTag("run", 1, 4, "forward")
+
+	if !strings.Contains(script, `tag.name = "run"`) {
+		t.Error("script missing tag name assignment")
+	}
+
+	if !strings.Contains(script, "spr:newTag(1, 4)") {
+		t.Error("script missing newTag with frame range")
+	}
+
+	if !strings.Contains(script, "tag.aniDir = AniDir.FORWARD") {
+		t.Error("script missing animation direction")
+	}
+
+	if !strings.Contains(script, "Tag created successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_AddFrame(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.AddFrame(100)
+
+	if !strings.Contains(script, "local frame = spr:newFrame()") {
+		t.Error("script missing newFrame call")
+	}
+
+	if !strings.Contains(script, "frame.duration = 0.100") {
+		t.Error("script missing duration assignment")
+	}
+
+	if !strings.Contains(script, "print(#spr.frames)") {
+		t.Error("script missing frame count output")
+	}
+}
+
+func TestLuaGenerator_GetSpriteInfo(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.GetSpriteInfo()
+
+	if !strings.Contains(script, `"color_mode":`) {
+		t.Error("script missing color_mode field")
+	}
+
+	if !strings.Contains(script, `"width":`) {
+		t.Error("script missing width field")
+	}
+
+	if !strings.Contains(script, `"height":`) {
+		t.Error("script missing height field")
+	}
+
+	if !strings.Contains(script, `"frame_count":`) {
+		t.Error("script missing frame_count field")
+	}
+
+	if !strings.Contains(script, `"layer_count":`) {
+		t.Error("script missing layer_count field")
+	}
+
+	if !strings.Contains(script, `"layers":`) {
+		t.Error("script missing layers array")
+	}
+}
+
+func TestLuaGenerator_SetPalette(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	colors := []string{"#FF0000", "#00FF00", "#0000FF"}
+	script := gen.SetPalette(colors)
+
+	if !strings.Contains(script, "palette:resize(3)") {
+		t.Error("script missing palette resize")
+	}
+
+	if !strings.Contains(script, "Color{r=255, g=0, b=0, a=255}") {
+		t.Error("script missing first color")
+	}
+
+	if !strings.Contains(script, "Color{r=0, g=255, b=0, a=255}") {
+		t.Error("script missing second color")
+	}
+
+	if !strings.Contains(script, "Color{r=0, g=0, b=255, a=255}") {
+		t.Error("script missing third color")
+	}
+
+	if !strings.Contains(script, "for i, color in ipairs(colors)") {
+		t.Error("script missing color iteration")
+	}
+
+	if !strings.Contains(script, "palette:setColor(i - 1, color)") {
+		t.Error("script missing setColor call")
+	}
+
+	if !strings.Contains(script, "Palette set successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestLuaGenerator_DuplicateFrame(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.DuplicateFrame(2, 3)
+
+	if !strings.Contains(script, "local srcFrame = spr.frames[2]") {
+		t.Error("script missing source frame reference")
+	}
+
+	if !strings.Contains(script, "spr:newFrame(3 + 1)") && !strings.Contains(script, "spr:newFrame(4)") {
+		t.Error("script missing newFrame at position")
+	}
+
+	if !strings.Contains(script, "srcCel.image") {
+		t.Error("script missing image reference")
+	}
+
+	if !strings.Contains(script, "print(3 + 1)") && !strings.Contains(script, "print(4)") {
+		t.Error("script missing frame number output")
+	}
+}
+
+func TestLuaGenerator_LinkCel(t *testing.T) {
+	gen := NewLuaGenerator()
+
+	script := gen.LinkCel("Layer 1", 1, 2)
+
+	if !strings.Contains(script, `lyr.name == "Layer 1"`) {
+		t.Error("script missing layer name check")
+	}
+
+	if !strings.Contains(script, "local srcFrame = spr.frames[1]") {
+		t.Error("script missing source frame reference")
+	}
+
+	if !strings.Contains(script, "local tgtFrame = spr.frames[2]") {
+		t.Error("script missing target frame reference")
+	}
+
+	if !strings.Contains(script, "local srcCel = layer:cel(srcFrame)") {
+		t.Error("script missing source cel reference")
+	}
+
+	if !strings.Contains(script, "spr:newCel(layer, tgtFrame, srcCel.image, srcCel.position)") {
+		t.Error("script missing linked cel creation")
+	}
+
+	if !strings.Contains(script, "Cel linked successfully") {
+		t.Error("script missing success message")
+	}
+}
+
+func TestWrapInTransaction(t *testing.T) {
+	innerCode := `img:putPixel(0, 0, Color(255, 0, 0, 255))`
+	script := WrapInTransaction(innerCode)
+
+	if !strings.Contains(script, "app.transaction(function()") {
+		t.Error("script missing transaction wrapper start")
+	}
+
+	if !strings.Contains(script, innerCode) {
+		t.Error("script missing inner code")
+	}
+
+	if !strings.Contains(script, "end)") {
+		t.Error("script missing transaction wrapper end")
+	}
+}
+
+func TestColor_ToHexRGB(t *testing.T) {
+	tests := []struct {
+		name  string
+		color Color
+		want  string
+	}{
+		{
+			name:  "black",
+			color: Color{R: 0, G: 0, B: 0, A: 255},
+			want:  "#000000",
+		},
+		{
+			name:  "white",
+			color: Color{R: 255, G: 255, B: 255, A: 255},
+			want:  "#FFFFFF",
+		},
+		{
+			name:  "red",
+			color: Color{R: 255, G: 0, B: 0, A: 255},
+			want:  "#FF0000",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.color.ToHexRGB()
+			if got != tt.want {
+				t.Errorf("Color.ToHexRGB() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestColorMode_String(t *testing.T) {
+	tests := []struct {
+		mode ColorMode
+		want string
+	}{
+		{mode: ColorModeRGB, want: "rgb"},
+		{mode: ColorModeGrayscale, want: "grayscale"},
+		{mode: ColorModeIndexed, want: "indexed"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := tt.mode.String()
+			if got != tt.want {
+				t.Errorf("ColorMode.String() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

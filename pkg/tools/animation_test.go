@@ -1,7 +1,18 @@
 package tools
 
 import (
+	"context"
+	"encoding/json"
+	"os"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
+	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
+	"github.com/willibrandon/mtlog"
+	"github.com/willibrandon/mtlog/core"
 )
 
 func TestSetFrameDurationInput_Validation(t *testing.T) {
@@ -391,4 +402,213 @@ func TestDeleteTagInput_Validation(t *testing.T) {
 			}
 		})
 	}
+}
+
+// MCP Protocol Tests (use real MCP with in-memory transport and real Aseprite)
+
+// createAnimationTestSession creates an MCP session with animation tools registered
+func createAnimationTestSession(t *testing.T) (*mcp.Server, *mcp.ClientSession, *aseprite.Client) {
+	t.Helper()
+
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, cfg.Timeout)
+	gen := aseprite.NewLuaGenerator()
+	logger := mtlog.New(mtlog.WithMinimumLevel(core.ErrorLevel))
+
+	server := mcp.NewServer(&mcp.Implementation{
+		Name:    "aseprite-mcp-test",
+		Version: "1.0.0",
+	}, nil)
+
+	RegisterAnimationTools(server, client, gen, cfg, logger)
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	_, err := server.Connect(context.Background(), serverTransport, nil)
+	require.NoError(t, err)
+
+	mcpClient := mcp.NewClient(&mcp.Implementation{
+		Name:    "test-client",
+		Version: "1.0.0",
+	}, nil)
+
+	session, err := mcpClient.Connect(context.Background(), clientTransport, nil)
+	require.NoError(t, err)
+
+	return server, session, client
+}
+
+func TestSetFrameDuration_ViaMCP(t *testing.T) {
+	_, session, client := createAnimationTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	// Create a sprite with multiple frames
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-duration.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-duration.aseprite")
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "set_frame_duration",
+		Arguments: map[string]any{
+			"sprite_path":  cfg.TempDir + "/test-duration.aseprite",
+			"frame_number": 1,
+			"duration_ms":  150,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
+}
+
+func TestCreateTag_ViaMCP(t *testing.T) {
+	_, session, client := createAnimationTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-tag.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-tag.aseprite")
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_tag",
+		Arguments: map[string]any{
+			"sprite_path": cfg.TempDir + "/test-tag.aseprite",
+			"tag_name":    "walk",
+			"from_frame":  1,
+			"to_frame":    1,
+			"direction":   "forward",
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
+}
+
+func TestDeleteTag_ViaMCP(t *testing.T) {
+	_, session, client := createAnimationTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-deltag.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-deltag.aseprite")
+
+	// First create a tag
+	createScript := gen.CreateTag("test", 1, 1, "forward")
+	_, err = client.ExecuteLua(context.Background(), createScript, cfg.TempDir+"/test-deltag.aseprite")
+	require.NoError(t, err)
+
+	// Now delete it
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "delete_tag",
+		Arguments: map[string]any{
+			"sprite_path": cfg.TempDir + "/test-deltag.aseprite",
+			"tag_name":    "test",
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
+}
+
+func TestDuplicateFrame_ViaMCP(t *testing.T) {
+	_, session, client := createAnimationTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-dup.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-dup.aseprite")
+
+	// Debug: check initial frame count
+	infoScript := gen.GetSpriteInfo()
+	infoOutput, _ := client.ExecuteLua(context.Background(), infoScript, cfg.TempDir+"/test-dup.aseprite")
+	t.Logf("Initial sprite info: %s", infoOutput)
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "duplicate_frame",
+		Arguments: map[string]any{
+			"sprite_path":  cfg.TempDir + "/test-dup.aseprite",
+			"source_frame": 1,
+			"insert_after": 0, // Insert at end
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	t.Logf("DuplicateFrame result: %s", result.Content[0].(*mcp.TextContent).Text)
+
+	var output struct {
+		NewFrameNumber int `json:"new_frame_number"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.Equal(t, 2, output.NewFrameNumber)
+}
+
+func TestLinkCel_ViaMCP(t *testing.T) {
+	_, session, client := createAnimationTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-link.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-link.aseprite")
+
+	// Add a second frame first
+	addFrameScript := gen.AddFrame(100)
+	_, err = client.ExecuteLua(context.Background(), addFrameScript, cfg.TempDir+"/test-link.aseprite")
+	require.NoError(t, err)
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "link_cel",
+		Arguments: map[string]any{
+			"sprite_path":  cfg.TempDir + "/test-link.aseprite",
+			"layer_name":   "Layer 1",
+			"source_frame": 1,
+			"target_frame": 2,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
 }

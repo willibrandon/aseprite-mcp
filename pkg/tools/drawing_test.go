@@ -1,7 +1,18 @@
 package tools
 
 import (
+	"context"
+	"encoding/json"
+	"os"
 	"testing"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
+	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
+	"github.com/willibrandon/mtlog"
+	"github.com/willibrandon/mtlog/core"
 )
 
 func TestDrawPixelsInput_Validation(t *testing.T) {
@@ -531,4 +542,258 @@ func TestFillAreaInput_Validation(t *testing.T) {
 			}
 		})
 	}
+}
+
+// MCP Protocol Tests (use real MCP with in-memory transport and real Aseprite)
+
+// createDrawingTestSession creates an MCP session with drawing tools registered
+func createDrawingTestSession(t *testing.T) (*mcp.Server, *mcp.ClientSession, *aseprite.Client) {
+	t.Helper()
+
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, cfg.Timeout)
+	gen := aseprite.NewLuaGenerator()
+	logger := mtlog.New(mtlog.WithMinimumLevel(core.ErrorLevel))
+
+	server := mcp.NewServer(&mcp.Implementation{
+		Name:    "aseprite-mcp-test",
+		Version: "1.0.0",
+	}, nil)
+
+	RegisterDrawingTools(server, client, gen, cfg, logger)
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	_, err := server.Connect(context.Background(), serverTransport, nil)
+	require.NoError(t, err)
+
+	mcpClient := mcp.NewClient(&mcp.Implementation{
+		Name:    "test-client",
+		Version: "1.0.0",
+	}, nil)
+
+	session, err := mcpClient.Connect(context.Background(), clientTransport, nil)
+	require.NoError(t, err)
+
+	return server, session, client
+}
+
+func TestDrawPixels_ViaMCP(t *testing.T) {
+	_, session, client := createDrawingTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-draw.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-draw.aseprite")
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "draw_pixels",
+		Arguments: map[string]any{
+			"sprite_path":  cfg.TempDir + "/test-draw.aseprite",
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"pixels": []map[string]any{
+				{"x": 10, "y": 10, "color": "#FF0000"},
+				{"x": 11, "y": 10, "color": "#00FF00"},
+				{"x": 12, "y": 10, "color": "#0000FF"},
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		PixelsDrawn int `json:"pixels_drawn"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.Equal(t, 3, output.PixelsDrawn)
+}
+
+func TestDrawLine_ViaMCP(t *testing.T) {
+	_, session, client := createDrawingTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-line.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-line.aseprite")
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "draw_line",
+		Arguments: map[string]any{
+			"sprite_path":  cfg.TempDir + "/test-line.aseprite",
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x1":           10,
+			"y1":           10,
+			"x2":           50,
+			"y2":           50,
+			"color":        "#FFFFFF",
+			"thickness":    2,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
+}
+
+func TestDrawRectangle_ViaMCP(t *testing.T) {
+	_, session, client := createDrawingTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-rect.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-rect.aseprite")
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "draw_rectangle",
+		Arguments: map[string]any{
+			"sprite_path":  cfg.TempDir + "/test-rect.aseprite",
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x":            10,
+			"y":            10,
+			"width":        30,
+			"height":       20,
+			"color":        "#FF00FF",
+			"filled":       true,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
+}
+
+func TestDrawCircle_ViaMCP(t *testing.T) {
+	_, session, client := createDrawingTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-circle.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-circle.aseprite")
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "draw_circle",
+		Arguments: map[string]any{
+			"sprite_path":  cfg.TempDir + "/test-circle.aseprite",
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"center_x":     32,
+			"center_y":     32,
+			"radius":       15,
+			"color":        "#FFFF00",
+			"filled":       false,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
+}
+
+func TestFillArea_ViaMCP(t *testing.T) {
+	_, session, client := createDrawingTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-fill.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-fill.aseprite")
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "fill_area",
+		Arguments: map[string]any{
+			"sprite_path":  cfg.TempDir + "/test-fill.aseprite",
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x":            32,
+			"y":            32,
+			"color":        "#00FFFF",
+			"tolerance":    0,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
+}
+
+func TestDrawContour_ViaMCP(t *testing.T) {
+	_, session, client := createDrawingTestSession(t)
+	defer session.Close()
+
+	cfg := testutil.LoadTestConfig(t)
+	gen := aseprite.NewLuaGenerator()
+
+	script := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, cfg.TempDir+"/test-contour.aseprite")
+	_, err := client.ExecuteLua(context.Background(), script, "")
+	require.NoError(t, err)
+	defer os.Remove(cfg.TempDir + "/test-contour.aseprite")
+
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "draw_contour",
+		Arguments: map[string]any{
+			"sprite_path":  cfg.TempDir + "/test-contour.aseprite",
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"points": []map[string]any{
+				{"x": 10, "y": 10},
+				{"x": 30, "y": 10},
+				{"x": 30, "y": 30},
+				{"x": 10, "y": 30},
+			},
+			"color":     "#FF00FF",
+			"thickness": 2,
+			"closed":    true,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
 }

@@ -180,16 +180,8 @@ end
 
 local newFrame
 app.transaction(function()
-	newFrame = spr:newFrame(#spr.frames + 1)
+	newFrame = spr:newFrame(srcFrame)
 	newFrame.duration = srcFrame.duration
-
-	-- Copy cels from source frame to new frame
-	for _, layer in ipairs(spr.layers) do
-		local srcCel = layer:cel(srcFrame)
-		if srcCel then
-			local newCel = spr:newCel(layer, newFrame, srcCel.image, srcCel.position)
-		end
-	end
 end)
 
 spr:saveAs(spr.filename)

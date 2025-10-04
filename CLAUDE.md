@@ -135,7 +135,7 @@ Core functionality implemented and tested:
   - Rectangular and elliptical selections with 4 modes (replace/add/subtract/intersect)
   - Select all, deselect, move selection
   - Cut, copy, paste operations
-  - **Important limitation**: Selections are transient and do NOT persist in .aseprite files - they only exist in memory during script execution
+  - **Persistence**: Selections stored in sprite.data as JSON, clipboard in __mcp_clipboard__ hidden layer
 - Animation tools (frame duration, tags, tag deletion, duplication, linked cels)
 - Inspection tools (pixel data reading with pagination for verification and analysis)
 - **Professional Pixel Art Tools:**
@@ -185,7 +185,7 @@ Lua script generation:
 - Wrap mutations in `app.transaction()` for atomicity
 - Include error checks in Lua: `if not spr then error("...") end`
 - Save sprite after mutations: `spr:saveAs(spr.filename)`
-- **Exception**: Do NOT save after selection operations - selections don't persist in .aseprite files
+- Selection operations save sprite to persist selection state in sprite.data
 
 ## Common Pitfalls
 
@@ -197,8 +197,8 @@ Lua script generation:
 6. **Don't assume sprite is open** - Check `app.activeSprite` in Lua scripts
 7. **Don't hardcode paths** - Use `filepath` package for cross-platform path handling
 8. **Don't delete last layer/frame** - Aseprite requires at least one layer and one frame; validate before deletion
-9. **Don't save after selections** - Selections are transient and lost on save; combine selection workflows in single scripts
-10. **Don't expect clipboard persistence** - Copy/Paste operations must be combined in single Lua scripts (clipboard doesn't persist across processes)
+9. **Selections are persisted** - Selection state is stored in sprite.data as JSON and restored across operations
+10. **Clipboard uses hidden layer** - Clipboard content is stored in __mcp_clipboard__ hidden layer and persists across operations
 
 ## Dependencies
 

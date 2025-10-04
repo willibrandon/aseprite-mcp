@@ -20,7 +20,14 @@ coverage.html
 *.tmp
 *.png
 *.gif
+*.aseprite
 /tmp/
+
+# Example outputs (test artifacts)
+examples/sprites/*.png
+examples/sprites/*.gif
+examples/sprites/*.json
+examples/sprites/*.aseprite
 
 # IDE
 .vscode/

@@ -1132,9 +1132,10 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 		return fmt.Errorf("draw_rectangle failed: %w", err)
 	}
 
-	// Note: Selection tools create in-memory selections that don't persist across
-	// tool calls. For copy/paste workflows, you would need to combine operations
-	// in a single Lua script, or use the drawing tools directly.
+	// Note: Selection and clipboard operations persist across MCP tool calls using sprite custom properties (sprite.data)
+	// and a hidden clipboard layer. This allows you to create a selection in one tool call, then copy/cut/paste in
+	// subsequent calls. Selection bounds are automatically saved and restored, and clipboard content is stored in a
+	// hidden __mcp_clipboard__ layer.
 
 	// For demonstration, let's show how to use drawing tools to achieve copy/paste effect
 	logger.Information("  Copying red square to position (60, 60) using draw_rectangle...")
@@ -1184,7 +1185,7 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 
 	logger.Information("  ✓ Drawing operations completed successfully")
 	logger.Information("  ✓ Result saved to: {OutputPath}", selectionOutputPath)
-	logger.Information("  Note: Selection tools work within single Lua scripts but don't persist across tool calls")
+	logger.Information("  Note: Selection and clipboard operations now persist across MCP tool calls using sprite.data and hidden clipboard layer")
 
 	// Step 22: Demonstrate advanced export tools
 	logger.Information("")

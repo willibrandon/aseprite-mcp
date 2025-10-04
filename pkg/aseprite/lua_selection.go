@@ -22,8 +22,8 @@ import (
 //   - "subtract": removes rectangle from current selection
 //   - "intersect": keeps only the intersection of current and new selection
 //
-// Note: Selections are transient and do not persist in saved .aseprite files.
-// The sprite is NOT saved after this operation.
+// The selection is persisted to sprite.data as JSON and restored across operations.
+// The sprite is saved after the selection is created.
 //
 // Prints "Rectangle selection created successfully" on success.
 // Returns an error if no sprite is active.
@@ -47,7 +47,14 @@ else
 	end
 end
 
--- Don't save - selections are transient and don't persist in .aseprite files
+-- Persist selection state to sprite.data for cross-process persistence
+if not spr.selection.isEmpty then
+	local bounds = spr.selection.bounds
+	spr.data = string.format('{"selection":{"x":%%d,"y":%%d,"w":%%d,"h":%%d}}',
+		bounds.x, bounds.y, bounds.width, bounds.height)
+	spr:saveAs(spr.filename)
+end
+
 print("Rectangle selection created successfully")`, x, y, width, height, mode, mode, mode)
 }
 
@@ -69,8 +76,8 @@ print("Rectangle selection created successfully")`, x, y, width, height, mode, m
 //   - "subtract": removes ellipse from current selection
 //   - "intersect": keeps only the intersection of current and new selection
 //
-// Note: Selections are transient and do not persist in saved .aseprite files.
-// The sprite is NOT saved after this operation.
+// The selection is persisted to sprite.data as JSON and restored across operations.
+// The sprite is saved after the selection is created.
 //
 // Prints "Ellipse selection created successfully" on success.
 // Returns an error if no sprite is active.
@@ -115,7 +122,14 @@ elseif "%s" == "intersect" then
 	spr.selection:intersect(sel)
 end
 
--- Don't save - selections are transient and don't persist in .aseprite files
+-- Persist selection state to sprite.data for cross-process persistence
+if not spr.selection.isEmpty then
+	local bounds = spr.selection.bounds
+	spr.data = string.format('{"selection":{"x":%%d,"y":%%d,"w":%%d,"h":%%d}}',
+		bounds.x, bounds.y, bounds.width, bounds.height)
+	spr:saveAs(spr.filename)
+end
+
 print("Ellipse selection created successfully")`, width, height, x, y, mode, mode, mode, mode)
 }
 
@@ -125,8 +139,8 @@ print("Ellipse selection created successfully")`, width, height, x, y, mode, mod
 // (sprite.width, sprite.height). This is useful before copy/cut operations
 // or to quickly select all content for transformations.
 //
-// Note: Selections are transient and do not persist in saved .aseprite files.
-// The sprite is NOT saved after this operation.
+// The selection is persisted to sprite.data as JSON and restored across operations.
+// The sprite is saved after the selection is created.
 //
 // Prints "Select all completed successfully" on success.
 // Returns an error if no sprite is active.
@@ -141,7 +155,12 @@ local rect = Rectangle(0, 0, spr.width, spr.height)
 local sel = Selection(rect)
 spr.selection = sel
 
--- Don't save - selections are transient and don't persist in .aseprite files
+-- Persist selection state to sprite.data for cross-process persistence
+local bounds = spr.selection.bounds
+spr.data = string.format('{"selection":{"x":%%d,"y":%%d,"w":%%d,"h":%%d}}',
+	bounds.x, bounds.y, bounds.width, bounds.height)
+spr:saveAs(spr.filename)
+
 print("Select all completed successfully")`
 }
 
@@ -150,8 +169,7 @@ print("Select all completed successfully")`
 // Removes the current selection mask, allowing operations to affect the entire
 // canvas again. This is the opposite of SelectAll.
 //
-// Note: Selections are transient and do not persist in saved .aseprite files.
-// The sprite is NOT saved after this operation.
+// The persisted selection state in sprite.data is cleared and the sprite is saved.
 //
 // Prints "Deselect completed successfully" on success.
 // Returns an error if no sprite is active.
@@ -163,7 +181,10 @@ end
 
 app.command.DeselectMask()
 
--- Don't save - selections are transient and don't persist in .aseprite files
+-- Clear persisted selection state
+spr.data = ""
+spr:saveAs(spr.filename)
+
 print("Deselect completed successfully")`
 }
 
@@ -177,8 +198,8 @@ print("Deselect completed successfully")`
 //   - dx: horizontal offset in pixels (positive = right, negative = left)
 //   - dy: vertical offset in pixels (positive = down, negative = up)
 //
-// Note: Selections are transient and do not persist in saved .aseprite files.
-// The sprite is NOT saved after this operation.
+// The selection is restored from sprite.data if needed, then moved and persisted back.
+// The sprite is saved after the selection is moved.
 //
 // Prints "Selection moved successfully" on success.
 // Returns an error if:
@@ -190,6 +211,14 @@ if not spr then
 	error("No active sprite")
 end
 
+-- Restore selection from persisted state if needed
+if spr.selection.isEmpty and spr.data ~= "" then
+	local x, y, w, h = spr.data:match('x":(%%d+),"y":(%%d+),"w":(%%d+),"h":(%%d+)')
+	if x and y and w and h then
+		spr.selection = Selection(Rectangle(tonumber(x), tonumber(y), tonumber(w), tonumber(h)))
+	end
+end
+
 if spr.selection.isEmpty then
 	error("No active selection to move")
 end
@@ -198,7 +227,12 @@ local bounds = spr.selection.bounds
 local newSel = Selection(Rectangle(bounds.x + %d, bounds.y + %d, bounds.width, bounds.height))
 spr.selection = newSel
 
--- Don't save - selections are transient and don't persist in .aseprite files
+-- Persist updated selection state
+local newBounds = spr.selection.bounds
+spr.data = string.format('{"selection":{"x":%%d,"y":%%d,"w":%%d,"h":%%d}}',
+	newBounds.x, newBounds.y, newBounds.width, newBounds.height)
+spr:saveAs(spr.filename)
+
 print("Selection moved successfully")`, dx, dy)
 }
 
@@ -227,6 +261,14 @@ if not spr then
 	error("No active sprite")
 end
 
+-- Restore selection from persisted state if needed
+if spr.selection.isEmpty and spr.data ~= "" then
+	local x, y, w, h = spr.data:match('x":(%%d+),"y":(%%d+),"w":(%%d+),"h":(%%d+)')
+	if x and y and w and h then
+		spr.selection = Selection(Rectangle(tonumber(x), tonumber(y), tonumber(w), tonumber(h)))
+	end
+end
+
 if spr.selection.isEmpty then
 	error("No active selection to cut")
 end
@@ -249,11 +291,50 @@ if not frame then
 	error("Frame not found: %d")
 end
 
-app.activeLayer = layer
-app.activeFrame = frame
+-- Find or create hidden clipboard layer before cutting
+local clipboardLayer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "__mcp_clipboard__" then
+		clipboardLayer = lyr
+		break
+	end
+end
 
-app.command.Cut()
+if not clipboardLayer then
+	clipboardLayer = spr:newLayer()
+	clipboardLayer.name = "__mcp_clipboard__"
+	clipboardLayer.isVisible = false
+end
 
+-- Copy selected region to clipboard layer first
+local cel = layer:cel(frame)
+if cel then
+	local bounds = spr.selection.bounds
+	local clipImage = Image(bounds.width, bounds.height, spr.colorMode)
+	clipImage:drawImage(cel.image, Point(-bounds.x, -bounds.y))
+
+	-- Store in clipboard layer
+	spr:newCel(clipboardLayer, 1, clipImage, Point(bounds.x, bounds.y))
+end
+
+-- Now cut from the source layer
+app.transaction(function()
+	local cel = layer:cel(frame)
+	if cel then
+		local bounds = spr.selection.bounds
+		-- Clear pixels in selection
+		for y = bounds.y, bounds.y + bounds.height - 1 do
+			for x = bounds.x, bounds.x + bounds.width - 1 do
+				if spr.selection:contains(x, y) then
+					cel.image:drawPixel(x - cel.position.x, y - cel.position.y, Color{r=0,g=0,b=0,a=0})
+				end
+			end
+		end
+	end
+end)
+
+-- Selection cleared after cut, clear persisted state
+spr.data = ""
 spr:saveAs(spr.filename)
 print("Cut selection completed successfully")`, escapedName, escapedName, frameNumber, frameNumber)
 }
@@ -263,11 +344,10 @@ print("Cut selection completed successfully")`, escapedName, escapedName, frameN
 // Copies the pixels within the current selection to the clipboard without
 // removing them. The clipboard content can then be pasted elsewhere.
 //
-// IMPORTANT: Clipboard operations have limitations in batch mode. The clipboard
-// state does not persist across separate Aseprite process invocations, so you
-// must perform copy and paste in the same script execution or session.
+// The clipboard content is stored in a hidden layer (__mcp_clipboard__) which
+// persists across operations. The selection is restored from sprite.data if needed.
 //
-// The sprite is NOT saved after this operation (copy doesn't modify content).
+// The sprite is saved to persist the clipboard content.
 //
 // Prints "Copy selection completed successfully" on success.
 // Returns an error if:
@@ -279,20 +359,50 @@ if not spr then
 	error("No active sprite")
 end
 
+-- Restore selection from persisted state if needed
+if spr.selection.isEmpty and spr.data ~= "" then
+	local x, y, w, h = spr.data:match('x":(%d+),"y":(%d+),"w":(%d+),"h":(%d+)')
+	if x and y and w and h then
+		spr.selection = Selection(Rectangle(tonumber(x), tonumber(y), tonumber(w), tonumber(h)))
+	end
+end
+
 if spr.selection.isEmpty then
 	error("No active selection to copy")
 end
 
--- Ensure we have an active layer and frame for the Copy command
-if #spr.layers > 0 then
-	app.activeLayer = spr.layers[1]
-end
-if #spr.frames > 0 then
-	app.activeFrame = spr.frames[1]
+-- Find or create hidden clipboard layer
+local clipboardLayer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "__mcp_clipboard__" then
+		clipboardLayer = lyr
+		break
+	end
 end
 
-app.command.Copy()
+if not clipboardLayer then
+	clipboardLayer = spr:newLayer()
+	clipboardLayer.name = "__mcp_clipboard__"
+	clipboardLayer.isVisible = false
+end
 
+-- Get the selected image from layer 1, frame 1
+-- In batch mode, we need to explicitly use frame 1 since app.activeFrame/activeLayer may not be set correctly
+local sourceLayer = spr.layers[1]
+local sourceFrame = spr.frames[1]
+local sourceCel = sourceLayer:cel(sourceFrame)
+
+if sourceCel then
+	-- Copy selected region to clipboard layer
+	local bounds = spr.selection.bounds
+	local clipImage = Image(bounds.width, bounds.height, spr.colorMode)
+	clipImage:drawImage(sourceCel.image, Point(-bounds.x, -bounds.y))
+
+	-- Store in clipboard layer at frame 1
+	spr:newCel(clipboardLayer, 1, clipImage, Point(bounds.x, bounds.y))
+end
+
+spr:saveAs(spr.filename)
 print("Copy selection completed successfully")`
 }
 
@@ -308,8 +418,7 @@ print("Copy selection completed successfully")`
 //   - x: optional x-coordinate for paste position (nil = current position)
 //   - y: optional y-coordinate for paste position (nil = current position)
 //
-// IMPORTANT: Clipboard operations have limitations in batch mode. The clipboard
-// state does not persist across separate Aseprite process invocations.
+// The clipboard content is retrieved from the hidden layer (__mcp_clipboard__).
 //
 // The operation is wrapped in a transaction for atomicity and the sprite
 // is saved after the paste is complete.
@@ -323,9 +432,11 @@ print("Copy selection completed successfully")`
 func (g *LuaGenerator) PasteClipboard(layerName string, frameNumber int, x, y *int) string {
 	escapedName := EscapeString(layerName)
 
-	pasteCommand := "app.command.Paste()"
+	pastePos := ""
 	if x != nil && y != nil {
-		pasteCommand = fmt.Sprintf("app.command.Paste { x = %d, y = %d }", *x, *y)
+		pastePos = fmt.Sprintf("local pasteX, pasteY = %d, %d", *x, *y)
+	} else {
+		pastePos = "local pasteX, pasteY = 0, 0"
 	}
 
 	return fmt.Sprintf(`local spr = app.activeSprite
@@ -333,7 +444,25 @@ if not spr then
 	error("No active sprite")
 end
 
--- Find layer by name
+-- Find clipboard layer
+local clipboardLayer = nil
+for i, lyr in ipairs(spr.layers) do
+	if lyr.name == "__mcp_clipboard__" then
+		clipboardLayer = lyr
+		break
+	end
+end
+
+if not clipboardLayer then
+	error("No clipboard content available")
+end
+
+local clipCel = clipboardLayer:cel(1)
+if not clipCel then
+	error("No clipboard content available")
+end
+
+-- Find target layer
 local layer = nil
 for i, lyr in ipairs(spr.layers) do
 	if lyr.name == "%s" then
@@ -351,11 +480,19 @@ if not frame then
 	error("Frame not found: %d")
 end
 
-app.activeLayer = layer
-app.activeFrame = frame
-
+-- Paste clipboard content to target layer
 %s
 
+app.transaction(function()
+	local targetCel = layer:cel(frame)
+	if not targetCel then
+		targetCel = spr:newCel(layer, frame)
+	end
+
+	-- Draw clipboard image onto target
+	targetCel.image:drawImage(clipCel.image, Point(pasteX - targetCel.position.x, pasteY - targetCel.position.y))
+end)
+
 spr:saveAs(spr.filename)
-print("Paste completed successfully")`, escapedName, escapedName, frameNumber, frameNumber, pasteCommand)
+print("Paste completed successfully")`, escapedName, escapedName, frameNumber, frameNumber, pastePos)
 }
