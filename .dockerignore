@@ -1,0 +1,6 @@
+.git
+.github
+bin/
+*.md
+examples/
+.DS_Store

@@ -1,4 +1,4 @@
-.PHONY: all build release test test-nocache test-integration test-integration-nocache bench lint clean install
+.PHONY: all build release test test-nocache test-integration test-integration-nocache test-coverage bench lint clean install docker-build-ci docker-test docker-test-integration docker-test-all
 
 # Binary name
 BINARY_NAME=aseprite-mcp
@@ -64,3 +64,31 @@ run:
 deps:
 	go mod download
 	go mod tidy
+
+# Docker CI targets
+DOCKER_IMAGE_CI=aseprite-mcp-ci:latest
+
+docker-build-ci:
+	docker build -f Dockerfile.ci -t $(DOCKER_IMAGE_CI) .
+
+docker-test:
+	@docker run --rm -v $(PWD):/workspace $(DOCKER_IMAGE_CI) bash -c '\
+		mkdir -p /root/.config/aseprite-mcp && \
+		printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/aseprite-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/aseprite-mcp/config.json && \
+		cd /workspace && \
+		go test -v -race -cover ./...'
+
+docker-test-integration:
+	@docker run --rm -v $(PWD):/workspace $(DOCKER_IMAGE_CI) bash -c '\
+		mkdir -p /root/.config/aseprite-mcp && \
+		printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/aseprite-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/aseprite-mcp/config.json && \
+		cd /workspace && \
+		go test -tags=integration -v ./...'
+
+docker-test-all:
+	@docker run --rm -v $(PWD):/workspace $(DOCKER_IMAGE_CI) bash -c '\
+		mkdir -p /root/.config/aseprite-mcp && \
+		printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/aseprite-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/aseprite-mcp/config.json && \
+		cd /workspace && \
+		go test -v -race -cover ./... && \
+		go test -tags=integration -v ./...'

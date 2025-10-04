@@ -143,7 +143,7 @@ app.command.ExportSpriteSheet{
 	type = "%s",
 	textureFilename = outputPath,
 	%s
-	dataFilename = outputPath:gsub("%.%w+$", ".json"),
+	dataFilename = outputPath:gsub("%%.%%w+$", ".json"),
 	borderPadding = %d,
 	shapePadding = %d,
 	innerPadding = %d,
@@ -154,7 +154,7 @@ app.command.ExportSpriteSheet{
 -- Build output JSON
 local result = string.format('{"spritesheet_path":"%%s","frame_count":%%d', outputPath, #spr.frames)
 if %t then
-	local jsonPath = outputPath:gsub("%.%w+$", ".json")
+	local jsonPath = outputPath:gsub("%%.%%w+$", ".json")
 	result = result .. string.format(',"metadata_path":"%%s"', jsonPath)
 end
 result = result .. "}"

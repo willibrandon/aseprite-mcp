@@ -1,0 +1,61 @@
+# Use Ubuntu 22.04 as base image (force amd64 to match Skia x64 binaries)
+ARG PLATFORM=linux/amd64
+FROM --platform=$PLATFORM ubuntu:22.04
+
+LABEL org.opencontainers.image.source=https://github.com/willibrandon/aseprite-mcp-go
+LABEL org.opencontainers.image.description="CI container with Aseprite pre-built for integration testing"
+LABEL org.opencontainers.image.licenses=MIT
+
+# Install build dependencies
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    cmake \
+    ninja-build \
+    g++ \
+    clang \
+    git \
+    wget \
+    unzip \
+    libx11-dev \
+    libxcursor-dev \
+    libxi-dev \
+    libxrandr-dev \
+    libgl1-mesa-dev \
+    libfontconfig1-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download pre-built Skia
+WORKDIR /deps
+RUN wget -q https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Linux-Release-x64.zip \
+    && unzip Skia-Linux-Release-x64.zip -d skia \
+    && rm Skia-Linux-Release-x64.zip
+
+# Clone and build Aseprite (use main branch for latest compatibility with Skia m124)
+WORKDIR /build
+RUN git clone --recursive --depth 1 https://github.com/aseprite/aseprite.git
+WORKDIR /build/aseprite
+RUN mkdir build && cd build \
+    && export CC=clang && export CXX=clang++ \
+    && cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_CXX_FLAGS:STRING=-stdlib=libstdc++ \
+        -DCMAKE_EXE_LINKER_FLAGS:STRING=-stdlib=libstdc++ \
+        -DENABLE_UI=OFF \
+        -DENABLE_SCRIPTING=ON \
+        -DLAF_BACKEND=skia \
+        -DSKIA_DIR=/deps/skia \
+        -DSKIA_LIBRARY_DIR=/deps/skia/out/Release-x64 \
+        -DSKIA_LIBRARY=/deps/skia/out/Release-x64/libskia.a \
+        -G Ninja \
+        .. \
+    && ninja aseprite
+
+# Install Go
+RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
+RUN wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz \
+    && rm go1.24.1.linux-amd64.tar.gz
+
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV ASEPRITE_PATH="/build/aseprite/build/bin/aseprite"
+
+WORKDIR /workspace
