@@ -32,8 +32,8 @@ A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and anim
 
 ```bash
 # Clone the repository
-git clone https://github.com/willibrandon/aseprite-mcp-go.git
-cd aseprite-mcp-go
+git clone https://github.com/willibrandon/aseprite-mcp.git
+cd aseprite-mcp
 
 # Build the server
 make build
