@@ -2,6 +2,9 @@ package tools
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBlendColors(t *testing.T) {
@@ -305,5 +308,157 @@ func TestFindClosestPaletteColor_EmptyPalette(t *testing.T) {
 	want := "#804020"
 	if got != want {
 		t.Errorf("findClosestPaletteColor with empty palette = %q, want %q", got, want)
+	}
+}
+
+// Unit tests for checkDiagonalSW helper function
+func TestCheckDiagonalSW(t *testing.T) {
+	tests := []struct {
+		name    string
+		grid    map[int]map[int]string
+		x       int
+		y       int
+		current string
+		want    *EdgeSuggestion
+	}{
+		{
+			name:    "x is 0 - edge case",
+			grid:    map[int]map[int]string{},
+			x:       0,
+			y:       5,
+			current: "",
+			want:    nil,
+		},
+		{
+			name: "diagonal SW pattern detected",
+			grid: map[int]map[int]string{
+				0: {0: "#FF0000FF"},                 // row 0: (0,0) has color, (1,0) is empty
+				1: {0: "#FF0000FF", 1: "#FF0000FF"}, // row 1: (0,1) and (1,1) have color
+			},
+			x:       1,
+			y:       0,
+			current: "",
+			want: &EdgeSuggestion{
+				X:              1,
+				Y:              0,
+				CurrentColor:   "",
+				NeighborColor:  "#FF0000FF",
+				SuggestedColor: "#FF000080",
+				Direction:      "diagonal_sw",
+			},
+		},
+		{
+			name: "no pattern - left is empty",
+			grid: map[int]map[int]string{
+				0: {},
+				1: {1: "#FF0000FF"},
+			},
+			x:       1,
+			y:       0,
+			current: "",
+			want:    nil,
+		},
+		{
+			name: "no pattern - below doesn't match",
+			grid: map[int]map[int]string{
+				0: {0: "#FF0000FF", 1: "#FF0000FF"},
+				1: {1: "#00FF00FF"}, // Different color
+			},
+			x:       1,
+			y:       0,
+			current: "",
+			want:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := checkDiagonalSW(tt.grid, tt.x, tt.y, tt.current)
+			if tt.want == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, tt.want.X, got.X)
+				assert.Equal(t, tt.want.Y, got.Y)
+				assert.Equal(t, tt.want.Direction, got.Direction)
+				assert.NotEmpty(t, got.SuggestedColor)
+			}
+		})
+	}
+}
+
+// Unit tests for checkDiagonalNW helper function
+func TestCheckDiagonalNW(t *testing.T) {
+	tests := []struct {
+		name    string
+		grid    map[int]map[int]string
+		x       int
+		y       int
+		current string
+		want    *EdgeSuggestion
+	}{
+		{
+			name:    "x is 0 - edge case",
+			grid:    map[int]map[int]string{},
+			x:       0,
+			y:       5,
+			current: "#FF0000FF",
+			want:    nil,
+		},
+		{
+			name: "diagonal NW pattern detected",
+			grid: map[int]map[int]string{
+				0: {0: "#FF0000FF", 1: "#FF0000FF"}, // row 0: (0,0) and (1,0) have color
+				1: {0: "#FF0000FF"},                 // row 1: (0,1) has color, (1,1) is empty
+			},
+			x:       1,
+			y:       0,
+			current: "#FF0000FF",
+			want: &EdgeSuggestion{
+				X:              1,
+				Y:              1,
+				CurrentColor:   "",
+				NeighborColor:  "#FF0000FF",
+				SuggestedColor: "#FF000080",
+				Direction:      "diagonal_nw",
+			},
+		},
+		{
+			name: "no pattern - left doesn't match current",
+			grid: map[int]map[int]string{
+				0: {0: "#00FF00FF", 1: "#FF0000FF"}, // Different colors
+				1: {0: "#FF0000FF"},
+			},
+			x:       1,
+			y:       0,
+			current: "#FF0000FF",
+			want:    nil,
+		},
+		{
+			name: "no pattern - belowLeft doesn't match current",
+			grid: map[int]map[int]string{
+				0: {0: "#FF0000FF", 1: "#FF0000FF"},
+				1: {0: "#00FF00FF"}, // Different color
+			},
+			x:       1,
+			y:       0,
+			current: "#FF0000FF",
+			want:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := checkDiagonalNW(tt.grid, tt.x, tt.y, tt.current)
+			if tt.want == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, tt.want.X, got.X)
+				assert.Equal(t, tt.want.Y, got.Y)
+				assert.Equal(t, tt.want.Direction, got.Direction)
+				assert.NotEmpty(t, got.SuggestedColor)
+			}
+		})
 	}
 }

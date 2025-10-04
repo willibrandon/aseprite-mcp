@@ -173,3 +173,135 @@ func TestAnalyzeReferenceDefaults_ViaMCP(t *testing.T) {
 	assert.NotNil(t, output.BrightnessMap, "Should have brightness map with defaults")
 	assert.NotNil(t, output.EdgeMap, "Should have edge map with defaults")
 }
+
+// Unit tests for findColorsForBrightnessRange helper function
+func TestFindColorsForBrightnessRange(t *testing.T) {
+	tests := []struct {
+		name      string
+		palette   []aseprite.PaletteColor
+		minLevel  int
+		maxLevel  int
+		numLevels int
+		wantCount int
+		checkFunc func(t *testing.T, colors []string)
+	}{
+		{
+			name: "colors found in range",
+			palette: []aseprite.PaletteColor{
+				{Color: "#000000", Lightness: 0.0},
+				{Color: "#808080", Lightness: 50.0},
+				{Color: "#FFFFFF", Lightness: 100.0},
+			},
+			minLevel:  2,
+			maxLevel:  2,
+			numLevels: 5,
+			wantCount: 1, // Should find middle color
+			checkFunc: func(t *testing.T, colors []string) {
+				assert.Contains(t, colors, "#808080")
+			},
+		},
+		{
+			name: "no colors in range - empty palette",
+			palette: []aseprite.PaletteColor{
+				{Color: "#000000", Lightness: 0.0},
+				{Color: "#FFFFFF", Lightness: 100.0},
+			},
+			minLevel:  2,
+			maxLevel:  2,
+			numLevels: 5,
+			wantCount: 2, // Should return darkest and lightest
+			checkFunc: func(t *testing.T, colors []string) {
+				assert.Contains(t, colors, "#000000", "Should include darkest color")
+				assert.Contains(t, colors, "#FFFFFF", "Should include lightest color")
+			},
+		},
+		{
+			name:      "empty palette",
+			palette:   []aseprite.PaletteColor{},
+			minLevel:  0,
+			maxLevel:  4,
+			numLevels: 5,
+			wantCount: 0,
+			checkFunc: func(t *testing.T, colors []string) {
+				assert.Empty(t, colors)
+			},
+		},
+		{
+			name: "single color palette - no match",
+			palette: []aseprite.PaletteColor{
+				{Color: "#FF0000", Lightness: 25.0},
+			},
+			minLevel:  4,
+			maxLevel:  4,
+			numLevels: 5,
+			wantCount: 1, // Should return the only color
+			checkFunc: func(t *testing.T, colors []string) {
+				assert.Contains(t, colors, "#FF0000")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			colors := findColorsForBrightnessRange(tt.palette, tt.minLevel, tt.maxLevel, tt.numLevels)
+			assert.Len(t, colors, tt.wantCount)
+			if tt.checkFunc != nil {
+				tt.checkFunc(t, colors)
+			}
+		})
+	}
+}
+
+// Unit tests for absDiff helper function
+func TestAbsDiff(t *testing.T) {
+	tests := []struct {
+		name string
+		a    float64
+		b    float64
+		want float64
+	}{
+		{
+			name: "positive difference",
+			a:    100.0,
+			b:    50.0,
+			want: 50.0,
+		},
+		{
+			name: "negative difference",
+			a:    50.0,
+			b:    100.0,
+			want: 50.0,
+		},
+		{
+			name: "wrap-around case (350 and 10 degrees)",
+			a:    350.0,
+			b:    10.0,
+			want: 20.0, // 360 - 340 = 20
+		},
+		{
+			name: "wrap-around case (10 and 350 degrees)",
+			a:    10.0,
+			b:    350.0,
+			want: 20.0,
+		},
+		{
+			name: "exact 180 degrees",
+			a:    0.0,
+			b:    180.0,
+			want: 180.0,
+		},
+		{
+			name: "greater than 180",
+			a:    0.0,
+			b:    270.0,
+			want: 90.0, // 360 - 270 = 90
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := absDiff(tt.a, tt.b)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

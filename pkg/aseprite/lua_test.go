@@ -1331,3 +1331,587 @@ func TestColorMode_String(t *testing.T) {
 		})
 	}
 }
+
+func TestLuaGenerator_DrawWithDither(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name     string
+		pattern  string
+		checkFor []string
+	}{
+		{
+			name:     "bayer_2x2 pattern",
+			pattern:  "bayer_2x2",
+			checkFor: []string{"local matrix = {{0, 2}, {3, 1}}", "local matrixSize = 2"},
+		},
+		{
+			name:     "bayer_4x4 pattern",
+			pattern:  "bayer_4x4",
+			checkFor: []string{"local matrix = {", "local matrixSize = 4"},
+		},
+		{
+			name:     "checkerboard pattern",
+			pattern:  "checkerboard",
+			checkFor: []string{"local matrix = {{0, 1}, {1, 0}}", "local matrixSize = 2"},
+		},
+		{
+			name:     "grass pattern",
+			pattern:  "grass",
+			checkFor: []string{"local matrixSize = 6"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.DrawWithDither("Layer 1", 1, 0, 0, 64, 64, "#FF0000", "#00FF00", tt.pattern, 0.5)
+
+			for _, check := range tt.checkFor {
+				if !strings.Contains(script, check) {
+					t.Errorf("DrawWithDither() missing %q in generated script", check)
+				}
+			}
+
+			if !strings.Contains(script, "Layer 1") {
+				t.Error("DrawWithDither() missing layer name in script")
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_GetPixels(t *testing.T) {
+	gen := &LuaGenerator{}
+	script := gen.GetPixels("Layer 1", 1, 10, 20, 100, 50)
+
+	if !strings.Contains(script, "Layer 1") {
+		t.Error("GetPixels() missing layer name")
+	}
+	if !strings.Contains(script, "spr.frames[1]") {
+		t.Error("GetPixels() missing frame reference")
+	}
+	if !strings.Contains(script, "for py = 20, 69 do") {
+		t.Error("GetPixels() missing correct y loop bounds")
+	}
+	if !strings.Contains(script, "for px = 10, 109 do") {
+		t.Error("GetPixels() missing correct x loop bounds")
+	}
+}
+
+func TestLuaGenerator_GetPixelsWithPagination(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name     string
+		offset   int
+		limit    int
+		checkFor []string
+	}{
+		{
+			name:     "with pagination",
+			offset:   10,
+			limit:    20,
+			checkFor: []string{"local offset = 10", "local limit = 20"},
+		},
+		{
+			name:     "without limit",
+			offset:   0,
+			limit:    0,
+			checkFor: []string{"local offset = 0", "local limit = 0"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.GetPixelsWithPagination("Layer 1", 1, 0, 0, 100, 100, tt.offset, tt.limit)
+
+			for _, check := range tt.checkFor {
+				if !strings.Contains(script, check) {
+					t.Errorf("GetPixelsWithPagination() missing %q", check)
+				}
+			}
+
+			if !strings.Contains(script, "Layer 1") {
+				t.Error("GetPixelsWithPagination() missing layer name")
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_ApplyShading(t *testing.T) {
+	gen := &LuaGenerator{}
+	palette := []string{"#000000", "#808080", "#FFFFFF"}
+
+	tests := []struct {
+		name      string
+		direction string
+		style     string
+		checkFor  []string
+	}{
+		{
+			name:      "top_left smooth shading",
+			direction: "top_left",
+			style:     "smooth",
+			checkFor:  []string{"local lightDx = -1", "local lightDy = -1", `local style = "smooth"`},
+		},
+		{
+			name:      "bottom_right hard shading",
+			direction: "bottom_right",
+			style:     "hard",
+			checkFor:  []string{"local lightDx = 1", "local lightDy = 1", `local style = "hard"`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.ApplyShading("Layer 1", 1, 0, 0, 64, 64, palette, tt.direction, 0.5, tt.style)
+
+			for _, check := range tt.checkFor {
+				if !strings.Contains(script, check) {
+					t.Errorf("ApplyShading() missing %q", check)
+				}
+			}
+
+			if !strings.Contains(script, "{r=0, g=0, b=0, a=255}") {
+				t.Error("ApplyShading() missing palette color conversion")
+			}
+		})
+	}
+}
+
+func TestParseHexColor(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  Color
+	}{
+		{
+			name:  "RGB with hash",
+			input: "#FF0000",
+			want:  Color{R: 255, G: 0, B: 0, A: 255},
+		},
+		{
+			name:  "RGB without hash",
+			input: "00FF00",
+			want:  Color{R: 0, G: 255, B: 0, A: 255},
+		},
+		{
+			name:  "RGBA with hash",
+			input: "#0000FF80",
+			want:  Color{R: 0, G: 0, B: 255, A: 128},
+		},
+		{
+			name:  "invalid short",
+			input: "#FFF",
+			want:  Color{R: 0, G: 0, B: 0, A: 255},
+		},
+		{
+			name:  "invalid long",
+			input: "#FFFFFFFFFF",
+			want:  Color{R: 0, G: 0, B: 0, A: 255},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseHexColor(tt.input)
+			if got != tt.want {
+				t.Errorf("parseHexColor(%q) = %+v, want %+v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_DownsampleImage(t *testing.T) {
+	gen := &LuaGenerator{}
+	script := gen.DownsampleImage("/path/to/source.png", "/path/to/output.aseprite", 64, 48)
+
+	checks := []string{
+		`app.open("/path/to/source.png")`,
+		"local targetWidth = 64",
+		"local targetHeight = 48",
+		"local scaleX = srcWidth / targetWidth",
+		"local scaleY = srcHeight / targetHeight",
+		"-- Downsample using box filter",
+		`targetSprite:saveAs("/path/to/output.aseprite")`,
+	}
+
+	for _, check := range checks {
+		if !strings.Contains(script, check) {
+			t.Errorf("DownsampleImage() missing %q", check)
+		}
+	}
+}
+
+func TestLuaGenerator_CreateTag_EdgeCases(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name      string
+		direction string
+		checkFor  string
+	}{
+		{
+			name:      "forward direction",
+			direction: "forward",
+			checkFor:  `aniDir = AniDir.FORWARD`,
+		},
+		{
+			name:      "reverse direction",
+			direction: "reverse",
+			checkFor:  `aniDir = AniDir.REVERSE`,
+		},
+		{
+			name:      "pingpong direction",
+			direction: "pingpong",
+			checkFor:  `aniDir = AniDir.PING_PONG`,
+		},
+		{
+			name:      "invalid defaults to forward",
+			direction: "invalid",
+			checkFor:  `aniDir = AniDir.FORWARD`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.CreateTag("test_tag", 1, 5, tt.direction)
+
+			if !strings.Contains(script, tt.checkFor) {
+				t.Errorf("CreateTag() missing %q", tt.checkFor)
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_DuplicateFrame_EdgeCases(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name        string
+		sourceFrame int
+		insertAfter int
+	}{
+		{
+			name:        "insert at end",
+			sourceFrame: 1,
+			insertAfter: 0,
+		},
+		{
+			name:        "insert after frame 2",
+			sourceFrame: 1,
+			insertAfter: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.DuplicateFrame(tt.sourceFrame, tt.insertAfter)
+
+			if len(script) == 0 {
+				t.Error("DuplicateFrame() generated empty script")
+			}
+
+			if !strings.Contains(script, "spr:newFrame") {
+				t.Error("DuplicateFrame() missing newFrame operation")
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_ExportSpritesheet_EdgeCases(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name        string
+		layout      string
+		includeJSON bool
+		checkLayout string
+	}{
+		{
+			name:        "horizontal with JSON",
+			layout:      "horizontal",
+			includeJSON: true,
+			checkLayout: `type = "horizontal"`,
+		},
+		{
+			name:        "vertical without JSON",
+			layout:      "vertical",
+			includeJSON: false,
+			checkLayout: `type = "vertical"`,
+		},
+		{
+			name:        "invalid defaults to horizontal",
+			layout:      "invalid",
+			includeJSON: false,
+			checkLayout: `type = "horizontal"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.ExportSpritesheet("/path/to/output.png", tt.layout, 2, tt.includeJSON)
+
+			if len(script) == 0 {
+				t.Error("ExportSpritesheet() generated empty script")
+			}
+
+			if !strings.Contains(script, tt.checkLayout) {
+				t.Errorf("ExportSpritesheet() missing %q", tt.checkLayout)
+			}
+
+			if !strings.Contains(script, "ExportSpriteSheet") {
+				t.Error("ExportSpritesheet() missing ExportSpriteSheet command")
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_SetPalette_EdgeCases(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name   string
+		colors []string
+	}{
+		{
+			name:   "single color",
+			colors: []string{"#FF0000"},
+		},
+		{
+			name:   "many colors",
+			colors: []string{"#FF0000", "#00FF00", "#0000FF", "#FFFF00"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.SetPalette(tt.colors)
+
+			if len(script) == 0 {
+				t.Error("SetPalette() generated empty script")
+			}
+
+			// Check for Color{...} format which indicates color conversion happened
+			if !strings.Contains(script, "Color{r=") {
+				t.Error("SetPalette() missing color conversion")
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_SetPaletteColor_EdgeCases(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	script := gen.SetPaletteColor(0, "#FF0000")
+
+	if len(script) == 0 {
+		t.Error("SetPaletteColor() generated empty script")
+	}
+
+	if !strings.Contains(script, "Color(") {
+		t.Error("SetPaletteColor() missing Color conversion")
+	}
+
+	script2 := gen.SetPaletteColor(255, "#0000FF")
+
+	if len(script2) == 0 {
+		t.Error("SetPaletteColor() generated empty script for index 255")
+	}
+}
+
+func TestLuaGenerator_AddPaletteColor_EdgeCases(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	script := gen.AddPaletteColor("#ABCDEF")
+
+	if len(script) == 0 {
+		t.Error("AddPaletteColor() generated empty script")
+	}
+
+	// Check that it generates a valid script with palette operations
+	if !strings.Contains(script, "Color(") {
+		t.Error("AddPaletteColor() missing Color conversion")
+	}
+}
+
+func TestLuaGenerator_SortPalette_EdgeCases(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name      string
+		method    string
+		ascending bool
+		wantSort  string
+	}{
+		{
+			name:      "hue ascending",
+			method:    "hue",
+			ascending: true,
+			wantSort:  "table.sort",
+		},
+		{
+			name:      "saturation descending",
+			method:    "saturation",
+			ascending: false,
+			wantSort:  "table.sort",
+		},
+		{
+			name:      "brightness ascending",
+			method:    "brightness",
+			ascending: true,
+			wantSort:  "table.sort",
+		},
+		{
+			name:      "luminance descending",
+			method:    "luminance",
+			ascending: false,
+			wantSort:  "table.sort",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.SortPalette(tt.method, tt.ascending)
+
+			if !strings.Contains(script, tt.wantSort) {
+				t.Errorf("SortPalette() missing sort operation")
+			}
+
+			if !strings.Contains(script, tt.method) {
+				t.Errorf("SortPalette() missing sort method %q", tt.method)
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_FlipSprite_AllTargets(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name      string
+		direction string
+		target    string
+	}{
+		{name: "horizontal sprite", direction: "horizontal", target: "sprite"},
+		{name: "vertical layer", direction: "vertical", target: "layer"},
+		{name: "horizontal cel", direction: "horizontal", target: "cel"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.FlipSprite(tt.direction, tt.target)
+
+			if !strings.Contains(script, "app.command.Flip") {
+				t.Error("FlipSprite() missing Flip command")
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_RotateSprite_AllAngles(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name   string
+		angle  int
+		target string
+	}{
+		{name: "90 degrees", angle: 90, target: "sprite"},
+		{name: "180 degrees", angle: 180, target: "sprite"},
+		{name: "270 degrees", angle: 270, target: "sprite"},
+		{name: "invalid angle defaults to 90", angle: 45, target: "sprite"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.RotateSprite(tt.angle, tt.target)
+
+			if !strings.Contains(script, "app.command.Rotate") {
+				t.Error("RotateSprite() missing Rotate command")
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_ResizeCanvas_AllAnchors(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	tests := []struct {
+		name   string
+		anchor string
+	}{
+		{name: "top_left", anchor: "top_left"},
+		{name: "top_right", anchor: "top_right"},
+		{name: "bottom_left", anchor: "bottom_left"},
+		{name: "bottom_right", anchor: "bottom_right"},
+		{name: "center", anchor: "center"},
+		{name: "invalid defaults to center", anchor: "invalid"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := gen.ResizeCanvas(100, 100, tt.anchor)
+
+			if !strings.Contains(script, "app.command.CanvasSize") {
+				t.Error("ResizeCanvas() missing CanvasSize command")
+			}
+
+			if !strings.Contains(script, "newWidth = 100") {
+				t.Error("ResizeCanvas() missing width parameter")
+			}
+
+			if !strings.Contains(script, "newHeight = 100") {
+				t.Error("ResizeCanvas() missing height parameter")
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_DrawWithDither_AllPatterns(t *testing.T) {
+	gen := &LuaGenerator{}
+
+	patterns := []string{
+		"bayer_2x2", "bayer_4x4", "bayer_8x8", "checkerboard",
+		"grass", "water", "stone", "cloud", "brick", "dots",
+		"diagonal", "cross", "noise", "horizontal_lines", "vertical_lines",
+	}
+
+	for _, pattern := range patterns {
+		t.Run(pattern, func(t *testing.T) {
+			script := gen.DrawWithDither("Layer 1", 1, 0, 0, 64, 64, "#FF0000", "#00FF00", pattern, 0.5)
+
+			if !strings.Contains(script, "local matrix") {
+				t.Errorf("DrawWithDither(%s) missing matrix definition", pattern)
+			}
+
+			if !strings.Contains(script, "local matrixSize") {
+				t.Errorf("DrawWithDither(%s) missing matrixSize", pattern)
+			}
+		})
+	}
+}
+
+func TestLuaGenerator_ApplyShading_AllDirections(t *testing.T) {
+	gen := &LuaGenerator{}
+	palette := []string{"#000000", "#808080", "#FFFFFF"}
+
+	directions := []string{
+		"top_left", "top", "top_right",
+		"left", "right",
+		"bottom_left", "bottom", "bottom_right",
+	}
+
+	for _, direction := range directions {
+		t.Run(direction, func(t *testing.T) {
+			script := gen.ApplyShading("Layer 1", 1, 0, 0, 64, 64, palette, direction, 0.5, "smooth")
+
+			if !strings.Contains(script, "local lightDx") {
+				t.Errorf("ApplyShading(%s) missing lightDx", direction)
+			}
+
+			if !strings.Contains(script, "local lightDy") {
+				t.Errorf("ApplyShading(%s) missing lightDy", direction)
+			}
+		})
+	}
+}

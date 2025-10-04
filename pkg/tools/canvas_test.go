@@ -358,6 +358,15 @@ func TestCreateCanvas_ViaMCP(t *testing.T) {
 			},
 			wantError: false,
 		},
+		{
+			name: "invalid color mode",
+			args: map[string]any{
+				"width":      64,
+				"height":     64,
+				"color_mode": "invalid",
+			},
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -367,12 +376,13 @@ func TestCreateCanvas_ViaMCP(t *testing.T) {
 				Arguments: tt.args,
 			})
 
+			require.NoError(t, err, "MCP call should not fail")
+
 			if tt.wantError {
-				assert.Error(t, err)
+				assert.True(t, result.IsError, "Expected tool error but got success")
 				return
 			}
 
-			require.NoError(t, err)
 			require.False(t, result.IsError, "Tool returned error: %v", result.Content)
 
 			// Parse output
@@ -449,6 +459,84 @@ func TestAddLayer_ViaMCP(t *testing.T) {
 
 	assert.Equal(t, 2, infoOutput.LayerCount, "Should have 2 layers (default + TestLayer)")
 	assert.Contains(t, infoOutput.Layers, "TestLayer")
+}
+
+func TestAddLayer_EmptyName_ViaMCP(t *testing.T) {
+	_, session, _, _, _ := createTestMCPSession(t)
+	defer session.Close()
+
+	// Create a canvas first
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      64,
+			"height":     64,
+			"color_mode": "rgb",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Try to add layer with empty name
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "add_layer",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+			"layer_name":  "",
+		},
+	})
+
+	require.NoError(t, err)
+	assert.True(t, result.IsError, "Should return error for empty layer name")
+}
+
+func TestAddFrame_InvalidDuration_ViaMCP(t *testing.T) {
+	_, session, _, _, _ := createTestMCPSession(t)
+	defer session.Close()
+
+	// Create a canvas first
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      64,
+			"height":     64,
+			"color_mode": "rgb",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Test invalid duration (too low)
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "add_frame",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+			"duration_ms": 0,
+		},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.IsError, "Should return error for duration_ms = 0")
+
+	// Test invalid duration (too high)
+	result2, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "add_frame",
+		Arguments: map[string]any{
+			"sprite_path": createOutput.FilePath,
+			"duration_ms": 70000,
+		},
+	})
+	require.NoError(t, err)
+	assert.True(t, result2.IsError, "Should return error for duration_ms > 65535")
 }
 
 func TestGetSpriteInfo_ViaMCP(t *testing.T) {

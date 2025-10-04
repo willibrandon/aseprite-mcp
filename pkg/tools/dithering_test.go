@@ -173,3 +173,70 @@ func TestDrawWithDitherDensity_ViaMCP(t *testing.T) {
 		require.False(t, result.IsError, "Density %f should succeed", density)
 	}
 }
+
+// Unit tests for isValidHexColor helper function
+func TestIsValidHexColor(t *testing.T) {
+	tests := []struct {
+		name  string
+		color string
+		want  bool
+	}{
+		{
+			name:  "empty string",
+			color: "",
+			want:  false,
+		},
+		{
+			name:  "valid RGB with hash",
+			color: "#FF0000",
+			want:  true,
+		},
+		{
+			name:  "valid RGB without hash",
+			color: "00FF00",
+			want:  true,
+		},
+		{
+			name:  "valid RGBA with hash",
+			color: "#0000FFAA",
+			want:  true,
+		},
+		{
+			name:  "valid RGBA without hash",
+			color: "FF00FF80",
+			want:  true,
+		},
+		{
+			name:  "too short",
+			color: "#FFF",
+			want:  false,
+		},
+		{
+			name:  "too long",
+			color: "#FF00FF00AA",
+			want:  false,
+		},
+		{
+			name:  "invalid character G",
+			color: "#GGGGGG",
+			want:  false,
+		},
+		{
+			name:  "invalid character Z",
+			color: "#FF00ZZ",
+			want:  false,
+		},
+		{
+			name:  "mixed case valid",
+			color: "#Ff00Aa",
+			want:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isValidHexColor(tt.color)
+			assert.Equal(t, tt.want, got, "isValidHexColor(%q)", tt.color)
+		})
+	}
+}

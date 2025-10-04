@@ -170,3 +170,148 @@ func TestFindClosestPaletteColor(t *testing.T) {
 		})
 	}
 }
+
+func TestSamplePixels_LargeImage(t *testing.T) {
+	// Create a large image to test subsampling
+	img := image.NewRGBA(image.Rect(0, 0, 1000, 1000))
+	for y := 0; y < 1000; y++ {
+		for x := 0; x < 1000; x++ {
+			img.Set(x, y, color.RGBA{uint8(x % 256), uint8(y % 256), 0, 255})
+		}
+	}
+
+	pixels := samplePixels(img, 5000)
+
+	if len(pixels) == 0 {
+		t.Error("samplePixels() returned no pixels")
+	}
+
+	if len(pixels) > 10000 {
+		t.Errorf("samplePixels() returned too many pixels: %d", len(pixels))
+	}
+}
+
+func TestSamplePixels_SmallImage(t *testing.T) {
+	// Create a small image - all pixels should be sampled
+	img := image.NewRGBA(image.Rect(0, 0, 10, 10))
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			img.Set(x, y, color.RGBA{255, 0, 0, 255})
+		}
+	}
+
+	pixels := samplePixels(img, 10000)
+
+	if len(pixels) != 100 {
+		t.Errorf("samplePixels() = %d pixels, want 100", len(pixels))
+	}
+}
+
+func TestKmeansClustering_EdgeCases(t *testing.T) {
+	// Test with exactly k colors
+	pixels := []colorful.Color{
+		{R: 1.0, G: 0.0, B: 0.0},
+		{R: 0.0, G: 1.0, B: 0.0},
+		{R: 0.0, G: 0.0, B: 1.0},
+	}
+
+	centers := kmeansClustering(pixels, 3, 10)
+
+	if len(centers) != 3 {
+		t.Errorf("kmeansClustering() returned %d centers, want 3", len(centers))
+	}
+}
+
+func TestAssignPaletteRoles(t *testing.T) {
+	palette := []PaletteColor{
+		{Color: "#000000", Hue: 0, Saturation: 0, Lightness: 0},
+		{Color: "#808080", Hue: 0, Saturation: 0, Lightness: 50},
+		{Color: "#FFFFFF", Hue: 0, Saturation: 0, Lightness: 100},
+		{Color: "#FF0000", Hue: 0, Saturation: 100, Lightness: 50},
+	}
+
+	// assignPaletteRoles modifies palette in place
+	assignPaletteRoles(palette)
+
+	// Check that roles are assigned (should be one of: dark_shadow, shadow, midtone, light, highlight)
+	validRoles := map[string]bool{
+		"dark_shadow": true,
+		"shadow":      true,
+		"midtone":     true,
+		"light":       true,
+		"highlight":   true,
+	}
+
+	for _, pc := range palette {
+		if pc.Role == "" {
+			t.Error("assignPaletteRoles() did not assign a role to all colors")
+		}
+		if !validRoles[pc.Role] {
+			t.Errorf("assignPaletteRoles() assigned invalid role: %s", pc.Role)
+		}
+	}
+}
+
+func TestFindClosestPaletteColor_EmptyPalette(t *testing.T) {
+	targetColor, _ := colorful.Hex("#FF0000")
+
+	_, _, err := FindClosestPaletteColor(targetColor, []PaletteColor{})
+
+	if err == nil {
+		t.Error("FindClosestPaletteColor() should return error for empty palette")
+	}
+}
+
+func TestFindClosestPaletteColor_InvalidHex(t *testing.T) {
+	palette := []PaletteColor{
+		{Color: "invalid"},
+		{Color: "#FF0000"},
+	}
+
+	targetColor, _ := colorful.Hex("#00FF00")
+
+	// Should skip invalid color and find the valid one
+	gotColor, gotIdx, err := FindClosestPaletteColor(targetColor, palette)
+
+	if err != nil {
+		t.Errorf("FindClosestPaletteColor() unexpected error: %v", err)
+	}
+
+	if gotIdx != 1 {
+		t.Errorf("FindClosestPaletteColor() index = %d, want 1", gotIdx)
+	}
+
+	if gotColor != "#FF0000" {
+		t.Errorf("FindClosestPaletteColor() color = %s, want #FF0000", gotColor)
+	}
+}
+
+func TestExtractPalette_EdgeCases(t *testing.T) {
+	// Test with minimum colors
+	img := image.NewRGBA(image.Rect(0, 0, 10, 10))
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			img.Set(x, y, color.RGBA{255, 0, 0, 255})
+		}
+	}
+
+	result, err := ExtractPalette(img, 2)
+
+	if err != nil {
+		t.Errorf("ExtractPalette() unexpected error: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("ExtractPalette() returned %d colors, want 2", len(result))
+	}
+
+	// Check that usage percentages sum to ~100%
+	totalUsage := 0.0
+	for _, pc := range result {
+		totalUsage += pc.UsagePercent
+	}
+
+	if totalUsage < 99.9 || totalUsage > 100.1 {
+		t.Errorf("ExtractPalette() usage percentages sum to %.2f, want ~100", totalUsage)
+	}
+}

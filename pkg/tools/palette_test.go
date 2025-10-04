@@ -732,3 +732,115 @@ func TestApplyShading_ViaMCP(t *testing.T) {
 	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
 	assert.True(t, output.Success, "Apply shading should succeed")
 }
+
+// Unit tests for parseJSON helper function
+func TestParseJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		output  string
+		wantErr bool
+	}{
+		{
+			name:    "valid JSON",
+			output:  `{"success": true}`,
+			wantErr: false,
+		},
+		{
+			name:    "valid JSON with extra text before",
+			output:  `some text before {"success": true}`,
+			wantErr: false,
+		},
+		{
+			name:    "valid JSON with extra text after",
+			output:  `{"success": true} some text after`,
+			wantErr: false,
+		},
+		{
+			name:    "valid JSON with extra text before and after",
+			output:  `prefix {"success": true} suffix`,
+			wantErr: false,
+		},
+		{
+			name:    "no JSON object",
+			output:  `no json here`,
+			wantErr: true,
+		},
+		{
+			name:    "empty string",
+			output:  ``,
+			wantErr: true,
+		},
+		{
+			name:    "only opening brace",
+			output:  `{`,
+			wantErr: true,
+		},
+		{
+			name:    "invalid JSON",
+			output:  `{invalid json}`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result struct {
+				Success bool `json:"success"`
+			}
+			err := parseJSON(tt.output, &result)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.True(t, result.Success)
+			}
+		})
+	}
+}
+
+// Unit tests for normalizeHueDiff helper function
+func TestNormalizeHueDiff(t *testing.T) {
+	tests := []struct {
+		name string
+		diff float64
+		want float64
+	}{
+		{
+			name: "positive difference < 180",
+			diff: 100.0,
+			want: 100.0,
+		},
+		{
+			name: "negative difference",
+			diff: -50.0,
+			want: 50.0, // -50 + 360 = 310, which is > 180, so 360 - 310 = 50
+		},
+		{
+			name: "difference > 180",
+			diff: 200.0,
+			want: 160.0, // 360 - 200 = 160
+		},
+		{
+			name: "difference > 360",
+			diff: 400.0,
+			want: 40.0, // 400 - 360 = 40
+		},
+		{
+			name: "exact 180",
+			diff: 180.0,
+			want: 180.0,
+		},
+		{
+			name: "multiple loops negative",
+			diff: -720.0,
+			want: 0.0, // -720 + 360 + 360 = 0
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeHueDiff(tt.diff)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

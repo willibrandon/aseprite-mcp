@@ -30,8 +30,9 @@ func createTransformTestSession(t *testing.T) (*mcp.Server, *mcp.ClientSession, 
 	}, nil)
 
 	RegisterTransformTools(server, client, gen, cfg, logger)
-	// Also register canvas tools for setup
+	// Also register canvas and drawing tools for setup
 	RegisterCanvasTools(server, client, gen, cfg, logger)
+	RegisterDrawingTools(server, client, gen, cfg, logger)
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 	_, err := server.Connect(context.Background(), serverTransport, nil)
@@ -303,4 +304,64 @@ func TestDownsampleImage_ViaMCP(t *testing.T) {
 	_, err = os.Stat(output.OutputPath)
 	assert.NoError(t, err, "Downsampled sprite should exist")
 	defer os.Remove(output.OutputPath)
+}
+
+func TestApplyOutline_ViaMCP(t *testing.T) {
+	_, session, _ := createTransformTestSession(t)
+	defer session.Close()
+
+	// Create a test sprite
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      32,
+			"height":     32,
+			"color_mode": "rgb",
+		},
+	})
+	require.NoError(t, err)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Draw some pixels first so outline has something to work with
+	_, err = session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "draw_rectangle",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x":            8,
+			"y":            8,
+			"width":        16,
+			"height":       16,
+			"color":        "#FF0000FF",
+			"filled":       true,
+		},
+	})
+	require.NoError(t, err)
+
+	// Apply outline
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "apply_outline",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"color":        "#000000FF",
+			"thickness":    2,
+		},
+	})
+
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	var output struct {
+		Success bool `json:"success"`
+	}
+	json.Unmarshal([]byte(result.Content[0].(*mcp.TextContent).Text), &output)
+	assert.True(t, output.Success)
 }

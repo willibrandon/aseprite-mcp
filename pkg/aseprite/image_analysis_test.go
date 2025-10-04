@@ -258,3 +258,77 @@ func TestAnalyzeComposition(t *testing.T) {
 		t.Error("AnalyzeComposition() returned empty dominant region")
 	}
 }
+
+func TestGenerateBrightnessMap_EdgeCases(t *testing.T) {
+	// Test with exact match dimensions (no downsampling needed)
+	img := image.NewRGBA(image.Rect(0, 0, 10, 10))
+	for y := 0; y < 10; y++ {
+		for x := 0; x < 10; x++ {
+			brightness := uint8((x + y) * 255 / 18)
+			img.Set(x, y, color.RGBA{brightness, brightness, brightness, 255})
+		}
+	}
+
+	result, err := GenerateBrightnessMap(img, 10, 10, 5)
+
+	if err != nil {
+		t.Fatalf("GenerateBrightnessMap() error = %v", err)
+	}
+
+	// Grid is 2D array, so check total cells
+	totalCells := 0
+	for _, row := range result.Grid {
+		totalCells += len(row)
+	}
+
+	if totalCells != 100 {
+		t.Errorf("GenerateBrightnessMap() total grid cells = %d, want 100", totalCells)
+	}
+
+	if len(result.Legend) != 5 {
+		t.Errorf("GenerateBrightnessMap() legend size = %d, want 5", len(result.Legend))
+	}
+}
+
+func TestFindFocalPoints(t *testing.T) {
+	// Create a 100x100 edge map for realistic focal point detection
+	grid := make([][]int, 100)
+	for i := range grid {
+		grid[i] = make([]int, 100)
+	}
+
+	edgeMap := &EdgeMap{
+		Grid: grid,
+	}
+
+	// Create strong edge patterns in multiple regions to trigger focal point detection
+	// Top-left quadrant: dense edges
+	for y := 10; y < 30; y++ {
+		for x := 10; x < 30; x++ {
+			edgeMap.Grid[y][x] = 1
+		}
+	}
+
+	// Center: another focal area
+	for y := 45; y < 55; y++ {
+		for x := 45; x < 55; x++ {
+			edgeMap.Grid[y][x] = 1
+		}
+	}
+
+	focalPoints := findFocalPoints(edgeMap, 100, 100)
+
+	// Function may or may not return focal points depending on density threshold
+	// Just verify that if it returns any, they're valid
+	for _, fp := range focalPoints {
+		if fp.X < 0 || fp.X >= 100 || fp.Y < 0 || fp.Y >= 100 {
+			t.Errorf("findFocalPoints() returned invalid coordinates: (%d, %d)", fp.X, fp.Y)
+		}
+		if fp.Weight < 0 || fp.Weight > 1 {
+			t.Errorf("findFocalPoints() returned invalid weight: %f", fp.Weight)
+		}
+	}
+
+	// Test passes if no invalid focal points were found
+	t.Logf("findFocalPoints() returned %d focal points", len(focalPoints))
+}
