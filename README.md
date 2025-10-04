@@ -171,21 +171,71 @@ See [examples/](examples/) for a complete working example client that demonstrat
 
 ## Development
 
+### Using Make
+
 ```bash
-# Run tests
+# Build (development - fast, no version info)
+make build
+
+# Build release (with version and timestamp)
+make release
+
+# Run unit tests
 make test
 
+# Run unit tests (no cache)
+make test-nocache
+
 # Run integration tests (requires configured Aseprite)
-go test -tags=integration -v ./...
+make test-integration
+
+# Run integration tests (no cache)
+make test-integration-nocache
 
 # Run benchmarks
-go test -tags=integration -bench=. -benchmem ./pkg/aseprite ./pkg/tools
+make bench
 
 # Run linters
 make lint
 
 # Generate coverage report
 make test-coverage
+
+# Clean build artifacts
+make clean
+```
+
+### Using Go CLI
+
+```bash
+# Build (development)
+go build -o bin/aseprite-mcp ./cmd/aseprite-mcp
+
+# Build release (with version info)
+go build -ldflags "-X main.Version=$(git describe --tags --always --dirty) -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o bin/aseprite-mcp ./cmd/aseprite-mcp
+
+# Run unit tests
+go test -v -race -cover ./...
+
+# Run unit tests (no cache)
+go test -v -race -cover -count=1 ./...
+
+# Run integration tests
+go test -tags=integration -v ./...
+
+# Run integration tests (no cache)
+go test -tags=integration -v -count=1 ./...
+
+# Run benchmarks
+go test -tags=integration -bench=. -benchmem ./pkg/aseprite ./pkg/tools
+
+# Run linters
+go vet ./...
+go fmt ./...
+
+# Generate coverage report
+go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+go tool cover -html=coverage.txt -o coverage.html
 ```
 
 ## Performance
