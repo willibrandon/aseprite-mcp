@@ -1,4 +1,4 @@
-.PHONY: all build release test test-nocache test-integration test-integration-nocache test-coverage bench lint clean install docker-build-ci docker-test docker-test-integration docker-test-all
+.PHONY: all build release test test-nocache test-integration test-integration-nocache test-coverage bench lint clean install docker-build-ci docker-test docker-test-integration docker-test-all docker-build docker-build-full docker-run docker-run-full
 
 # Binary name
 BINARY_NAME=aseprite-mcp
@@ -92,3 +92,25 @@ docker-test-all:
 		cd /workspace && \
 		go test -v -race -cover ./... && \
 		go test -tags=integration -v ./...'
+
+# Docker MCP Server targets
+DOCKER_IMAGE=aseprite-mcp:latest
+DOCKER_IMAGE_FULL=aseprite-mcp:full
+
+docker-build:
+	docker build -t $(DOCKER_IMAGE) -f Dockerfile .
+
+docker-build-full:
+	docker build -t $(DOCKER_IMAGE_FULL) -f Dockerfile.with-aseprite .
+
+docker-run:
+	@echo "ERROR: Lightweight image requires Aseprite volume mount."
+	@echo "Use 'make docker-run-full' for self-contained image, or:"
+	@echo ""
+	@echo "  docker run --rm -i \\"
+	@echo "    -v /path/to/aseprite:/usr/local/bin/aseprite:ro \\"
+	@echo "    $(DOCKER_IMAGE)"
+	@exit 1
+
+docker-run-full:
+	docker run --rm -i $(DOCKER_IMAGE_FULL)

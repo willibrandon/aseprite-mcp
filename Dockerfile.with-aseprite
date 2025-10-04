@@ -1,0 +1,45 @@
+# Complete Docker image with Aseprite included
+# This builds on the CI image to provide a fully self-contained MCP server
+
+# Stage 1: Build the Go binary
+FROM golang:1.24.1-alpine AS builder
+
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o aseprite-mcp ./cmd/aseprite-mcp
+
+# Stage 2: Copy Aseprite from CI image and combine with MCP server
+FROM ghcr.io/willibrandon/aseprite-mcp-ci:latest
+
+LABEL org.opencontainers.image.source=https://github.com/willibrandon/aseprite-mcp
+LABEL org.opencontainers.image.description="MCP server for Aseprite with Aseprite binary included"
+LABEL org.opencontainers.image.licenses=MIT
+LABEL io.modelcontextprotocol.server.name="io.github.willibrandon/aseprite-mcp"
+
+# Copy the Go binary from builder
+COPY --from=builder /build/aseprite-mcp /usr/local/bin/aseprite-mcp
+
+# Aseprite is already available at /build/aseprite/build/bin/aseprite from CI image
+ENV ASEPRITE_PATH=/build/aseprite/build/bin/aseprite
+ENV TEMP_DIR=/tmp/aseprite-mcp
+ENV TIMEOUT=30
+ENV LOG_LEVEL=info
+
+# Create config directory and file
+RUN mkdir -p /root/.config/aseprite-mcp && \
+    printf '{\n  "aseprite_path": "%s",\n  "temp_dir": "%s",\n  "timeout": %d,\n  "log_level": "%s"\n}\n' \
+    "$ASEPRITE_PATH" "$TEMP_DIR" "$TIMEOUT" "$LOG_LEVEL" \
+    > /root/.config/aseprite-mcp/config.json
+
+WORKDIR /workspace
+
+# MCP servers communicate over stdio
+ENTRYPOINT ["/usr/local/bin/aseprite-mcp"]
