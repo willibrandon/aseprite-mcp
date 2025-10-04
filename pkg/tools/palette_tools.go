@@ -127,8 +127,9 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "get_palette",
 			Description: "Retrieve the current sprite palette as an array of hex colors. Returns both the color array and palette size. Useful for inspecting existing palettes before modification.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input GetPaletteInput) (*mcp.CallToolResult, *GetPaletteOutput, error) {
-			logger.Debug("get_palette tool called",
+		maybeWrapWithTiming("get_palette", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input GetPaletteInput) (*mcp.CallToolResult, *GetPaletteOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("get_palette tool called",
 				"sprite", input.SpritePath)
 
 			// Generate Lua script to get palette
@@ -137,7 +138,7 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to get palette", "error", err)
+				opLogger.Error("Failed to get palette", "error", err)
 				return nil, nil, fmt.Errorf("failed to get palette: %w", err)
 			}
 
@@ -147,12 +148,12 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 				return nil, nil, fmt.Errorf("failed to parse palette output: %w", err)
 			}
 
-			logger.Information("Palette retrieved successfully",
+			opLogger.Information("Palette retrieved successfully",
 				"sprite", input.SpritePath,
 				"colors", result.Size)
 
 			return nil, &result, nil
-		},
+		}),
 	)
 
 	// Register set_palette_color tool
@@ -162,8 +163,9 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "set_palette_color",
 			Description: "Set a specific palette index to a color. Index must be within the current palette range (0 to palette size - 1). Useful for modifying individual palette entries.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input SetPaletteColorInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
-			logger.Debug("set_palette_color tool called",
+		maybeWrapWithTiming("set_palette_color", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input SetPaletteColorInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("set_palette_color tool called",
 				"sprite", input.SpritePath,
 				"index", input.Index,
 				"color", input.Color)
@@ -184,17 +186,17 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to set palette color", "error", err)
+				opLogger.Error("Failed to set palette color", "error", err)
 				return nil, nil, fmt.Errorf("failed to set palette color: %w", err)
 			}
 
-			logger.Information("Palette color set successfully",
+			opLogger.Information("Palette color set successfully",
 				"sprite", input.SpritePath,
 				"index", input.Index,
 				"color", input.Color)
 
 			return nil, &struct{ Success bool }{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register add_palette_color tool
@@ -204,8 +206,9 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "add_palette_color",
 			Description: "Add a new color to the palette. The palette will be resized to accommodate the new color. Returns the index of the newly added color. Maximum palette size is 256 colors.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input AddPaletteColorInput) (*mcp.CallToolResult, *AddPaletteColorOutput, error) {
-			logger.Debug("add_palette_color tool called",
+		maybeWrapWithTiming("add_palette_color", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input AddPaletteColorInput) (*mcp.CallToolResult, *AddPaletteColorOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("add_palette_color tool called",
 				"sprite", input.SpritePath,
 				"color", input.Color)
 
@@ -220,7 +223,7 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to add palette color", "error", err)
+				opLogger.Error("Failed to add palette color", "error", err)
 				return nil, nil, fmt.Errorf("failed to add palette color: %w", err)
 			}
 
@@ -230,13 +233,13 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 				return nil, nil, fmt.Errorf("failed to parse add color output: %w", err)
 			}
 
-			logger.Information("Palette color added successfully",
+			opLogger.Information("Palette color added successfully",
 				"sprite", input.SpritePath,
 				"color", input.Color,
 				"index", result.ColorIndex)
 
 			return nil, &result, nil
-		},
+		}),
 	)
 
 	// Register sort_palette tool
@@ -246,8 +249,9 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "sort_palette",
 			Description: "Sort the palette by hue, saturation, brightness, or luminance. Can sort in ascending or descending order. Useful for organizing palettes for easier color selection.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input SortPaletteInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
-			logger.Debug("sort_palette tool called",
+		maybeWrapWithTiming("sort_palette", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input SortPaletteInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("sort_palette tool called",
 				"sprite", input.SpritePath,
 				"method", input.Method,
 				"ascending", input.Ascending)
@@ -266,17 +270,17 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to sort palette", "error", err)
+				opLogger.Error("Failed to sort palette", "error", err)
 				return nil, nil, fmt.Errorf("failed to sort palette: %w", err)
 			}
 
-			logger.Information("Palette sorted successfully",
+			opLogger.Information("Palette sorted successfully",
 				"sprite", input.SpritePath,
 				"method", input.Method,
 				"ascending", input.Ascending)
 
 			return nil, &struct{ Success bool }{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register set_palette tool
@@ -286,8 +290,9 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "set_palette",
 			Description: "Set the sprite's color palette to the specified colors. Useful for applying extracted palettes from analyze_reference or creating custom limited palettes for pixel art. Colors should be in #RRGGBB hex format.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input SetPaletteInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
-			logger.Debug("set_palette tool called",
+		maybeWrapWithTiming("set_palette", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input SetPaletteInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("set_palette tool called",
 				"sprite", input.SpritePath,
 				"color_count", len(input.Colors))
 
@@ -313,16 +318,16 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to set palette", "error", err)
+				opLogger.Error("Failed to set palette", "error", err)
 				return nil, nil, fmt.Errorf("failed to set palette: %w", err)
 			}
 
-			logger.Information("Palette set successfully",
+			opLogger.Information("Palette set successfully",
 				"sprite", input.SpritePath,
 				"colors", len(input.Colors))
 
 			return nil, &struct{ Success bool }{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register apply_shading tool
@@ -332,8 +337,9 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "apply_shading",
 			Description: "Apply palette-constrained shading to a region based on light direction. Automatically adjusts pixel colors to create highlights and shadows while staying within the provided palette. Supports smooth, hard, and pillow shading styles. Essential for adding depth and dimension to pixel art.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input ApplyShadingInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
-			logger.Debug("apply_shading tool called",
+		maybeWrapWithTiming("apply_shading", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input ApplyShadingInput) (*mcp.CallToolResult, *struct{ Success bool }, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("apply_shading tool called",
 				"sprite", input.SpritePath,
 				"layer", input.LayerName,
 				"frame", input.FrameNumber,
@@ -400,18 +406,18 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to apply shading", "error", err)
+				opLogger.Error("Failed to apply shading", "error", err)
 				return nil, nil, fmt.Errorf("failed to apply shading: %w", err)
 			}
 
-			logger.Information("Shading applied successfully",
+			opLogger.Information("Shading applied successfully",
 				"sprite", input.SpritePath,
 				"layer", input.LayerName,
 				"direction", input.LightDirection,
 				"style", input.Style)
 
 			return nil, &struct{ Success bool }{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register analyze_palette_harmonies tool
@@ -421,8 +427,9 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "analyze_palette_harmonies",
 			Description: "Analyze color palette for harmonious relationships. Identifies complementary pairs (opposite colors on color wheel), triadic sets (3 evenly spaced colors), analogous groups (adjacent colors), and color temperature (warm/cool/neutral). Essential for creating professional, cohesive pixel art palettes based on color theory.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzePaletteHarmoniesInput) (*mcp.CallToolResult, *PaletteHarmonyResult, error) {
-			logger.Debug("analyze_palette_harmonies tool called",
+		maybeWrapWithTiming("analyze_palette_harmonies", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzePaletteHarmoniesInput) (*mcp.CallToolResult, *PaletteHarmonyResult, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("analyze_palette_harmonies tool called",
 				"palette_size", len(input.Palette))
 
 			// Validate inputs
@@ -444,7 +451,7 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Analyze harmonies
 			result := analyzePaletteHarmonies(input.Palette)
 
-			logger.Information("Palette harmonies analyzed successfully",
+			opLogger.Information("Palette harmonies analyzed successfully",
 				"complementary_pairs", len(result.Complementary),
 				"triadic_sets", len(result.Triadic),
 				"analogous_sets", len(result.Analogous),
@@ -458,7 +465,7 @@ func RegisterPaletteTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			}
 
 			return nil, output, nil
-		},
+		}),
 	)
 }
 

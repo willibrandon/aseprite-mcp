@@ -156,8 +156,9 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "draw_pixels",
 			Description: "Draw individual pixels at specified coordinates with colors. Supports batch operations for efficiency.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DrawPixelsInput) (*mcp.CallToolResult, *DrawPixelsOutput, error) {
-			logger.Debug("draw_pixels tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "pixel_count", len(input.Pixels))
+		maybeWrapWithTiming("draw_pixels", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DrawPixelsInput) (*mcp.CallToolResult, *DrawPixelsOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("draw_pixels tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "pixel_count", len(input.Pixels))
 
 			// Validate inputs
 			if input.LayerName == "" {
@@ -192,19 +193,19 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to draw pixels", "error", err)
+				opLogger.Error("Failed to draw pixels", "error", err)
 				return nil, nil, fmt.Errorf("failed to draw pixels: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Pixels drawn successfully") {
-				logger.Warning("Unexpected output from draw_pixels", "output", output)
+				opLogger.Warning("Unexpected output from draw_pixels", "output", output)
 			}
 
-			logger.Information("Pixels drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "count", len(pixels))
+			opLogger.Information("Pixels drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "count", len(pixels))
 
 			return nil, &DrawPixelsOutput{PixelsDrawn: len(pixels)}, nil
-		},
+		}),
 	)
 
 	// Register draw_line tool
@@ -214,8 +215,9 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "draw_line",
 			Description: "Draw a line between two points with specified color and thickness.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DrawLineInput) (*mcp.CallToolResult, *DrawLineOutput, error) {
-			logger.Debug("draw_line tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber)
+		maybeWrapWithTiming("draw_line", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DrawLineInput) (*mcp.CallToolResult, *DrawLineOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("draw_line tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber)
 
 			// Validate inputs
 			if input.LayerName == "" {
@@ -242,19 +244,19 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to draw line", "error", err)
+				opLogger.Error("Failed to draw line", "error", err)
 				return nil, nil, fmt.Errorf("failed to draw line: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Line drawn successfully") {
-				logger.Warning("Unexpected output from draw_line", "output", output)
+				opLogger.Warning("Unexpected output from draw_line", "output", output)
 			}
 
-			logger.Information("Line drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber)
+			opLogger.Information("Line drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber)
 
 			return nil, &DrawLineOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register draw_contour tool
@@ -264,8 +266,9 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "draw_contour",
 			Description: "Draw a polyline or polygon by connecting multiple points. Supports both open paths and closed shapes.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DrawContourInput) (*mcp.CallToolResult, *DrawContourOutput, error) {
-			logger.Debug("draw_contour tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "points", len(input.Points), "closed", input.Closed)
+		maybeWrapWithTiming("draw_contour", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DrawContourInput) (*mcp.CallToolResult, *DrawContourOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("draw_contour tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "points", len(input.Points), "closed", input.Closed)
 
 			// Validate inputs
 			if input.LayerName == "" {
@@ -302,19 +305,19 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to draw contour", "error", err)
+				opLogger.Error("Failed to draw contour", "error", err)
 				return nil, nil, fmt.Errorf("failed to draw contour: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Contour drawn successfully") {
-				logger.Warning("Unexpected output from draw_contour", "output", output)
+				opLogger.Warning("Unexpected output from draw_contour", "output", output)
 			}
 
-			logger.Information("Contour drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "points", len(points), "closed", input.Closed)
+			opLogger.Information("Contour drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "points", len(points), "closed", input.Closed)
 
 			return nil, &DrawContourOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register draw_rectangle tool
@@ -324,8 +327,9 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "draw_rectangle",
 			Description: "Draw a rectangle with specified position, size, color, and fill option.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DrawRectangleInput) (*mcp.CallToolResult, *DrawRectangleOutput, error) {
-			logger.Debug("draw_rectangle tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "filled", input.Filled)
+		maybeWrapWithTiming("draw_rectangle", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DrawRectangleInput) (*mcp.CallToolResult, *DrawRectangleOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("draw_rectangle tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "filled", input.Filled)
 
 			// Validate inputs
 			if input.LayerName == "" {
@@ -352,19 +356,19 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to draw rectangle", "error", err)
+				opLogger.Error("Failed to draw rectangle", "error", err)
 				return nil, nil, fmt.Errorf("failed to draw rectangle: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Rectangle drawn successfully") {
-				logger.Warning("Unexpected output from draw_rectangle", "output", output)
+				opLogger.Warning("Unexpected output from draw_rectangle", "output", output)
 			}
 
-			logger.Information("Rectangle drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "filled", input.Filled)
+			opLogger.Information("Rectangle drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "filled", input.Filled)
 
 			return nil, &DrawRectangleOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register draw_circle tool
@@ -374,8 +378,9 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "draw_circle",
 			Description: "Draw a circle with specified center, radius, color, and fill option.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DrawCircleInput) (*mcp.CallToolResult, *DrawCircleOutput, error) {
-			logger.Debug("draw_circle tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "radius", input.Radius, "filled", input.Filled)
+		maybeWrapWithTiming("draw_circle", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DrawCircleInput) (*mcp.CallToolResult, *DrawCircleOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("draw_circle tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "radius", input.Radius, "filled", input.Filled)
 
 			// Validate inputs
 			if input.LayerName == "" {
@@ -402,19 +407,19 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to draw circle", "error", err)
+				opLogger.Error("Failed to draw circle", "error", err)
 				return nil, nil, fmt.Errorf("failed to draw circle: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Circle drawn successfully") {
-				logger.Warning("Unexpected output from draw_circle", "output", output)
+				opLogger.Warning("Unexpected output from draw_circle", "output", output)
 			}
 
-			logger.Information("Circle drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "radius", input.Radius, "filled", input.Filled)
+			opLogger.Information("Circle drawn successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "radius", input.Radius, "filled", input.Filled)
 
 			return nil, &DrawCircleOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register fill_area tool
@@ -424,8 +429,9 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			Name:        "fill_area",
 			Description: "Flood fill from a starting point with specified color (paint bucket tool).",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input FillAreaInput) (*mcp.CallToolResult, *FillAreaOutput, error) {
-			logger.Debug("fill_area tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "x", input.X, "y", input.Y, "tolerance", input.Tolerance)
+		maybeWrapWithTiming("fill_area", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input FillAreaInput) (*mcp.CallToolResult, *FillAreaOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("fill_area tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "x", input.X, "y", input.Y, "tolerance", input.Tolerance)
 
 			// Validate inputs
 			if input.LayerName == "" {
@@ -452,18 +458,18 @@ func RegisterDrawingTools(server *mcp.Server, client *aseprite.Client, gen *asep
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to fill area", "error", err)
+				opLogger.Error("Failed to fill area", "error", err)
 				return nil, nil, fmt.Errorf("failed to fill area: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Area filled successfully") {
-				logger.Warning("Unexpected output from fill_area", "output", output)
+				opLogger.Warning("Unexpected output from fill_area", "output", output)
 			}
 
-			logger.Information("Area filled successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "x", input.X, "y", input.Y, "tolerance", input.Tolerance)
+			opLogger.Information("Area filled successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "x", input.X, "y", input.Y, "tolerance", input.Tolerance)
 
 			return nil, &FillAreaOutput{Success: true}, nil
-		},
+		}),
 	)
 }

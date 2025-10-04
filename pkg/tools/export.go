@@ -87,8 +87,9 @@ func RegisterExportTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "export_sprite",
 			Description: "Export sprite to common image formats (PNG, GIF, JPG, BMP).",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input ExportSpriteInput) (*mcp.CallToolResult, *ExportSpriteOutput, error) {
-			logger.Debug("export_sprite tool called", "sprite_path", input.SpritePath, "output_path", input.OutputPath, "format", input.Format, "frame_number", input.FrameNumber)
+		maybeWrapWithTiming("export_sprite", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input ExportSpriteInput) (*mcp.CallToolResult, *ExportSpriteOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("export_sprite tool called", "sprite_path", input.SpritePath, "output_path", input.OutputPath, "format", input.Format, "frame_number", input.FrameNumber)
 
 			// Validate inputs
 			if input.OutputPath == "" {
@@ -124,32 +125,32 @@ func RegisterExportTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to export sprite", "error", err)
+				opLogger.Error("Failed to export sprite", "error", err)
 				return nil, nil, fmt.Errorf("failed to export sprite: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Exported successfully") {
-				logger.Warning("Unexpected output from export_sprite", "output", output)
+				opLogger.Warning("Unexpected output from export_sprite", "output", output)
 			}
 
 			// Get file size
 			fileInfo, err := os.Stat(input.OutputPath)
 			if err != nil {
-				logger.Warning("Failed to stat exported file", "error", err)
+				opLogger.Warning("Failed to stat exported file", "error", err)
 				return nil, &ExportSpriteOutput{
 					ExportedPath: input.OutputPath,
 					FileSize:     0,
 				}, nil
 			}
 
-			logger.Information("Sprite exported successfully", "sprite", input.SpritePath, "output", input.OutputPath, "format", format, "frame", input.FrameNumber, "size", fileInfo.Size())
+			opLogger.Information("Sprite exported successfully", "sprite", input.SpritePath, "output", input.OutputPath, "format", format, "frame", input.FrameNumber, "size", fileInfo.Size())
 
 			return nil, &ExportSpriteOutput{
 				ExportedPath: input.OutputPath,
 				FileSize:     fileInfo.Size(),
 			}, nil
-		},
+		}),
 	)
 
 	// Register export_spritesheet tool
@@ -159,8 +160,9 @@ func RegisterExportTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "export_spritesheet",
 			Description: "Export animation frames as spritesheet with layout options.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input ExportSpritesheetInput) (*mcp.CallToolResult, *ExportSpritesheetOutput, error) {
-			logger.Debug("export_spritesheet tool called", "sprite_path", input.SpritePath, "output_path", input.OutputPath, "layout", input.Layout)
+		maybeWrapWithTiming("export_spritesheet", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input ExportSpritesheetInput) (*mcp.CallToolResult, *ExportSpritesheetOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("export_spritesheet tool called", "sprite_path", input.SpritePath, "output_path", input.OutputPath, "layout", input.Layout)
 
 			// Validate inputs
 			if input.OutputPath == "" {
@@ -204,21 +206,21 @@ func RegisterExportTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to export spritesheet", "error", err)
+				opLogger.Error("Failed to export spritesheet", "error", err)
 				return nil, nil, fmt.Errorf("failed to export spritesheet: %w", err)
 			}
 
 			// Parse JSON output
 			var result ExportSpritesheetOutput
 			if err := parseJSON(output, &result); err != nil {
-				logger.Error("Failed to parse spritesheet output", "error", err, "output", output)
+				opLogger.Error("Failed to parse spritesheet output", "error", err, "output", output)
 				return nil, nil, fmt.Errorf("failed to parse output: %w", err)
 			}
 
-			logger.Information("Spritesheet exported successfully", "sprite", input.SpritePath, "output", result.SpritesheetPath, "frames", result.FrameCount)
+			opLogger.Information("Spritesheet exported successfully", "sprite", input.SpritePath, "output", result.SpritesheetPath, "frames", result.FrameCount)
 
 			return nil, &result, nil
-		},
+		}),
 	)
 
 	// Register import_image tool
@@ -228,8 +230,9 @@ func RegisterExportTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "import_image",
 			Description: "Import an external image file as a layer in the sprite.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input ImportImageInput) (*mcp.CallToolResult, *ImportImageOutput, error) {
-			logger.Debug("import_image tool called", "sprite_path", input.SpritePath, "image_path", input.ImagePath, "layer", input.LayerName)
+		maybeWrapWithTiming("import_image", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input ImportImageInput) (*mcp.CallToolResult, *ImportImageOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("import_image tool called", "sprite_path", input.SpritePath, "image_path", input.ImagePath, "layer", input.LayerName)
 
 			// Validate inputs
 			if input.SpritePath == "" {
@@ -266,19 +269,19 @@ func RegisterExportTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to import image", "error", err)
+				opLogger.Error("Failed to import image", "error", err)
 				return nil, nil, fmt.Errorf("failed to import image: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Image imported successfully") {
-				logger.Warning("Unexpected output from import_image", "output", output)
+				opLogger.Warning("Unexpected output from import_image", "output", output)
 			}
 
-			logger.Information("Image imported successfully", "sprite", input.SpritePath, "image", input.ImagePath, "layer", input.LayerName)
+			opLogger.Information("Image imported successfully", "sprite", input.SpritePath, "image", input.ImagePath, "layer", input.LayerName)
 
 			return nil, &ImportImageOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register save_as tool
@@ -288,8 +291,9 @@ func RegisterExportTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "save_as",
 			Description: "Save sprite to a new .aseprite file path.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input SaveAsInput) (*mcp.CallToolResult, *SaveAsOutput, error) {
-			logger.Debug("save_as tool called", "sprite_path", input.SpritePath, "output_path", input.OutputPath)
+		maybeWrapWithTiming("save_as", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input SaveAsInput) (*mcp.CallToolResult, *SaveAsOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("save_as tool called", "sprite_path", input.SpritePath, "output_path", input.OutputPath)
 
 			// Validate inputs
 			if input.SpritePath == "" {
@@ -317,20 +321,20 @@ func RegisterExportTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to save sprite", "error", err)
+				opLogger.Error("Failed to save sprite", "error", err)
 				return nil, nil, fmt.Errorf("failed to save sprite: %w", err)
 			}
 
 			// Parse JSON output
 			var result SaveAsOutput
 			if err := parseJSON(output, &result); err != nil {
-				logger.Error("Failed to parse save_as output", "error", err, "output", output)
+				opLogger.Error("Failed to parse save_as output", "error", err, "output", output)
 				return nil, nil, fmt.Errorf("failed to parse output: %w", err)
 			}
 
-			logger.Information("Sprite saved successfully", "sprite", input.SpritePath, "new_path", result.FilePath)
+			opLogger.Information("Sprite saved successfully", "sprite", input.SpritePath, "new_path", result.FilePath)
 
 			return nil, &result, nil
-		},
+		}),
 	)
 }

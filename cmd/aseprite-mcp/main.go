@@ -13,6 +13,7 @@ import (
 	"github.com/willibrandon/aseprite-mcp-go/pkg/server"
 	"github.com/willibrandon/mtlog"
 	"github.com/willibrandon/mtlog/core"
+	"github.com/willibrandon/mtlog/sinks"
 )
 
 var (
@@ -56,11 +57,13 @@ func main() {
 	}
 
 	// Initialize logger
-	logger := createLogger(cfg.LogLevel)
+	logger := createLogger(cfg.LogLevel, cfg.LogFile)
+	defer closeLogger(logger) // Ensure logs are flushed on shutdown
 
 	// Health check mode
 	if *showHealth {
 		exitCode := performHealthCheck(cfg, logger)
+		closeLogger(logger) // Flush logs before exit
 		os.Exit(exitCode)
 	}
 
@@ -72,6 +75,7 @@ func main() {
 	srv, err := server.New(cfg, logger)
 	if err != nil {
 		logger.Fatal("Failed to create server: {Error}", err)
+		closeLogger(logger) // Flush logs before exit
 		os.Exit(1)
 	}
 
@@ -99,6 +103,7 @@ func main() {
 	case err := <-errChan:
 		if err != nil {
 			logger.Error("Server error: {Error}", err)
+			closeLogger(logger) // Flush logs before exit
 			os.Exit(1)
 		}
 	}
@@ -106,14 +111,58 @@ func main() {
 	logger.Information("Server stopped")
 }
 
+// closeLogger closes the logger and flushes any buffered logs.
+func closeLogger(logger core.Logger) {
+	// Type assert to access Close() method on concrete logger type
+	if closer, ok := logger.(interface{ Close() error }); ok {
+		_ = closer.Close() // Ignore close errors
+	}
+}
+
 // createLogger creates a configured logger instance.
-func createLogger(logLevel string) core.Logger {
-	// Create stderr sink (stdout is used for MCP communication)
-	sink := &stderrSink{}
+func createLogger(logLevel string, logFilePath string) core.Logger {
+	// Create console sink with custom template and Literate theme
+	// Template: [HH:mm:ss LEVEL] Context: Message (Properties when in debug mode)
+	// Output to stderr since stdout is used for MCP communication
+	template := "[${Timestamp:HH:mm:ss} ${Level:u3}] {SourceContext}: ${Message}"
+	if logLevel == "debug" {
+		// In debug mode, show enriched properties like machine name, process
+		template = "[${Timestamp:HH:mm:ss} ${Level:u3}] {SourceContext} [{MachineName}/{ProcessName}:{ProcessId}]: ${Message}"
+	}
+	consoleSink, err := sinks.NewConsoleSinkWithTemplateAndTheme(
+		template,
+		sinks.LiterateTheme(),
+	)
+	if err != nil {
+		// Fallback to simple console if template fails
+		consoleSink = sinks.NewConsoleSink()
+	}
+	// Redirect output to stderr (stdout is used for MCP communication)
+	consoleSink.SetOutput(os.Stderr)
 
 	// Create logger with options based on log level
 	var opts []mtlog.Option
-	opts = append(opts, mtlog.WithSink(sink))
+	opts = append(opts, mtlog.WithSink(consoleSink))
+
+	// Add file logging if path provided
+	if logFilePath != "" {
+		// Create rolling file sink for production use
+		// Rolls daily or at 100MB, keeps 7 days of logs
+		// BufferSize: 1 for near-immediate writes (values <=0 default to 64KB)
+		fileSink, err := sinks.NewRollingFileSink(sinks.RollingFileOptions{
+			FilePath:        logFilePath,
+			MaxFileSize:     100 * 1024 * 1024, // 100MB
+			RollingInterval: sinks.RollingIntervalDaily,
+			RetainFileCount: 7, // Keep last 7 days
+			BufferSize:      1, // Minimum buffer for near-immediate writes
+		})
+		if err != nil {
+			// Log error but continue with console only
+			fmt.Fprintf(os.Stderr, "Warning: Failed to create log file sink: %v\n", err)
+		} else {
+			opts = append(opts, mtlog.WithSink(fileSink))
+		}
+	}
 
 	switch logLevel {
 	case "debug":
@@ -127,6 +176,16 @@ func createLogger(logLevel string) core.Logger {
 	default:
 		opts = append(opts, mtlog.WithMinimumLevel(core.InformationLevel))
 	}
+
+	// Add enrichers for better context and debugging
+	opts = append(opts, mtlog.WithSourceContext("AsepriteMCP"))
+	opts = append(opts, mtlog.WithMachineName()) // Add machine name
+	opts = append(opts, mtlog.WithProcess())     // Add process ID and executable
+	opts = append(opts, mtlog.WithTimestamp())   // Ensure timestamps are included
+
+	// Add deadline awareness - warn when operations approach timeout
+	// Since most operations have 30s timeout, warn at 5s remaining
+	opts = append(opts, mtlog.WithContextDeadlineWarning(5*time.Second))
 
 	// Create logger
 	logger := mtlog.New(opts...)
@@ -175,66 +234,4 @@ func performHealthCheck(cfg *config.Config, logger core.Logger) int {
 
 	logger.Information("Health check passed - all systems operational")
 	return 0
-}
-
-// stderrSink writes log events to stderr without colors.
-type stderrSink struct{}
-
-func (s *stderrSink) Emit(event *core.LogEvent) {
-	timestamp := event.Timestamp.Format("2006-01-02 15:04:05.000")
-
-	// Map log level to string
-	var levelStr string
-	switch event.Level {
-	case core.DebugLevel:
-		levelStr = "DBG"
-	case core.InformationLevel:
-		levelStr = "INF"
-	case core.WarningLevel:
-		levelStr = "WRN"
-	case core.ErrorLevel:
-		levelStr = "ERR"
-	case core.FatalLevel:
-		levelStr = "FTL"
-	default:
-		levelStr = "???"
-	}
-
-	// Render message with properties
-	message := event.MessageTemplate
-	for name, value := range event.Properties {
-		placeholder := fmt.Sprintf("{%s}", name)
-		valueStr := fmt.Sprintf("%v", value)
-		message = replaceAll(message, placeholder, valueStr)
-	}
-
-	fmt.Fprintf(os.Stderr, "[%s] [%s] %s\n", timestamp, levelStr, message)
-}
-
-func (s *stderrSink) Close() error {
-	return nil
-}
-
-// replaceAll is a simple string replacement helper
-func replaceAll(s, old, new string) string {
-	result := ""
-	for {
-		idx := indexString(s, old)
-		if idx == -1 {
-			result += s
-			break
-		}
-		result += s[:idx] + new
-		s = s[idx+len(old):]
-	}
-	return result
-}
-
-func indexString(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }

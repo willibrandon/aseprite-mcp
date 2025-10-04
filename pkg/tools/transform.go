@@ -119,8 +119,9 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "downsample_image",
 			Description: "Downsample an image to smaller dimensions using box filter (area averaging) algorithm. Accepts any image format supported by Aseprite (.aseprite, .png, .jpg, .bmp, .gif) and creates a new downsampled sprite. This is useful for creating pixel art versions of high-resolution images or reducing image size while maintaining quality.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DownsampleImageInput) (*mcp.CallToolResult, *DownsampleImageOutput, error) {
-			logger.Debug("downsample_image tool called", "source", input.SourcePath, "target_width", input.TargetWidth, "target_height", input.TargetHeight)
+		maybeWrapWithTiming("downsample_image", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DownsampleImageInput) (*mcp.CallToolResult, *DownsampleImageOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("downsample_image tool called", "source", input.SourcePath, "target_width", input.TargetWidth, "target_height", input.TargetHeight)
 
 			// Validate dimensions
 			if input.TargetWidth < 1 || input.TargetWidth > 65535 {
@@ -140,7 +141,7 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			infoScript := gen.GetSpriteInfo()
 			infoOutput, err := client.ExecuteLua(ctx, infoScript, input.SourcePath)
 			if err != nil {
-				logger.Error("Failed to get source image info", "error", err)
+				opLogger.Error("Failed to get source image info", "error", err)
 				return nil, nil, fmt.Errorf("failed to get source image info: %w", err)
 			}
 
@@ -161,12 +162,12 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 					}
 				}
 				if sourceWidth == 0 || sourceHeight == 0 {
-					logger.Error("Failed to parse source dimensions", "error", err, "output", infoOutput)
+					opLogger.Error("Failed to parse source dimensions", "error", err, "output", infoOutput)
 					return nil, nil, fmt.Errorf("failed to parse source dimensions: %w", err)
 				}
 			}
 
-			logger.Information("Source image dimensions", "width", sourceWidth, "height", sourceHeight)
+			opLogger.Information("Source image dimensions", "width", sourceWidth, "height", sourceHeight)
 
 			// Generate downsampling script
 			script := gen.DownsampleImage(input.SourcePath, outputPath, input.TargetWidth, input.TargetHeight)
@@ -174,14 +175,14 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script
 			output, err := client.ExecuteLua(ctx, script, "")
 			if err != nil {
-				logger.Error("Failed to downsample image", "error", err)
+				opLogger.Error("Failed to downsample image", "error", err)
 				return nil, nil, fmt.Errorf("failed to downsample image: %w", err)
 			}
 
 			// Parse output path
 			resultPath := strings.TrimSpace(output)
 
-			logger.Information("Image downsampled successfully",
+			opLogger.Information("Image downsampled successfully",
 				"source", input.SourcePath,
 				"output", resultPath,
 				"source_size", fmt.Sprintf("%dx%d", sourceWidth, sourceHeight),
@@ -194,7 +195,7 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 				TargetWidth:  input.TargetWidth,
 				TargetHeight: input.TargetHeight,
 			}, nil
-		},
+		}),
 	)
 
 	// Register flip_sprite tool
@@ -204,8 +205,9 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "flip_sprite",
 			Description: "Flip a sprite, layer, or cel horizontally or vertically. This operation mirrors the image content along the specified axis.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input FlipSpriteInput) (*mcp.CallToolResult, *FlipSpriteOutput, error) {
-			logger.Debug("flip_sprite tool called", "sprite", input.SpritePath, "direction", input.Direction, "target", input.Target)
+		maybeWrapWithTiming("flip_sprite", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input FlipSpriteInput) (*mcp.CallToolResult, *FlipSpriteOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("flip_sprite tool called", "sprite", input.SpritePath, "direction", input.Direction, "target", input.Target)
 
 			// Validate direction
 			if input.Direction != "horizontal" && input.Direction != "vertical" {
@@ -226,14 +228,14 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to flip sprite", "error", err)
+				opLogger.Error("Failed to flip sprite", "error", err)
 				return nil, nil, fmt.Errorf("failed to flip sprite: %w", err)
 			}
 
-			logger.Information("Sprite flipped successfully", "direction", input.Direction, "target", input.Target)
+			opLogger.Information("Sprite flipped successfully", "direction", input.Direction, "target", input.Target)
 
 			return nil, &FlipSpriteOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register rotate_sprite tool
@@ -243,8 +245,9 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "rotate_sprite",
 			Description: "Rotate a sprite, layer, or cel by 90, 180, or 270 degrees clockwise.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input RotateSpriteInput) (*mcp.CallToolResult, *RotateSpriteOutput, error) {
-			logger.Debug("rotate_sprite tool called", "sprite", input.SpritePath, "angle", input.Angle, "target", input.Target)
+		maybeWrapWithTiming("rotate_sprite", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input RotateSpriteInput) (*mcp.CallToolResult, *RotateSpriteOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("rotate_sprite tool called", "sprite", input.SpritePath, "angle", input.Angle, "target", input.Target)
 
 			// Validate angle
 			if input.Angle != 90 && input.Angle != 180 && input.Angle != 270 {
@@ -265,14 +268,14 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to rotate sprite", "error", err)
+				opLogger.Error("Failed to rotate sprite", "error", err)
 				return nil, nil, fmt.Errorf("failed to rotate sprite: %w", err)
 			}
 
-			logger.Information("Sprite rotated successfully", "angle", input.Angle, "target", input.Target)
+			opLogger.Information("Sprite rotated successfully", "angle", input.Angle, "target", input.Target)
 
 			return nil, &RotateSpriteOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register scale_sprite tool
@@ -282,8 +285,9 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "scale_sprite",
 			Description: "Scale a sprite by specified X and Y factors using a chosen algorithm (nearest, bilinear, or rotsprite). Returns the new dimensions.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input ScaleSpriteInput) (*mcp.CallToolResult, *ScaleSpriteOutput, error) {
-			logger.Debug("scale_sprite tool called", "sprite", input.SpritePath, "scale_x", input.ScaleX, "scale_y", input.ScaleY, "algorithm", input.Algorithm)
+		maybeWrapWithTiming("scale_sprite", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input ScaleSpriteInput) (*mcp.CallToolResult, *ScaleSpriteOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("scale_sprite tool called", "sprite", input.SpritePath, "scale_x", input.ScaleX, "scale_y", input.ScaleY, "algorithm", input.Algorithm)
 
 			// Validate scale factors
 			if input.ScaleX < 0.01 || input.ScaleX > 100.0 {
@@ -307,7 +311,7 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to scale sprite", "error", err)
+				opLogger.Error("Failed to scale sprite", "error", err)
 				return nil, nil, fmt.Errorf("failed to scale sprite: %w", err)
 			}
 
@@ -317,14 +321,14 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 				return nil, nil, fmt.Errorf("failed to parse scale result: %w", err)
 			}
 
-			logger.Information("Sprite scaled successfully",
+			opLogger.Information("Sprite scaled successfully",
 				"scale_x", input.ScaleX,
 				"scale_y", input.ScaleY,
 				"algorithm", input.Algorithm,
 				"new_size", fmt.Sprintf("%dx%d", result.NewWidth, result.NewHeight))
 
 			return nil, &result, nil
-		},
+		}),
 	)
 
 	// Register crop_sprite tool
@@ -334,8 +338,9 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "crop_sprite",
 			Description: "Crop a sprite to a specified rectangular region. The crop bounds must be within the sprite dimensions.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input CropSpriteInput) (*mcp.CallToolResult, *CropSpriteOutput, error) {
-			logger.Debug("crop_sprite tool called", "sprite", input.SpritePath, "bounds", fmt.Sprintf("%d,%d,%dx%d", input.X, input.Y, input.Width, input.Height))
+		maybeWrapWithTiming("crop_sprite", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input CropSpriteInput) (*mcp.CallToolResult, *CropSpriteOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("crop_sprite tool called", "sprite", input.SpritePath, "bounds", fmt.Sprintf("%d,%d,%dx%d", input.X, input.Y, input.Width, input.Height))
 
 			// Validate crop bounds
 			if input.X < 0 || input.Y < 0 {
@@ -351,14 +356,14 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to crop sprite", "error", err)
+				opLogger.Error("Failed to crop sprite", "error", err)
 				return nil, nil, fmt.Errorf("failed to crop sprite: %w", err)
 			}
 
-			logger.Information("Sprite cropped successfully", "bounds", fmt.Sprintf("%d,%d,%dx%d", input.X, input.Y, input.Width, input.Height))
+			opLogger.Information("Sprite cropped successfully", "bounds", fmt.Sprintf("%d,%d,%dx%d", input.X, input.Y, input.Width, input.Height))
 
 			return nil, &CropSpriteOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register resize_canvas tool
@@ -368,8 +373,9 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "resize_canvas",
 			Description: "Resize the canvas without scaling content. Content is positioned according to the anchor point (center, top_left, top_right, bottom_left, or bottom_right).",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input ResizeCanvasInput) (*mcp.CallToolResult, *ResizeCanvasOutput, error) {
-			logger.Debug("resize_canvas tool called", "sprite", input.SpritePath, "size", fmt.Sprintf("%dx%d", input.Width, input.Height), "anchor", input.Anchor)
+		maybeWrapWithTiming("resize_canvas", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input ResizeCanvasInput) (*mcp.CallToolResult, *ResizeCanvasOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("resize_canvas tool called", "sprite", input.SpritePath, "size", fmt.Sprintf("%dx%d", input.Width, input.Height), "anchor", input.Anchor)
 
 			// Validate dimensions
 			if input.Width < 1 || input.Width > 65535 {
@@ -400,14 +406,14 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to resize canvas", "error", err)
+				opLogger.Error("Failed to resize canvas", "error", err)
 				return nil, nil, fmt.Errorf("failed to resize canvas: %w", err)
 			}
 
-			logger.Information("Canvas resized successfully", "size", fmt.Sprintf("%dx%d", input.Width, input.Height), "anchor", input.Anchor)
+			opLogger.Information("Canvas resized successfully", "size", fmt.Sprintf("%dx%d", input.Width, input.Height), "anchor", input.Anchor)
 
 			return nil, &ResizeCanvasOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register apply_outline tool
@@ -417,8 +423,9 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "apply_outline",
 			Description: "Apply an outline effect to a layer at a specified frame. The outline is drawn around non-transparent pixels with configurable color and thickness.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input ApplyOutlineInput) (*mcp.CallToolResult, *ApplyOutlineOutput, error) {
-			logger.Debug("apply_outline tool called", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "color", input.Color, "thickness", input.Thickness)
+		maybeWrapWithTiming("apply_outline", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input ApplyOutlineInput) (*mcp.CallToolResult, *ApplyOutlineOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("apply_outline tool called", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "color", input.Color, "thickness", input.Thickness)
 
 			// Validate frame number
 			if input.FrameNumber < 1 {
@@ -442,13 +449,13 @@ func RegisterTransformTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to apply outline", "error", err)
+				opLogger.Error("Failed to apply outline", "error", err)
 				return nil, nil, fmt.Errorf("failed to apply outline: %w", err)
 			}
 
-			logger.Information("Outline applied successfully", "layer", input.LayerName, "frame", input.FrameNumber, "thickness", input.Thickness)
+			opLogger.Information("Outline applied successfully", "layer", input.LayerName, "frame", input.FrameNumber, "thickness", input.Thickness)
 
 			return nil, &ApplyOutlineOutput{Success: true}, nil
-		},
+		}),
 	)
 }

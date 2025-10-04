@@ -36,3 +36,7 @@ Thumbs.db
 # Config
 config.json
 .env
+
+# Aseprite-MCP binaries
+/aseprite-mcp
+cmd/aseprite-mcp/aseprite-mcp

@@ -69,8 +69,9 @@ func RegisterAnalysisTools(server *mcp.Server, client *aseprite.Client, gen *ase
 			Name:        "analyze_reference",
 			Description: "Extract structured data from reference images to guide pixel art creation. Performs k-means palette extraction, brightness/edge detection, and composition analysis. Returns palette sorted by hue/lightness, brightness map with quantized levels, edge map with major contours, composition guides (rule of thirds, focal points), and suggested dithering zones.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeReferenceInput) (*mcp.CallToolResult, *AnalyzeReferenceOutput, error) {
-			logger.Debug("analyze_reference tool called",
+		maybeWrapWithTiming("analyze_reference", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeReferenceInput) (*mcp.CallToolResult, *AnalyzeReferenceOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("analyze_reference tool called",
 				"reference", input.ReferencePath,
 				"target_width", input.TargetWidth,
 				"target_height", input.TargetHeight,
@@ -112,14 +113,14 @@ func RegisterAnalysisTools(server *mcp.Server, client *aseprite.Client, gen *ase
 			// Load reference image
 			file, err := os.Open(input.ReferencePath)
 			if err != nil {
-				logger.Error("Failed to open reference image", "error", err)
+				opLogger.Error("Failed to open reference image", "error", err)
 				return nil, nil, fmt.Errorf("failed to open reference image: %w", err)
 			}
 			defer file.Close()
 
 			img, _, err := image.Decode(file)
 			if err != nil {
-				logger.Error("Failed to decode reference image", "error", err)
+				opLogger.Error("Failed to decode reference image", "error", err)
 				return nil, nil, fmt.Errorf("failed to decode reference image: %w", err)
 			}
 
@@ -127,39 +128,39 @@ func RegisterAnalysisTools(server *mcp.Server, client *aseprite.Client, gen *ase
 			sourceWidth := bounds.Dx()
 			sourceHeight := bounds.Dy()
 
-			logger.Information("Analyzing reference image",
+			opLogger.Information("Analyzing reference image",
 				"source_size", fmt.Sprintf("%dx%d", sourceWidth, sourceHeight),
 				"target_size", fmt.Sprintf("%dx%d", input.TargetWidth, input.TargetHeight))
 
 			// Extract palette using k-means clustering
 			palette, err := aseprite.ExtractPalette(img, paletteSize)
 			if err != nil {
-				logger.Error("Failed to extract palette", "error", err)
+				opLogger.Error("Failed to extract palette", "error", err)
 				return nil, nil, fmt.Errorf("failed to extract palette: %w", err)
 			}
 
-			logger.Debug("Palette extracted", "colors", len(palette))
+			opLogger.Debug("Palette extracted", "colors", len(palette))
 
 			// Generate brightness map
 			brightnessMap, err := aseprite.GenerateBrightnessMap(img, input.TargetWidth, input.TargetHeight, brightnessLevels)
 			if err != nil {
-				logger.Error("Failed to generate brightness map", "error", err)
+				opLogger.Error("Failed to generate brightness map", "error", err)
 				return nil, nil, fmt.Errorf("failed to generate brightness map: %w", err)
 			}
 
 			// Detect edges
 			edgeMap, err := aseprite.DetectEdges(img, edgeThreshold)
 			if err != nil {
-				logger.Error("Failed to detect edges", "error", err)
+				opLogger.Error("Failed to detect edges", "error", err)
 				return nil, nil, fmt.Errorf("failed to detect edges: %w", err)
 			}
 
-			logger.Debug("Edge detection complete", "major_edges", len(edgeMap.MajorEdges))
+			opLogger.Debug("Edge detection complete", "major_edges", len(edgeMap.MajorEdges))
 
 			// Analyze composition
 			composition, err := aseprite.AnalyzeComposition(img, edgeMap)
 			if err != nil {
-				logger.Error("Failed to analyze composition", "error", err)
+				opLogger.Error("Failed to analyze composition", "error", err)
 				return nil, nil, fmt.Errorf("failed to analyze composition: %w", err)
 			}
 
@@ -169,7 +170,7 @@ func RegisterAnalysisTools(server *mcp.Server, client *aseprite.Client, gen *ase
 			// Calculate metadata
 			metadata := calculateMetadata(palette, sourceWidth, sourceHeight, input.TargetWidth, input.TargetHeight)
 
-			logger.Information("Reference analysis complete",
+			opLogger.Information("Reference analysis complete",
 				"palette_colors", len(palette),
 				"focal_points", len(composition.FocalPoints),
 				"dithering_zones", len(ditheringZones),
@@ -184,7 +185,7 @@ func RegisterAnalysisTools(server *mcp.Server, client *aseprite.Client, gen *ase
 				DitheringZones: ditheringZones,
 				Metadata:       metadata,
 			}, nil
-		},
+		}),
 	)
 }
 

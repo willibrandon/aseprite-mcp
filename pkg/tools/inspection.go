@@ -60,8 +60,9 @@ func RegisterInspectionTools(server *mcp.Server, client *aseprite.Client, gen *a
 			Name:        "get_pixels",
 			Description: "Read pixel data from a rectangular region of a sprite. Returns an array of pixels with their coordinates and colors in hex format (#RRGGBBAA). Supports pagination for large regions using cursor and page_size parameters (default page size: 1000, max: 10000).",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input GetPixelsInput) (*mcp.CallToolResult, *GetPixelsOutput, error) {
-			logger.Debug("get_pixels tool called", "sprite_path", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "x", input.X, "y", input.Y, "width", input.Width, "height", input.Height, "cursor", input.Cursor, "page_size", input.PageSize)
+		maybeWrapWithTiming("get_pixels", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input GetPixelsInput) (*mcp.CallToolResult, *GetPixelsOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("get_pixels tool called", "sprite_path", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "x", input.X, "y", input.Y, "width", input.Width, "height", input.Height, "cursor", input.Cursor, "page_size", input.PageSize)
 
 			// Validate inputs
 			if input.Width <= 0 || input.Height <= 0 {
@@ -100,14 +101,14 @@ func RegisterInspectionTools(server *mcp.Server, client *aseprite.Client, gen *a
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to get pixels", "error", err)
+				opLogger.Error("Failed to get pixels", "error", err)
 				return nil, nil, fmt.Errorf("failed to get pixels: %w", err)
 			}
 
 			// Parse JSON output
 			var pixels []PixelData
 			if err := json.Unmarshal([]byte(output), &pixels); err != nil {
-				logger.Error("Failed to parse pixel data", "error", err, "output", output)
+				opLogger.Error("Failed to parse pixel data", "error", err, "output", output)
 				return nil, nil, fmt.Errorf("failed to parse pixel data: %w", err)
 			}
 
@@ -118,13 +119,13 @@ func RegisterInspectionTools(server *mcp.Server, client *aseprite.Client, gen *a
 				nextCursor = strconv.Itoa(nextOffset)
 			}
 
-			logger.Information("Read pixels successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "total", totalPixelCount, "returned", len(pixels), "offset", offset)
+			opLogger.Information("Read pixels successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber, "total", totalPixelCount, "returned", len(pixels), "offset", offset)
 
 			return nil, &GetPixelsOutput{
 				Pixels:      pixels,
 				NextCursor:  nextCursor,
 				TotalPixels: totalPixelCount,
 			}, nil
-		},
+		}),
 	)
 }

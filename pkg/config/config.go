@@ -10,7 +10,9 @@
 //	  "aseprite_path": "/absolute/path/to/aseprite",
 //	  "temp_dir": "/tmp/aseprite-mcp",
 //	  "timeout": 30,
-//	  "log_level": "info"
+//	  "log_level": "info",
+//	  "log_file": "",
+//	  "enable_timing": false
 //	}
 //
 // The aseprite_path field is required and must point to a real Aseprite executable.
@@ -30,6 +32,8 @@ import (
 //   - TempDir defaults to /tmp/aseprite-mcp if not specified
 //   - Timeout defaults to 30 seconds if not specified
 //   - LogLevel defaults to "info" if not specified
+//   - LogFile defaults to empty (stderr only) if not specified
+//   - EnableTiming defaults to false if not specified
 //
 // The AsepritePath is REQUIRED and must be an absolute path to a real executable.
 type Config struct {
@@ -49,6 +53,16 @@ type Config struct {
 	// Valid values: "debug", "info", "warn", "error"
 	// Defaults to "info" if not specified.
 	LogLevel string `json:"log_level"`
+
+	// LogFile is the optional path to a log file for persistent logging.
+	// If empty, logs only go to stderr.
+	// Defaults to empty string if not specified.
+	LogFile string `json:"log_file"`
+
+	// EnableTiming enables request tracking and operation timing for all tools.
+	// When enabled, each operation gets a unique request ID and duration is logged.
+	// Defaults to false if not specified.
+	EnableTiming bool `json:"enable_timing"`
 }
 
 // Default configuration values applied when fields are not specified in the config file.
@@ -104,6 +118,8 @@ type configJSON struct {
 	TempDir      string `json:"temp_dir"`
 	Timeout      int    `json:"timeout"` // timeout in seconds
 	LogLevel     string `json:"log_level"`
+	LogFile      string `json:"log_file"`
+	EnableTiming bool   `json:"enable_timing"`
 }
 
 // loadFromFile loads configuration from the default config file location.
@@ -126,6 +142,8 @@ func (c *Config) loadFromFile() error {
 	c.TempDir = cj.TempDir
 	c.Timeout = time.Duration(cj.Timeout) * time.Second
 	c.LogLevel = cj.LogLevel
+	c.LogFile = cj.LogFile
+	c.EnableTiming = cj.EnableTiming
 
 	return nil
 }

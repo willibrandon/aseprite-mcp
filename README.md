@@ -48,11 +48,19 @@ Create `~/.config/aseprite-mcp/config.json`:
   "aseprite_path": "/path/to/aseprite",
   "temp_dir": "/tmp/aseprite-mcp",
   "timeout": 30,
-  "log_level": "info"
+  "log_level": "info",
+  "log_file": "",
+  "enable_timing": false
 }
 ```
 
-**Important**: The `aseprite_path` must be an absolute path to your Aseprite executable. No automatic discovery or environment variables are used.
+**Configuration options:**
+- `aseprite_path` (required): Absolute path to Aseprite executable. No automatic discovery or environment variables.
+- `temp_dir` (optional): Directory for temporary files. Defaults to `/tmp/aseprite-mcp`.
+- `timeout` (optional): Command timeout in seconds. Defaults to 30.
+- `log_level` (optional): Logging verbosity (`debug`, `info`, `warn`, `error`). Defaults to `info`.
+- `log_file` (optional): Path to log file for persistent logging. If empty, logs only to stderr.
+- `enable_timing` (optional): Enable request tracking and operation timing. Defaults to `false`.
 
 ### 3. Run
 

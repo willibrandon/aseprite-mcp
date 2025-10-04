@@ -43,9 +43,19 @@ All operations require a configuration file at `~/.config/aseprite-mcp/config.js
   "aseprite_path": "/absolute/path/to/aseprite",
   "temp_dir": "/tmp/aseprite-mcp",
   "timeout": 30,
-  "log_level": "info"
+  "log_level": "info",
+  "log_file": "",
+  "enable_timing": false
 }
 ```
+
+Configuration fields:
+- `aseprite_path` (required): Absolute path to Aseprite executable
+- `temp_dir` (optional): Temporary directory, defaults to `/tmp/aseprite-mcp`
+- `timeout` (optional): Command timeout in seconds, defaults to 30
+- `log_level` (optional): Verbosity level (`debug`, `info`, `warn`, `error`), defaults to `info`
+- `log_file` (optional): Path to persistent log file, empty means stderr only
+- `enable_timing` (optional): Enable request tracking/timing, defaults to `false`
 
 The `aseprite_path` MUST be an absolute path to a real Aseprite executable. The project does NOT:
 - Auto-discover Aseprite installations

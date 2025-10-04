@@ -414,8 +414,9 @@ func RegisterAntialiasingTools(server *mcp.Server, client *aseprite.Client, gen 
 			Name:        "suggest_antialiasing",
 			Description: "Analyze pixel art for jagged diagonal edges and suggest intermediate colors to smooth them (antialiasing). Detects stair-step patterns on diagonals and calculates blended colors to create smoother curves. Use auto_apply to automatically apply suggestions or use_palette to constrain intermediate colors to the sprite's palette. Returns suggestions with positions, colors, and directions for manual review or automatic application.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input SuggestAntialiasingInput) (*mcp.CallToolResult, *AntialiasingResult, error) {
-			logger.Debug("suggest_antialiasing tool called",
+		maybeWrapWithTiming("suggest_antialiasing", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input SuggestAntialiasingInput) (*mcp.CallToolResult, *AntialiasingResult, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("suggest_antialiasing tool called",
 				"sprite", input.SpritePath,
 				"layer", input.LayerName,
 				"frame", input.FrameNumber,
@@ -445,6 +446,6 @@ func RegisterAntialiasingTools(server *mcp.Server, client *aseprite.Client, gen 
 			return &mcp.CallToolResult{
 				IsError: false,
 			}, result, nil
-		},
+		}),
 	)
 }

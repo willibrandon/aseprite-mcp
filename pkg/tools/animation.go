@@ -82,8 +82,9 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "set_frame_duration",
 			Description: "Set the duration of an existing animation frame in milliseconds.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input SetFrameDurationInput) (*mcp.CallToolResult, *SetFrameDurationOutput, error) {
-			logger.Debug("set_frame_duration tool called", "sprite_path", input.SpritePath, "frame_number", input.FrameNumber, "duration_ms", input.DurationMs)
+		maybeWrapWithTiming("set_frame_duration", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input SetFrameDurationInput) (*mcp.CallToolResult, *SetFrameDurationOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("set_frame_duration tool called", "sprite_path", input.SpritePath, "frame_number", input.FrameNumber, "duration_ms", input.DurationMs)
 
 			// Validate inputs
 			if input.FrameNumber < 1 {
@@ -100,19 +101,19 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to set frame duration", "error", err)
+				opLogger.Error("Failed to set frame duration", "error", err)
 				return nil, nil, fmt.Errorf("failed to set frame duration: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Frame duration set successfully") {
-				logger.Warning("Unexpected output from set_frame_duration", "output", output)
+				opLogger.Warning("Unexpected output from set_frame_duration", "output", output)
 			}
 
-			logger.Information("Frame duration set successfully", "sprite", input.SpritePath, "frame", input.FrameNumber, "duration_ms", input.DurationMs)
+			opLogger.Information("Frame duration set successfully", "sprite", input.SpritePath, "frame", input.FrameNumber, "duration_ms", input.DurationMs)
 
 			return nil, &SetFrameDurationOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register create_tag tool
@@ -122,8 +123,9 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "create_tag",
 			Description: "Create an animation tag to define a named frame range with playback direction.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input CreateTagInput) (*mcp.CallToolResult, *CreateTagOutput, error) {
-			logger.Debug("create_tag tool called", "sprite_path", input.SpritePath, "tag_name", input.TagName, "from_frame", input.FromFrame, "to_frame", input.ToFrame, "direction", input.Direction)
+		maybeWrapWithTiming("create_tag", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input CreateTagInput) (*mcp.CallToolResult, *CreateTagOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("create_tag tool called", "sprite_path", input.SpritePath, "tag_name", input.TagName, "from_frame", input.FromFrame, "to_frame", input.ToFrame, "direction", input.Direction)
 
 			// Validate inputs
 			if input.TagName == "" {
@@ -154,19 +156,19 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to create tag", "error", err)
+				opLogger.Error("Failed to create tag", "error", err)
 				return nil, nil, fmt.Errorf("failed to create tag: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Tag created successfully") {
-				logger.Warning("Unexpected output from create_tag", "output", output)
+				opLogger.Warning("Unexpected output from create_tag", "output", output)
 			}
 
-			logger.Information("Tag created successfully", "sprite", input.SpritePath, "tag_name", input.TagName, "from_frame", input.FromFrame, "to_frame", input.ToFrame, "direction", input.Direction)
+			opLogger.Information("Tag created successfully", "sprite", input.SpritePath, "tag_name", input.TagName, "from_frame", input.FromFrame, "to_frame", input.ToFrame, "direction", input.Direction)
 
 			return nil, &CreateTagOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register duplicate_frame tool
@@ -176,8 +178,9 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "duplicate_frame",
 			Description: "Duplicate an existing frame and insert it at the specified position.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DuplicateFrameInput) (*mcp.CallToolResult, *DuplicateFrameOutput, error) {
-			logger.Debug("duplicate_frame tool called", "sprite_path", input.SpritePath, "source_frame", input.SourceFrame, "insert_after", input.InsertAfter)
+		maybeWrapWithTiming("duplicate_frame", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DuplicateFrameInput) (*mcp.CallToolResult, *DuplicateFrameOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("duplicate_frame tool called", "sprite_path", input.SpritePath, "source_frame", input.SourceFrame, "insert_after", input.InsertAfter)
 
 			// Validate inputs
 			if input.SourceFrame < 1 {
@@ -194,7 +197,7 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to duplicate frame", "error", err)
+				opLogger.Error("Failed to duplicate frame", "error", err)
 				return nil, nil, fmt.Errorf("failed to duplicate frame: %w", err)
 			}
 
@@ -205,10 +208,10 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 				return nil, nil, fmt.Errorf("failed to parse new frame number from output: %w", err)
 			}
 
-			logger.Information("Frame duplicated successfully", "sprite", input.SpritePath, "source_frame", input.SourceFrame, "new_frame_number", newFrameNumber)
+			opLogger.Information("Frame duplicated successfully", "sprite", input.SpritePath, "source_frame", input.SourceFrame, "new_frame_number", newFrameNumber)
 
 			return nil, &DuplicateFrameOutput{NewFrameNumber: newFrameNumber}, nil
-		},
+		}),
 	)
 
 	// Register link_cel tool
@@ -218,8 +221,9 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "link_cel",
 			Description: "Create a linked cel that references another cel's image data, useful for animation optimization.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input LinkCelInput) (*mcp.CallToolResult, *LinkCelOutput, error) {
-			logger.Debug("link_cel tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "source_frame", input.SourceFrame, "target_frame", input.TargetFrame)
+		maybeWrapWithTiming("link_cel", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input LinkCelInput) (*mcp.CallToolResult, *LinkCelOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("link_cel tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "source_frame", input.SourceFrame, "target_frame", input.TargetFrame)
 
 			// Validate inputs
 			if input.LayerName == "" {
@@ -244,19 +248,19 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to link cel", "error", err)
+				opLogger.Error("Failed to link cel", "error", err)
 				return nil, nil, fmt.Errorf("failed to link cel: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Cel linked successfully") {
-				logger.Warning("Unexpected output from link_cel", "output", output)
+				opLogger.Warning("Unexpected output from link_cel", "output", output)
 			}
 
-			logger.Information("Cel linked successfully", "sprite", input.SpritePath, "layer", input.LayerName, "source_frame", input.SourceFrame, "target_frame", input.TargetFrame)
+			opLogger.Information("Cel linked successfully", "sprite", input.SpritePath, "layer", input.LayerName, "source_frame", input.SourceFrame, "target_frame", input.TargetFrame)
 
 			return nil, &LinkCelOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register delete_tag tool
@@ -266,8 +270,9 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "delete_tag",
 			Description: "Delete an animation tag by name.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DeleteTagInput) (*mcp.CallToolResult, *DeleteTagOutput, error) {
-			logger.Debug("delete_tag tool called", "sprite_path", input.SpritePath, "tag_name", input.TagName)
+		maybeWrapWithTiming("delete_tag", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DeleteTagInput) (*mcp.CallToolResult, *DeleteTagOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("delete_tag tool called", "sprite_path", input.SpritePath, "tag_name", input.TagName)
 
 			// Validate inputs
 			if input.SpritePath == "" {
@@ -284,18 +289,18 @@ func RegisterAnimationTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to delete tag", "error", err)
+				opLogger.Error("Failed to delete tag", "error", err)
 				return nil, nil, fmt.Errorf("failed to delete tag: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Tag deleted successfully") {
-				logger.Warning("Unexpected output from delete_tag", "output", output)
+				opLogger.Warning("Unexpected output from delete_tag", "output", output)
 			}
 
-			logger.Information("Tag deleted successfully", "sprite", input.SpritePath, "tag", input.TagName)
+			opLogger.Information("Tag deleted successfully", "sprite", input.SpritePath, "tag", input.TagName)
 
 			return nil, &DeleteTagOutput{Success: true}, nil
-		},
+		}),
 	)
 }

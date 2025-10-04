@@ -124,8 +124,10 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "create_canvas",
 			Description: "Create a new Aseprite sprite with specified dimensions and color mode. Returns the path to the created .aseprite file.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input CreateCanvasInput) (*mcp.CallToolResult, *CreateCanvasOutput, error) {
-			logger.Debug("create_canvas tool called", "width", input.Width, "height", input.Height, "color_mode", input.ColorMode)
+		maybeWrapWithTiming("create_canvas", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input CreateCanvasInput) (*mcp.CallToolResult, *CreateCanvasOutput, error) {
+			// Use logger with context for request tracking
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("create_canvas parameters", "width", input.Width, "height", input.Height, "color_mode", input.ColorMode)
 
 			// Validate color mode
 			var colorMode aseprite.ColorMode
@@ -149,17 +151,17 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with Aseprite
 			output, err := client.ExecuteLua(ctx, script, "")
 			if err != nil {
-				logger.Error("Failed to create canvas", "error", err)
+				opLogger.Error("Failed to create canvas", "error", err)
 				return nil, nil, fmt.Errorf("failed to create canvas: %w", err)
 			}
 
 			// Parse output to get file path
 			filePath := strings.TrimSpace(output)
 
-			logger.Information("Canvas created successfully", "path", filePath, "width", input.Width, "height", input.Height)
+			opLogger.Debug("Canvas created successfully", "path", filePath, "width", input.Width, "height", input.Height)
 
 			return nil, &CreateCanvasOutput{FilePath: filePath}, nil
-		},
+		}),
 	)
 
 	// Register add_layer tool
@@ -169,8 +171,9 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "add_layer",
 			Description: "Add a new layer to an existing Aseprite sprite. Returns success status.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input AddLayerInput) (*mcp.CallToolResult, *AddLayerOutput, error) {
-			logger.Debug("add_layer tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName)
+		maybeWrapWithTiming("add_layer", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input AddLayerInput) (*mcp.CallToolResult, *AddLayerOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("add_layer tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName)
 
 			// Validate layer name
 			if input.LayerName == "" {
@@ -183,14 +186,14 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with the sprite
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to add layer", "error", err)
+				opLogger.Error("Failed to add layer", "error", err)
 				return nil, nil, fmt.Errorf("failed to add layer: %w", err)
 			}
 
-			logger.Information("Layer added successfully", "sprite", input.SpritePath, "layer", input.LayerName)
+			opLogger.Debug("Layer added successfully", "sprite", input.SpritePath, "layer", input.LayerName)
 
 			return nil, &AddLayerOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register add_frame tool
@@ -200,8 +203,9 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "add_frame",
 			Description: "Add a new frame to an existing Aseprite sprite. Returns the frame number (1-based index).",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input AddFrameInput) (*mcp.CallToolResult, *AddFrameOutput, error) {
-			logger.Debug("add_frame tool called", "sprite_path", input.SpritePath, "duration_ms", input.DurationMs)
+		maybeWrapWithTiming("add_frame", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input AddFrameInput) (*mcp.CallToolResult, *AddFrameOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("add_frame tool called", "sprite_path", input.SpritePath, "duration_ms", input.DurationMs)
 
 			// Validate duration
 			if input.DurationMs < 1 || input.DurationMs > 65535 {
@@ -214,7 +218,7 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to add frame", "error", err)
+				opLogger.Error("Failed to add frame", "error", err)
 				return nil, nil, fmt.Errorf("failed to add frame: %w", err)
 			}
 
@@ -225,10 +229,10 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 				return nil, nil, fmt.Errorf("failed to parse frame number from output: %w", err)
 			}
 
-			logger.Information("Frame added successfully", "sprite", input.SpritePath, "frame_number", frameNumber)
+			opLogger.Debug("Frame added successfully", "sprite", input.SpritePath, "frame_number", frameNumber)
 
 			return nil, &AddFrameOutput{FrameNumber: frameNumber}, nil
-		},
+		}),
 	)
 
 	// Register get_sprite_info tool
@@ -238,8 +242,9 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "get_sprite_info",
 			Description: "Retrieve metadata about an existing Aseprite sprite including dimensions, color mode, frame count, layer count, and layer names.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input GetSpriteInfoInput) (*mcp.CallToolResult, *GetSpriteInfoOutput, error) {
-			logger.Debug("get_sprite_info tool called", "sprite_path", input.SpritePath)
+		maybeWrapWithTiming("get_sprite_info", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input GetSpriteInfoInput) (*mcp.CallToolResult, *GetSpriteInfoOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("get_sprite_info tool called", "sprite_path", input.SpritePath)
 
 			// Generate Lua script
 			script := gen.GetSpriteInfo()
@@ -247,21 +252,21 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to get sprite info", "error", err)
+				opLogger.Error("Failed to get sprite info", "error", err)
 				return nil, nil, fmt.Errorf("failed to get sprite info: %w", err)
 			}
 
 			// Parse JSON output
 			var info GetSpriteInfoOutput
 			if err := json.Unmarshal([]byte(strings.TrimSpace(output)), &info); err != nil {
-				logger.Error("Failed to parse sprite info", "error", err, "output", output)
+				opLogger.Error("Failed to parse sprite info", "error", err, "output", output)
 				return nil, nil, fmt.Errorf("failed to parse sprite info: %w", err)
 			}
 
-			logger.Information("Sprite info retrieved successfully", "sprite", input.SpritePath, "width", info.Width, "height", info.Height)
+			opLogger.Debug("Sprite info retrieved successfully", "sprite", input.SpritePath, "width", info.Width, "height", info.Height)
 
 			return nil, &info, nil
-		},
+		}),
 	)
 
 	// Register delete_layer tool
@@ -271,8 +276,9 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "delete_layer",
 			Description: "Delete a layer from an existing sprite. Cannot delete the last remaining layer.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DeleteLayerInput) (*mcp.CallToolResult, *DeleteLayerOutput, error) {
-			logger.Debug("delete_layer tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName)
+		maybeWrapWithTiming("delete_layer", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DeleteLayerInput) (*mcp.CallToolResult, *DeleteLayerOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("delete_layer tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName)
 
 			// Generate Lua script
 			script := gen.DeleteLayer(input.LayerName)
@@ -280,14 +286,14 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with the sprite
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to delete layer", "error", err)
+				opLogger.Error("Failed to delete layer", "error", err)
 				return nil, nil, fmt.Errorf("failed to delete layer: %w", err)
 			}
 
-			logger.Information("Layer deleted successfully", "sprite", input.SpritePath, "layer", input.LayerName)
+			opLogger.Information("Layer deleted successfully", "sprite", input.SpritePath, "layer", input.LayerName)
 
 			return nil, &DeleteLayerOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register delete_frame tool
@@ -297,8 +303,9 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			Name:        "delete_frame",
 			Description: "Delete a frame from an existing sprite. Cannot delete the last remaining frame.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DeleteFrameInput) (*mcp.CallToolResult, *DeleteFrameOutput, error) {
-			logger.Debug("delete_frame tool called", "sprite_path", input.SpritePath, "frame_number", input.FrameNumber)
+		maybeWrapWithTiming("delete_frame", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DeleteFrameInput) (*mcp.CallToolResult, *DeleteFrameOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("delete_frame tool called", "sprite_path", input.SpritePath, "frame_number", input.FrameNumber)
 
 			// Generate Lua script
 			script := gen.DeleteFrame(input.FrameNumber)
@@ -306,14 +313,14 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			// Execute Lua script with the sprite
 			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to delete frame", "error", err)
+				opLogger.Error("Failed to delete frame", "error", err)
 				return nil, nil, fmt.Errorf("failed to delete frame: %w", err)
 			}
 
-			logger.Information("Frame deleted successfully", "sprite", input.SpritePath, "frame_number", input.FrameNumber)
+			opLogger.Information("Frame deleted successfully", "sprite", input.SpritePath, "frame_number", input.FrameNumber)
 
 			return nil, &DeleteFrameOutput{Success: true}, nil
-		},
+		}),
 	)
 }
 

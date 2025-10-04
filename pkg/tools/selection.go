@@ -7,6 +7,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
+	"github.com/willibrandon/aseprite-mcp-go/pkg/config"
 	"github.com/willibrandon/mtlog/core"
 )
 
@@ -109,7 +110,7 @@ type PasteClipboardOutput struct {
 }
 
 // RegisterSelectionTools registers all selection-related MCP tools with the server.
-func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *aseprite.LuaGenerator, logger core.Logger) {
+func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *aseprite.LuaGenerator, cfg *config.Config, logger core.Logger) {
 	// Register select_rectangle tool
 	mcp.AddTool(
 		server,
@@ -117,8 +118,9 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "select_rectangle",
 			Description: "Create a rectangular selection with specified mode (replace/add/subtract/intersect). Selections define which pixels will be affected by editing operations.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input SelectRectangleInput) (*mcp.CallToolResult, *SelectRectangleOutput, error) {
-			logger.Debug("select_rectangle tool called", "sprite_path", input.SpritePath, "x", input.X, "y", input.Y, "width", input.Width, "height", input.Height, "mode", input.Mode)
+		maybeWrapWithTiming("select_rectangle", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input SelectRectangleInput) (*mcp.CallToolResult, *SelectRectangleOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("select_rectangle tool called", "sprite_path", input.SpritePath, "x", input.X, "y", input.Y, "width", input.Width, "height", input.Height, "mode", input.Mode)
 
 			// Validate inputs
 			if input.Width < 1 {
@@ -145,19 +147,19 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to create rectangle selection", "error", err)
+				opLogger.Error("Failed to create rectangle selection", "error", err)
 				return nil, nil, fmt.Errorf("failed to create rectangle selection: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Rectangle selection created successfully") {
-				logger.Warning("Unexpected output from select_rectangle", "output", output)
+				opLogger.Warning("Unexpected output from select_rectangle", "output", output)
 			}
 
-			logger.Information("Rectangle selection created successfully", "sprite", input.SpritePath, "mode", mode)
+			opLogger.Information("Rectangle selection created successfully", "sprite", input.SpritePath, "mode", mode)
 
 			return nil, &SelectRectangleOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register select_ellipse tool
@@ -167,8 +169,9 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "select_ellipse",
 			Description: "Create an elliptical selection with specified mode (replace/add/subtract/intersect). The ellipse is defined by a bounding box.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input SelectEllipseInput) (*mcp.CallToolResult, *SelectEllipseOutput, error) {
-			logger.Debug("select_ellipse tool called", "sprite_path", input.SpritePath, "x", input.X, "y", input.Y, "width", input.Width, "height", input.Height, "mode", input.Mode)
+		maybeWrapWithTiming("select_ellipse", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input SelectEllipseInput) (*mcp.CallToolResult, *SelectEllipseOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("select_ellipse tool called", "sprite_path", input.SpritePath, "x", input.X, "y", input.Y, "width", input.Width, "height", input.Height, "mode", input.Mode)
 
 			// Validate inputs
 			if input.Width < 1 {
@@ -195,19 +198,19 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to create ellipse selection", "error", err)
+				opLogger.Error("Failed to create ellipse selection", "error", err)
 				return nil, nil, fmt.Errorf("failed to create ellipse selection: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Ellipse selection created successfully") {
-				logger.Warning("Unexpected output from select_ellipse", "output", output)
+				opLogger.Warning("Unexpected output from select_ellipse", "output", output)
 			}
 
-			logger.Information("Ellipse selection created successfully", "sprite", input.SpritePath, "mode", mode)
+			opLogger.Information("Ellipse selection created successfully", "sprite", input.SpritePath, "mode", mode)
 
 			return nil, &SelectEllipseOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register select_all tool
@@ -217,8 +220,9 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "select_all",
 			Description: "Select the entire canvas. This selects all pixels in the sprite, regardless of layers or frames.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input SelectAllInput) (*mcp.CallToolResult, *SelectAllOutput, error) {
-			logger.Debug("select_all tool called", "sprite_path", input.SpritePath)
+		maybeWrapWithTiming("select_all", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input SelectAllInput) (*mcp.CallToolResult, *SelectAllOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("select_all tool called", "sprite_path", input.SpritePath)
 
 			// Generate Lua script
 			script := gen.SelectAll()
@@ -226,19 +230,19 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to select all", "error", err)
+				opLogger.Error("Failed to select all", "error", err)
 				return nil, nil, fmt.Errorf("failed to select all: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Select all completed successfully") {
-				logger.Warning("Unexpected output from select_all", "output", output)
+				opLogger.Warning("Unexpected output from select_all", "output", output)
 			}
 
-			logger.Information("Select all completed successfully", "sprite", input.SpritePath)
+			opLogger.Information("Select all completed successfully", "sprite", input.SpritePath)
 
 			return nil, &SelectAllOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register deselect tool
@@ -248,8 +252,9 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "deselect",
 			Description: "Clear the current selection. Removes any active selection from the sprite.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input DeselectInput) (*mcp.CallToolResult, *DeselectOutput, error) {
-			logger.Debug("deselect tool called", "sprite_path", input.SpritePath)
+		maybeWrapWithTiming("deselect", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input DeselectInput) (*mcp.CallToolResult, *DeselectOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("deselect tool called", "sprite_path", input.SpritePath)
 
 			// Generate Lua script
 			script := gen.Deselect()
@@ -257,19 +262,19 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to deselect", "error", err)
+				opLogger.Error("Failed to deselect", "error", err)
 				return nil, nil, fmt.Errorf("failed to deselect: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Deselect completed successfully") {
-				logger.Warning("Unexpected output from deselect", "output", output)
+				opLogger.Warning("Unexpected output from deselect", "output", output)
 			}
 
-			logger.Information("Deselect completed successfully", "sprite", input.SpritePath)
+			opLogger.Information("Deselect completed successfully", "sprite", input.SpritePath)
 
 			return nil, &DeselectOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register move_selection tool
@@ -279,8 +284,9 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "move_selection",
 			Description: "Move the current selection by a specified offset. Does not move the pixel content, only the selection bounds. Requires an active selection.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input MoveSelectionInput) (*mcp.CallToolResult, *MoveSelectionOutput, error) {
-			logger.Debug("move_selection tool called", "sprite_path", input.SpritePath, "dx", input.DX, "dy", input.DY)
+		maybeWrapWithTiming("move_selection", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input MoveSelectionInput) (*mcp.CallToolResult, *MoveSelectionOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("move_selection tool called", "sprite_path", input.SpritePath, "dx", input.DX, "dy", input.DY)
 
 			// Generate Lua script
 			script := gen.MoveSelection(input.DX, input.DY)
@@ -288,19 +294,19 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to move selection", "error", err)
+				opLogger.Error("Failed to move selection", "error", err)
 				return nil, nil, fmt.Errorf("failed to move selection: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Selection moved successfully") {
-				logger.Warning("Unexpected output from move_selection", "output", output)
+				opLogger.Warning("Unexpected output from move_selection", "output", output)
 			}
 
-			logger.Information("Selection moved successfully", "sprite", input.SpritePath, "dx", input.DX, "dy", input.DY)
+			opLogger.Information("Selection moved successfully", "sprite", input.SpritePath, "dx", input.DX, "dy", input.DY)
 
 			return nil, &MoveSelectionOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register cut_selection tool
@@ -310,8 +316,9 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "cut_selection",
 			Description: "Cut the selected pixels to clipboard. Removes pixels from the specified layer and frame, placing them on the clipboard. Requires an active selection.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input CutSelectionInput) (*mcp.CallToolResult, *CutSelectionOutput, error) {
-			logger.Debug("cut_selection tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber)
+		maybeWrapWithTiming("cut_selection", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input CutSelectionInput) (*mcp.CallToolResult, *CutSelectionOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("cut_selection tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber)
 
 			// Validate inputs
 			if input.LayerName == "" {
@@ -328,19 +335,19 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to cut selection", "error", err)
+				opLogger.Error("Failed to cut selection", "error", err)
 				return nil, nil, fmt.Errorf("failed to cut selection: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Cut selection completed successfully") {
-				logger.Warning("Unexpected output from cut_selection", "output", output)
+				opLogger.Warning("Unexpected output from cut_selection", "output", output)
 			}
 
-			logger.Information("Cut selection completed successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber)
+			opLogger.Information("Cut selection completed successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber)
 
 			return nil, &CutSelectionOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register copy_selection tool
@@ -350,8 +357,9 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "copy_selection",
 			Description: "Copy the selected pixels to clipboard without removing them. Requires an active selection.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input CopySelectionInput) (*mcp.CallToolResult, *CopySelectionOutput, error) {
-			logger.Debug("copy_selection tool called", "sprite_path", input.SpritePath)
+		maybeWrapWithTiming("copy_selection", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input CopySelectionInput) (*mcp.CallToolResult, *CopySelectionOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("copy_selection tool called", "sprite_path", input.SpritePath)
 
 			// Generate Lua script
 			script := gen.CopySelection()
@@ -359,19 +367,19 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to copy selection", "error", err)
+				opLogger.Error("Failed to copy selection", "error", err)
 				return nil, nil, fmt.Errorf("failed to copy selection: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Copy selection completed successfully") {
-				logger.Warning("Unexpected output from copy_selection", "output", output)
+				opLogger.Warning("Unexpected output from copy_selection", "output", output)
 			}
 
-			logger.Information("Copy selection completed successfully", "sprite", input.SpritePath)
+			opLogger.Information("Copy selection completed successfully", "sprite", input.SpritePath)
 
 			return nil, &CopySelectionOutput{Success: true}, nil
-		},
+		}),
 	)
 
 	// Register paste_clipboard tool
@@ -381,8 +389,9 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			Name:        "paste_clipboard",
 			Description: "Paste clipboard content onto the specified layer and frame. Optionally specify paste position (x, y). Requires clipboard to contain image data.",
 		},
-		func(ctx context.Context, req *mcp.CallToolRequest, input PasteClipboardInput) (*mcp.CallToolResult, *PasteClipboardOutput, error) {
-			logger.Debug("paste_clipboard tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "x", input.X, "y", input.Y)
+		maybeWrapWithTiming("paste_clipboard", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input PasteClipboardInput) (*mcp.CallToolResult, *PasteClipboardOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("paste_clipboard tool called", "sprite_path", input.SpritePath, "layer_name", input.LayerName, "frame_number", input.FrameNumber, "x", input.X, "y", input.Y)
 
 			// Validate inputs
 			if input.LayerName == "" {
@@ -399,18 +408,18 @@ func RegisterSelectionTools(server *mcp.Server, client *aseprite.Client, gen *as
 			// Execute Lua script with the sprite
 			output, err := client.ExecuteLua(ctx, script, input.SpritePath)
 			if err != nil {
-				logger.Error("Failed to paste clipboard", "error", err)
+				opLogger.Error("Failed to paste clipboard", "error", err)
 				return nil, nil, fmt.Errorf("failed to paste clipboard: %w", err)
 			}
 
 			// Check for success message
 			if !strings.Contains(output, "Paste completed successfully") {
-				logger.Warning("Unexpected output from paste_clipboard", "output", output)
+				opLogger.Warning("Unexpected output from paste_clipboard", "output", output)
 			}
 
-			logger.Information("Paste completed successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber)
+			opLogger.Information("Paste completed successfully", "sprite", input.SpritePath, "layer", input.LayerName, "frame", input.FrameNumber)
 
 			return nil, &PasteClipboardOutput{Success: true}, nil
-		},
+		}),
 	)
 }
