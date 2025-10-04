@@ -28,7 +28,10 @@ jobs:
       - name: Check if Dockerfile.ci changed
         id: dockerfile-changed
         run: |
-          if git diff --name-only HEAD^ HEAD | grep -q "^Dockerfile.ci$"; then
+          # Check if this is first run or Dockerfile changed
+          if ! git rev-parse HEAD^ >/dev/null 2>&1; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          elif git diff --name-only HEAD^ HEAD | grep -q "^Dockerfile.ci$"; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
