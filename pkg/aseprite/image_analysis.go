@@ -95,19 +95,26 @@ func GenerateBrightnessMap(img image.Image, targetW, targetH, numLevels int) (*B
 
 // DetectEdges applies Sobel edge detection to an image.
 // Returns a binary edge map where 1 = edge detected, 0 = no edge.
-func DetectEdges(img image.Image, threshold int) (*EdgeMap, error) {
+// If targetW and targetH are > 0, the image is downsampled before edge detection.
+func DetectEdges(img image.Image, threshold int, targetW, targetH int) (*EdgeMap, error) {
 	if threshold < 0 || threshold > 255 {
 		return nil, fmt.Errorf("threshold must be between 0 and 255, got %d", threshold)
 	}
 
-	bounds := img.Bounds()
+	// Downsample image to target dimensions if specified
+	processImg := img
+	if targetW > 0 && targetH > 0 {
+		processImg = resize.Resize(uint(targetW), uint(targetH), img, resize.Bilinear)
+	}
+
+	bounds := processImg.Bounds()
 	width, height := bounds.Dx(), bounds.Dy()
 
 	// Convert to grayscale
 	gray := image.NewGray(bounds)
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			gray.Set(x, y, img.At(x, y))
+			gray.Set(x, y, processImg.At(x, y))
 		}
 	}
 

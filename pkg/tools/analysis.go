@@ -148,8 +148,8 @@ func RegisterAnalysisTools(server *mcp.Server, client *aseprite.Client, gen *ase
 				return nil, nil, fmt.Errorf("failed to generate brightness map: %w", err)
 			}
 
-			// Detect edges
-			edgeMap, err := aseprite.DetectEdges(img, edgeThreshold)
+			// Detect edges (downsampled to target resolution to reduce response size)
+			edgeMap, err := aseprite.DetectEdges(img, edgeThreshold, input.TargetWidth, input.TargetHeight)
 			if err != nil {
 				opLogger.Error("Failed to detect edges", "error", err)
 				return nil, nil, fmt.Errorf("failed to detect edges: %w", err)

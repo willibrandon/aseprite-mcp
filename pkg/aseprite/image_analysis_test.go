@@ -160,7 +160,7 @@ func TestDetectEdges(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			img := createEdgeTestImage(100, 100)
-			result, err := DetectEdges(img, tt.threshold)
+			result, err := DetectEdges(img, tt.threshold, 0, 0)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DetectEdges() error = %v, wantErr %v", err, tt.wantErr)
@@ -210,7 +210,7 @@ func TestAnalyzeComposition(t *testing.T) {
 	img := createEdgeTestImage(100, 100)
 
 	// First detect edges
-	edgeMap, err := DetectEdges(img, 30)
+	edgeMap, err := DetectEdges(img, 30, 0, 0)
 	if err != nil {
 		t.Fatalf("DetectEdges() error = %v", err)
 	}

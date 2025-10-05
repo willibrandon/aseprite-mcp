@@ -119,12 +119,12 @@ func TestAnalyzeReference_ViaMCP(t *testing.T) {
 	}
 	assert.NotNil(t, output.BrightnessMap.Legend, "Should have brightness legend")
 
-	// Verify edge map (note: edge detection is done on source image for full detail)
+	// Verify edge map (downsampled to target resolution to reduce response size)
 	assert.NotNil(t, output.EdgeMap, "Should have edge map")
 	assert.NotNil(t, output.EdgeMap.Grid, "Should have edge grid")
-	assert.Equal(t, 100, len(output.EdgeMap.Grid), "Edge grid height should match source")
+	assert.Equal(t, 32, len(output.EdgeMap.Grid), "Edge grid height should match target")
 	if len(output.EdgeMap.Grid) > 0 {
-		assert.Equal(t, 100, len(output.EdgeMap.Grid[0]), "Edge grid width should match source")
+		assert.Equal(t, 32, len(output.EdgeMap.Grid[0]), "Edge grid width should match target")
 	}
 
 	// Verify composition analysis
