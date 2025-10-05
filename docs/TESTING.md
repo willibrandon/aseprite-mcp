@@ -5,19 +5,42 @@
 ALL tests require a real Aseprite installation with configuration file.
 
 Create `~/.config/aseprite-mcp/config.json`:
+
+**macOS:**
 ```json
 {
-  "aseprite_path": "/absolute/path/to/aseprite",
+  "aseprite_path": "/Applications/Aseprite.app/Contents/MacOS/aseprite",
   "temp_dir": "/tmp/aseprite-mcp",
   "timeout": 30,
-  "log_level": "info"
+  "log_level": "info",
+  "log_file": "",
+  "enable_timing": false
 }
 ```
 
-Example paths:
-- Windows: `D:\\SRC\\aseprite\\build\\bin\\aseprite.exe`
-- macOS: `/Applications/Aseprite.app/Contents/MacOS/aseprite`
-- Linux: `/usr/bin/aseprite`
+**Linux:**
+```json
+{
+  "aseprite_path": "/usr/bin/aseprite",
+  "temp_dir": "/tmp/aseprite-mcp",
+  "timeout": 30,
+  "log_level": "info",
+  "log_file": "",
+  "enable_timing": false
+}
+```
+
+**Windows:**
+```json
+{
+  "aseprite_path": "C:\\Program Files\\Aseprite\\aseprite.exe",
+  "temp_dir": "C:\\Temp\\aseprite-mcp",
+  "timeout": 30,
+  "log_level": "info",
+  "log_file": "",
+  "enable_timing": false
+}
+```
 
 ## Unit Tests
 
@@ -62,6 +85,15 @@ open coverage.html
   - Create real sprites, draw pixels, export images
   - Verify file I/O with real Aseprite binary
 
+## Docker Testing
+
+Run tests in Docker CI environment (includes Aseprite):
+```bash
+make docker-test-all
+```
+
+This runs both unit and integration tests in the CI container with Aseprite pre-built.
+
 ## Manual Testing
 
 Test server manually:
@@ -69,15 +101,18 @@ Test server manually:
 go run ./cmd/aseprite-mcp
 ```
 
+Test server via Docker:
+```bash
+make docker-run-full
+```
+
 ## Testing Philosophy
 
-**No Mocks, No Fakes, No Stubs**
-
-All tests use real Aseprite executable. This ensures:
-- Tests reflect actual Aseprite behavior
-- Changes in Aseprite API are caught immediately
+All tests use a real Aseprite executable to ensure:
+- Tests accurately reflect Aseprite's actual behavior
+- Changes in Aseprite's API are detected immediately
 - Integration issues are discovered during development
-- Confidence that the server works with real Aseprite
+- High confidence that the server works correctly in production
 
 ## Troubleshooting
 
@@ -89,5 +124,5 @@ All tests use real Aseprite executable. This ensures:
 - On Windows, use double backslashes: `D:\\path\\to\\aseprite.exe`
 
 **Tests timeout**
-- Increase `timeout` value in config.json (value in nanoseconds)
-- Default is 30000000000 (30 seconds)
+- Increase `timeout` value in config.json (value in seconds)
+- Default is 30 seconds
