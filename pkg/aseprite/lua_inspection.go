@@ -100,6 +100,9 @@ local endIdx = (limit > 0) and (offset + limit - 1) or -1
 
 local pixels = {}
 
+-- Get palette for indexed color mode
+local palette = spr.palettes[1]
+
 -- Read pixels from the specified region
 for py = %d, %d do
 	for px = %d, %d do
@@ -114,10 +117,28 @@ for py = %d, %d do
 				local pixelValue = img:getPixel(imgX, imgY)
 
 				-- Convert pixel value to RGBA
-				local r = app.pixelColor.rgbaR(pixelValue)
-				local g = app.pixelColor.rgbaG(pixelValue)
-				local b = app.pixelColor.rgbaB(pixelValue)
-				local a = app.pixelColor.rgbaA(pixelValue)
+				local r, g, b, a
+				if spr.colorMode == ColorMode.INDEXED then
+					-- In indexed mode, pixelValue is a palette index
+					-- Check if index is within palette bounds
+					if pixelValue >= 0 and pixelValue < #palette then
+						-- Look up the actual color in the palette
+						local palColor = palette:getColor(pixelValue)
+						r = palColor.red
+						g = palColor.green
+						b = palColor.blue
+						a = palColor.alpha
+					else
+						-- Out of bounds index, treat as transparent
+						r, g, b, a = 0, 0, 0, 0
+					end
+				else
+					-- In RGB/Grayscale mode, extract color components directly
+					r = app.pixelColor.rgbaR(pixelValue)
+					g = app.pixelColor.rgbaG(pixelValue)
+					b = app.pixelColor.rgbaB(pixelValue)
+					a = app.pixelColor.rgbaA(pixelValue)
+				end
 
 				-- Store as hex color
 				local hexColor = string.format("#%%02X%%02X%%02X%%02X", r, g, b, a)

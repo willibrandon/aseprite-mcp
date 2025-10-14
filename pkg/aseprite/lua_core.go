@@ -52,39 +52,57 @@ func FormatColor(c Color) string {
 	return fmt.Sprintf("Color(%d, %d, %d, %d)", c.R, c.G, c.B, c.A)
 }
 
-// FormatColorWithPalette formats a Color with optional palette snapping.
+// FormatColorWithPalette formats a Color with optional palette snapping for img:putPixel.
 //
 // If usePalette is false, returns a direct Color constructor call.
-// If usePalette is true, wraps the color in snapToPalette() to find the nearest palette color.
+// If usePalette is true, wraps the color in snapToPaletteForPixel() to find the nearest palette color.
 //
-// The snapToPalette function must be defined in the script (use GeneratePaletteSnapperHelper).
+// The snapToPaletteForPixel function must be defined in the script (use GeneratePaletteSnapperHelper).
 // This is useful for palette-constrained pixel art to ensure all colors match the palette.
+// Returns palette index in indexed mode, pixel color in other modes.
 func FormatColorWithPalette(c Color, usePalette bool) string {
 	if !usePalette {
 		return FormatColor(c)
 	}
-	return fmt.Sprintf("snapToPalette(%d, %d, %d, %d)", c.R, c.G, c.B, c.A)
+	return fmt.Sprintf("snapToPaletteForPixel(%d, %d, %d, %d)", c.R, c.G, c.B, c.A)
 }
 
-// GeneratePaletteSnapperHelper returns Lua code defining a snapToPalette helper function.
+// FormatColorWithPaletteForTool formats a Color with optional palette snapping for app.useTool.
 //
-// The generated function snaps an arbitrary RGBA color to the nearest color in the
-// sprite's active palette using LAB color space distance for perceptual accuracy.
+// If usePalette is false, returns a direct Color constructor call.
+// If usePalette is true, wraps the color in snapToPaletteForTool() to find the nearest palette color.
+//
+// The snapToPaletteForTool function must be defined in the script (use GeneratePaletteSnapperHelper).
+// Always returns a pixel color value suitable for app.useTool in all color modes.
+func FormatColorWithPaletteForTool(c Color, usePalette bool) string {
+	if !usePalette {
+		return FormatColor(c)
+	}
+	return fmt.Sprintf("snapToPaletteForTool(%d, %d, %d, %d)", c.R, c.G, c.B, c.A)
+}
+
+// GeneratePaletteSnapperHelper returns Lua code defining palette snapping helper functions.
+//
+// Generates two helper functions:
+//  1. snapToPaletteForPixel(r, g, b, a) - for img:putPixel (returns index in indexed mode)
+//  2. snapToPaletteForTool(r, g, b, a) - for app.useTool (returns pixel color)
+//
+// Both functions snap an arbitrary RGBA color to the nearest color in the sprite's active
+// palette using Euclidean color space distance.
 //
 // Include this helper at the start of scripts that use palette-aware drawing (use_palette=true).
-// The function signature is: snapToPalette(r, g, b, a) -> Color
 func GeneratePaletteSnapperHelper() string {
 	return `
--- Helper: Snap color to nearest palette color
-local function snapToPalette(r, g, b, a)
-	local palette = app.activeSprite.palettes[1]
+-- Helper: Find nearest palette index for given RGBA color
+local function findNearestPaletteIndex(r, g, b, a)
+	local spr = app.activeSprite
+	local palette = spr.palettes[1]
 	if not palette or #palette == 0 then
-		-- No palette available, return original color
-		return Color(r, g, b, a)
+		return 0
 	end
 
 	local minDist = math.huge
-	local nearestColor = palette:getColor(0)
+	local nearestIndex = 0
 
 	for i = 0, #palette - 1 do
 		local palColor = palette:getColor(i)
@@ -96,11 +114,47 @@ local function snapToPalette(r, g, b, a)
 
 		if dist < minDist then
 			minDist = dist
-			nearestColor = palColor
+			nearestIndex = i
 		end
 	end
 
-	return Color(nearestColor.red, nearestColor.green, nearestColor.blue, nearestColor.alpha)
+	return nearestIndex
+end
+
+-- Helper: Snap color for img:putPixel (returns palette index in indexed mode)
+local function snapToPaletteForPixel(r, g, b, a)
+	local spr = app.activeSprite
+	if spr.colorMode == ColorMode.INDEXED then
+		-- In indexed mode, return the palette index directly
+		return findNearestPaletteIndex(r, g, b, a)
+	else
+		-- In RGB/Grayscale, return pixel color
+		local nearestIndex = findNearestPaletteIndex(r, g, b, a)
+		local palette = spr.palettes[1]
+		local nearestColor = palette:getColor(nearestIndex)
+		return app.pixelColor.rgba(nearestColor.red, nearestColor.green, nearestColor.blue, nearestColor.alpha)
+	end
+end
+
+-- Helper: Snap color for app.useTool (returns index in indexed mode, pixel color otherwise)
+local function snapToPaletteForTool(r, g, b, a)
+	local spr = app.activeSprite
+	local nearestIndex = findNearestPaletteIndex(r, g, b, a)
+
+	if spr.colorMode == ColorMode.INDEXED then
+		-- In indexed mode, app.useTool expects palette index
+		return nearestIndex
+	else
+		-- In RGB/Grayscale, app.useTool expects pixel color
+		local palette = spr.palettes[1]
+		local nearestColor = palette:getColor(nearestIndex)
+		return app.pixelColor.rgba(nearestColor.red, nearestColor.green, nearestColor.blue, nearestColor.alpha)
+	end
+end
+
+-- Default snapToPalette for backwards compatibility (uses ForPixel variant)
+local function snapToPalette(r, g, b, a)
+	return snapToPaletteForPixel(r, g, b, a)
 end
 `
 }
