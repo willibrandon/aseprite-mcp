@@ -318,13 +318,13 @@ func TestLuaGenerator_DrawContour(t *testing.T) {
 		script := gen.DrawContour("Layer 1", 1, points, color, 2, false, true)
 
 		// Should include palette snapper helper
-		if !strings.Contains(script, "function snapToPalette") {
-			t.Error("script with use_palette missing snapToPalette helper")
+		if !strings.Contains(script, "function snapToPaletteForTool") {
+			t.Error("script with use_palette missing snapToPaletteForTool helper")
 		}
 
-		// The color variable should be assigned the result of snapToPalette (with RGBA values, not Color())
-		if !strings.Contains(script, "local color = snapToPalette(255, 0, 0, 255)") {
-			t.Error("script should use snapToPalette for color assignment")
+		// The color variable should be assigned the result of snapToPaletteForTool (with RGBA values, not Color())
+		if !strings.Contains(script, "local color = snapToPaletteForTool(255, 0, 0, 255)") {
+			t.Error("script should use snapToPaletteForTool for color assignment")
 		}
 	})
 }
