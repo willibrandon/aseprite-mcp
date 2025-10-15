@@ -7,6 +7,10 @@ import "fmt"
 // Creates a sprite with the specified dimensions and color mode, then saves it to disk.
 // The sprite is created using Aseprite's Sprite constructor and saved to the provided path.
 //
+// For indexed color mode sprites, the transparent color is set to palette index 255 instead
+// of the default index 0. This allows palette index 0 to be used for actual colors without
+// being treated as transparent by Aseprite's cel trimming operations.
+//
 // Parameters:
 //   - width: sprite width in pixels (1-65535)
 //   - height: sprite height in pixels (1-65535)
@@ -16,6 +20,15 @@ import "fmt"
 // The generated script prints the filename on success.
 func (g *LuaGenerator) CreateCanvas(width, height int, colorMode ColorMode, filename string) string {
 	escapedFilename := EscapeString(filename)
+
+	// For indexed sprites, set transparent color to index 255 to allow index 0 to be used for actual colors
+	if colorMode == ColorModeIndexed {
+		return fmt.Sprintf(`local spr = Sprite(%d, %d, %s)
+spr.transparentColor = 255
+spr:saveAs("%s")
+print("%s")`, width, height, colorMode.ToLua(), escapedFilename, escapedFilename)
+	}
+
 	return fmt.Sprintf(`local spr = Sprite(%d, %d, %s)
 spr:saveAs("%s")
 print("%s")`, width, height, colorMode.ToLua(), escapedFilename, escapedFilename)
