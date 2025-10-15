@@ -5,6 +5,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -253,4 +254,131 @@ func TestIntegration_MixedPaletteAndNonPalette_Drawing(t *testing.T) {
 	}
 
 	t.Logf("✓ Mixed palette and non-palette drawing works correctly")
+}
+
+// TestIntegration_IndexedColorMode_DrawingVerification tests issue #1:
+// Drawing tools should actually draw pixels in indexed color mode, not create transparent pixels.
+func TestIntegration_IndexedColorMode_DrawingVerification(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create indexed color mode sprite
+	spritePath := testutil.TempSpritePath(t, "test-indexed-drawing-bug.aseprite")
+	createScript := gen.CreateCanvas(64, 64, aseprite.ColorModeIndexed, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Set a simple 4-color palette
+	setPaletteScript := gen.SetPalette([]string{"#000000", "#FF0000", "#00FF00", "#0000FF"})
+	_, err = client.ExecuteLua(ctx, setPaletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to set palette: %v", err)
+	}
+
+	// Test draw_pixels
+	pixels := []aseprite.Pixel{
+		{Point: aseprite.Point{X: 10, Y: 10}, Color: aseprite.Color{R: 255, G: 0, B: 0, A: 255}}, // Red
+		{Point: aseprite.Point{X: 11, Y: 10}, Color: aseprite.Color{R: 0, G: 255, B: 0, A: 255}}, // Green
+		{Point: aseprite.Point{X: 12, Y: 10}, Color: aseprite.Color{R: 0, G: 0, B: 255, A: 255}}, // Blue
+	}
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, true)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawPixels) error = %v", err)
+	}
+	if !strings.Contains(output, "Pixels drawn successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	// Verify pixels were actually drawn (not transparent)
+	getScript := gen.GetPixels("Layer 1", 1, 10, 10, 3, 1)
+	output, err = client.ExecuteLua(ctx, getScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(GetPixels) error = %v", err)
+	}
+
+	var pixelData []PixelData
+	if err := json.Unmarshal([]byte(output), &pixelData); err != nil {
+		t.Fatalf("Failed to parse pixel data: %v, output: %s", err, output)
+	}
+
+	// Check that pixels are NOT transparent
+	for i, p := range pixelData {
+		if strings.HasPrefix(strings.ToUpper(p.Color), "#00000000") || strings.HasPrefix(strings.ToUpper(p.Color), "#01000000") {
+			t.Errorf("Pixel %d at (%d,%d) is transparent: %s (BUG: draw_pixels failed in indexed mode)", i, p.X, p.Y, p.Color)
+		}
+	}
+
+	t.Logf("✓ draw_pixels in indexed mode: verified %d non-transparent pixels", len(pixelData))
+
+	// Test draw_rectangle
+	drawRectScript := gen.DrawRectangle("Layer 1", 1, 20, 20, 5, 5, aseprite.Color{R: 255, G: 0, B: 0, A: 255}, true, true)
+	output, err = client.ExecuteLua(ctx, drawRectScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawRectangle) error = %v", err)
+	}
+	if !strings.Contains(output, "Rectangle drawn successfully") {
+		t.Errorf("Expected success message for rectangle, got: %s", output)
+	}
+
+	// Verify rectangle was drawn
+	getRectScript := gen.GetPixels("Layer 1", 1, 20, 20, 5, 5)
+	output, err = client.ExecuteLua(ctx, getRectScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(GetPixels for rectangle) error = %v", err)
+	}
+
+	if err := json.Unmarshal([]byte(output), &pixelData); err != nil {
+		t.Fatalf("Failed to parse rectangle pixel data: %v", err)
+	}
+
+	transparentCount := 0
+	for _, p := range pixelData {
+		if strings.HasPrefix(strings.ToUpper(p.Color), "#00000000") || strings.HasPrefix(strings.ToUpper(p.Color), "#01000000") {
+			transparentCount++
+		}
+	}
+	if transparentCount > 0 {
+		t.Errorf("BUG: draw_rectangle created %d transparent pixels out of %d in indexed mode", transparentCount, len(pixelData))
+	}
+
+	t.Logf("✓ draw_rectangle in indexed mode: verified %d non-transparent pixels", len(pixelData))
+
+	// Test fill_area
+	fillScript := gen.FillArea("Layer 1", 1, 40, 40, aseprite.Color{R: 0, G: 0, B: 255, A: 255}, 0, true)
+	output, err = client.ExecuteLua(ctx, fillScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(FillArea) error = %v", err)
+	}
+	if !strings.Contains(output, "Area filled successfully") {
+		t.Errorf("Expected success message for fill, got: %s", output)
+	}
+
+	// Verify fill worked (check a sample region)
+	getFillScript := gen.GetPixels("Layer 1", 1, 40, 40, 10, 10)
+	output, err = client.ExecuteLua(ctx, getFillScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(GetPixels for fill) error = %v", err)
+	}
+
+	if err := json.Unmarshal([]byte(output), &pixelData); err != nil {
+		t.Fatalf("Failed to parse fill pixel data: %v", err)
+	}
+
+	transparentCount = 0
+	for _, p := range pixelData {
+		if strings.HasPrefix(strings.ToUpper(p.Color), "#00000000") || strings.HasPrefix(strings.ToUpper(p.Color), "#01000000") {
+			transparentCount++
+		}
+	}
+	if transparentCount > 0 {
+		t.Errorf("BUG: fill_area created/left %d transparent pixels in indexed mode", transparentCount)
+	}
+
+	t.Logf("✓ fill_area in indexed mode: verified non-transparent pixels")
 }

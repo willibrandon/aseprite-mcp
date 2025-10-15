@@ -17,7 +17,7 @@ func TestFormatColorWithPalette_NoPalette(t *testing.T) {
 func TestFormatColorWithPalette_WithPalette(t *testing.T) {
 	color := Color{R: 255, G: 128, B: 64, A: 255}
 	result := FormatColorWithPalette(color, true)
-	expected := "snapToPalette(255, 128, 64, 255)"
+	expected := "snapToPaletteForPixel(255, 128, 64, 255)"
 	if result != expected {
 		t.Errorf("FormatColorWithPalette(usePalette=true) = %s, want %s", result, expected)
 	}
@@ -27,11 +27,19 @@ func TestGeneratePaletteSnapperHelper(t *testing.T) {
 	helper := GeneratePaletteSnapperHelper()
 
 	// Verify helper contains key components
-	if !strings.Contains(helper, "local function snapToPalette") {
-		t.Error("Helper should define snapToPalette function")
+	if !strings.Contains(helper, "local function findNearestPaletteIndex") {
+		t.Error("Helper should define findNearestPaletteIndex function")
 	}
 
-	if !strings.Contains(helper, "app.activeSprite.palettes[1]") {
+	if !strings.Contains(helper, "local function snapToPaletteForPixel") {
+		t.Error("Helper should define snapToPaletteForPixel function")
+	}
+
+	if !strings.Contains(helper, "local function snapToPaletteForTool") {
+		t.Error("Helper should define snapToPaletteForTool function")
+	}
+
+	if !strings.Contains(helper, "spr.palettes[1]") {
 		t.Error("Helper should access sprite palette")
 	}
 
@@ -48,8 +56,9 @@ func TestGeneratePaletteSnapperHelper(t *testing.T) {
 		t.Error("Helper should handle missing palette")
 	}
 
-	if !strings.Contains(helper, "return Color(r, g, b, a)") {
-		t.Error("Helper should return original color if palette missing")
+	// Verify it returns palette index in indexed mode
+	if !strings.Contains(helper, "if spr.colorMode == ColorMode.INDEXED") {
+		t.Error("Helper should check for indexed color mode")
 	}
 }
 
@@ -63,17 +72,17 @@ func TestDrawPixels_WithPalette(t *testing.T) {
 	script := gen.DrawPixels("Layer 1", 1, pixels, true)
 
 	// Verify palette snapper helper is included
-	if !strings.Contains(script, "local function snapToPalette") {
-		t.Error("Script should include snapToPalette helper when usePalette=true")
+	if !strings.Contains(script, "local function snapToPaletteForPixel") {
+		t.Error("Script should include snapToPaletteForPixel helper when usePalette=true")
 	}
 
-	// Verify colors are wrapped in snapToPalette calls
-	if !strings.Contains(script, "snapToPalette(255, 0, 0, 255)") {
-		t.Error("Script should use snapToPalette for first pixel")
+	// Verify colors are wrapped in snapToPaletteForPixel calls
+	if !strings.Contains(script, "snapToPaletteForPixel(255, 0, 0, 255)") {
+		t.Error("Script should use snapToPaletteForPixel for first pixel")
 	}
 
-	if !strings.Contains(script, "snapToPalette(0, 255, 0, 255)") {
-		t.Error("Script should use snapToPalette for second pixel")
+	if !strings.Contains(script, "snapToPaletteForPixel(0, 255, 0, 255)") {
+		t.Error("Script should use snapToPaletteForPixel for second pixel")
 	}
 }
 
@@ -107,13 +116,13 @@ func TestDrawLine_WithPalette(t *testing.T) {
 	script := gen.DrawLine("Layer 1", 1, 10, 10, 50, 50, color, 2, true)
 
 	// Verify palette snapper helper is included
-	if !strings.Contains(script, "local function snapToPalette") {
-		t.Error("Script should include snapToPalette helper")
+	if !strings.Contains(script, "local function snapToPaletteForTool") {
+		t.Error("Script should include snapToPaletteForTool helper")
 	}
 
-	// Verify color is wrapped in snapToPalette
-	if !strings.Contains(script, "snapToPalette(128, 64, 32, 255)") {
-		t.Error("Script should use snapToPalette for line color")
+	// Verify color is wrapped in snapToPaletteForTool
+	if !strings.Contains(script, "snapToPaletteForTool(128, 64, 32, 255)") {
+		t.Error("Script should use snapToPaletteForTool for line color")
 	}
 }
 
@@ -124,13 +133,13 @@ func TestDrawRectangle_WithPalette(t *testing.T) {
 	script := gen.DrawRectangle("Layer 1", 1, 10, 10, 30, 30, color, true, true)
 
 	// Verify palette snapper helper is included
-	if !strings.Contains(script, "local function snapToPalette") {
-		t.Error("Script should include snapToPalette helper")
+	if !strings.Contains(script, "local function snapToPaletteForTool") {
+		t.Error("Script should include snapToPaletteForTool helper")
 	}
 
-	// Verify color is wrapped in snapToPalette
-	if !strings.Contains(script, "snapToPalette(200, 100, 50, 255)") {
-		t.Error("Script should use snapToPalette for rectangle color")
+	// Verify color is wrapped in snapToPaletteForTool
+	if !strings.Contains(script, "snapToPaletteForTool(200, 100, 50, 255)") {
+		t.Error("Script should use snapToPaletteForTool for rectangle color")
 	}
 }
 
@@ -141,13 +150,13 @@ func TestDrawCircle_WithPalette(t *testing.T) {
 	script := gen.DrawCircle("Layer 1", 1, 50, 50, 20, color, true, true)
 
 	// Verify palette snapper helper is included
-	if !strings.Contains(script, "local function snapToPalette") {
-		t.Error("Script should include snapToPalette helper")
+	if !strings.Contains(script, "local function snapToPaletteForTool") {
+		t.Error("Script should include snapToPaletteForTool helper")
 	}
 
-	// Verify color is wrapped in snapToPalette
-	if !strings.Contains(script, "snapToPalette(150, 200, 250, 255)") {
-		t.Error("Script should use snapToPalette for circle color")
+	// Verify color is wrapped in snapToPaletteForTool
+	if !strings.Contains(script, "snapToPaletteForTool(150, 200, 250, 255)") {
+		t.Error("Script should use snapToPaletteForTool for circle color")
 	}
 }
 
@@ -158,12 +167,12 @@ func TestFillArea_WithPalette(t *testing.T) {
 	script := gen.FillArea("Layer 1", 1, 25, 25, color, 10, true)
 
 	// Verify palette snapper helper is included
-	if !strings.Contains(script, "local function snapToPalette") {
-		t.Error("Script should include snapToPalette helper")
+	if !strings.Contains(script, "local function snapToPaletteForTool") {
+		t.Error("Script should include snapToPaletteForTool helper")
 	}
 
-	// Verify color is wrapped in snapToPalette
-	if !strings.Contains(script, "snapToPalette(75, 125, 175, 255)") {
-		t.Error("Script should use snapToPalette for fill color")
+	// Verify color is wrapped in snapToPaletteForTool
+	if !strings.Contains(script, "snapToPaletteForTool(75, 125, 175, 255)") {
+		t.Error("Script should use snapToPaletteForTool for fill color")
 	}
 }

@@ -155,7 +155,7 @@ print("Line drawn successfully")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber,
 		thickness,
-		FormatColorWithPalette(color, usePalette),
+		FormatColorWithPaletteForTool(color, usePalette),
 		FormatPoint(Point{X: x1, Y: y1}),
 		FormatPoint(Point{X: x2, Y: y2})))
 
@@ -231,7 +231,7 @@ app.transaction(function()
 		escapedName, escapedName,
 		frameNumber, frameNumber,
 		thickness,
-		FormatColorWithPalette(color, usePalette)))
+		FormatColorWithPaletteForTool(color, usePalette)))
 
 	// Draw line segments between consecutive points
 	for i := 0; i < len(points)-1; i++ {
@@ -346,7 +346,7 @@ print("Rectangle drawn successfully")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber,
 		tool,
-		FormatColorWithPalette(color, usePalette),
+		FormatColorWithPaletteForTool(color, usePalette),
 		FormatPoint(Point{X: x, Y: y}),
 		FormatPoint(Point{X: x + width - 1, Y: y + height - 1})))
 
@@ -436,7 +436,7 @@ print("Circle drawn successfully")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber,
 		tool,
-		FormatColorWithPalette(color, usePalette),
+		FormatColorWithPaletteForTool(color, usePalette),
 		FormatPoint(Point{X: x1, Y: y1}),
 		FormatPoint(Point{X: x2, Y: y2})))
 
@@ -516,7 +516,7 @@ spr:saveAs(spr.filename)
 print("Area filled successfully")`,
 		escapedName, escapedName,
 		frameNumber, frameNumber,
-		FormatColorWithPalette(color, usePalette),
+		FormatColorWithPaletteForTool(color, usePalette),
 		FormatPoint(Point{X: x, Y: y}),
 		tolerance))
 
