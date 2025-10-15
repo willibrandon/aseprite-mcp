@@ -735,9 +735,44 @@ if not img then
 	cel.image = img
 end
 
--- Define colors
-local color1 = app.pixelColor.rgba(%d, %d, %d, %d)
-local color2 = app.pixelColor.rgba(%d, %d, %d, %d)
+-- Helper: Find nearest palette index for given RGBA color
+local function findNearestPaletteIndex(r, g, b, a)
+	local palette = spr.palettes[1]
+	if not palette or #palette == 0 then
+		return 0
+	end
+
+	local minDist = math.huge
+	local nearestIndex = 0
+
+	for i = 0, #palette - 1 do
+		local palColor = palette:getColor(i)
+		local dr = r - palColor.red
+		local dg = g - palColor.green
+		local db = b - palColor.blue
+		local da = a - palColor.alpha
+		local dist = dr*dr + dg*dg + db*db + da*da
+
+		if dist < minDist then
+			minDist = dist
+			nearestIndex = i
+		end
+	end
+
+	return nearestIndex
+end
+
+-- Define colors based on color mode
+local color1, color2
+if spr.colorMode == ColorMode.INDEXED then
+	-- In indexed mode, img:drawPixel expects palette indices
+	color1 = findNearestPaletteIndex(%d, %d, %d, %d)
+	color2 = findNearestPaletteIndex(%d, %d, %d, %d)
+else
+	-- In RGB/Grayscale mode, use pixel color values
+	color1 = app.pixelColor.rgba(%d, %d, %d, %d)
+	color2 = app.pixelColor.rgba(%d, %d, %d, %d)
+end
 
 -- Dithering matrix
 %s
@@ -765,6 +800,8 @@ spr:saveAs(spr.filename)
 print("Dithering applied successfully")`,
 		escapedLayerName, escapedLayerName,
 		frameNumber, frameNumber,
+		c1.R, c1.G, c1.B, c1.A,
+		c2.R, c2.G, c2.B, c2.A,
 		c1.R, c1.G, c1.B, c1.A,
 		c2.R, c2.G, c2.B, c2.A,
 		matrixCode,

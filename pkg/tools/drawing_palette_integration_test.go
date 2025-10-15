@@ -382,3 +382,164 @@ func TestIntegration_IndexedColorMode_DrawingVerification(t *testing.T) {
 
 	t.Logf("✓ fill_area in indexed mode: verified non-transparent pixels")
 }
+
+// TestIntegration_DrawWithDither_RGBMode tests issue #2:
+// draw_with_dither should create a dithering pattern, not transparent pixels.
+func TestIntegration_DrawWithDither_RGBMode(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create sprite in RGB mode (as specified in issue #2)
+	spritePath := testutil.TempSpritePath(t, "test-dither-transparency-bug.aseprite")
+	createScript := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Call draw_with_dither with two valid colors and bayer_4x4 pattern
+	color1 := "#FF0000" // Red
+	color2 := "#0000FF" // Blue
+	drawScript := gen.DrawWithDither("Layer 1", 1, 10, 10, 20, 20, color1, color2, "bayer_4x4", 0.5)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawWithDither) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Dithering applied successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	// Check pixels with get_pixels to verify they are NOT transparent
+	getScript := gen.GetPixels("Layer 1", 1, 10, 10, 20, 20)
+	output, err = client.ExecuteLua(ctx, getScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(GetPixels) error = %v", err)
+	}
+
+	var pixelData []PixelData
+	if err := json.Unmarshal([]byte(output), &pixelData); err != nil {
+		t.Fatalf("Failed to parse pixel data: %v, output: %s", err, output)
+	}
+
+	// Count transparent pixels (the bug)
+	transparentCount := 0
+	redCount := 0
+	blueCount := 0
+	otherCount := 0
+
+	for _, p := range pixelData {
+		colorUpper := strings.ToUpper(p.Color)
+		if colorUpper == "#00000000" || colorUpper == "#01000000" {
+			transparentCount++
+			t.Logf("BUG: Found transparent pixel at (%d,%d): %s", p.X, p.Y, p.Color)
+		} else if colorUpper == "#FF0000FF" {
+			redCount++
+		} else if colorUpper == "#0000FFFF" {
+			blueCount++
+		} else {
+			otherCount++
+			t.Logf("Unexpected color at (%d,%d): %s (expected red or blue)", p.X, p.Y, p.Color)
+		}
+	}
+
+	// Expected: Dithering pattern mixing color1 and color2
+	// Actual (bug): Transparent pixels appear in the dithered region
+	if transparentCount > 0 {
+		t.Errorf("BUG: draw_with_dither created %d transparent pixels out of %d total (issue #2)", transparentCount, len(pixelData))
+	}
+
+	// Verify we have a dithering pattern (mix of both colors)
+	if redCount == 0 && blueCount == 0 {
+		t.Errorf("No dither pattern found: red=%d, blue=%d, transparent=%d, other=%d", redCount, blueCount, transparentCount, otherCount)
+	}
+
+	t.Logf("✓ draw_with_dither pattern: red=%d, blue=%d, transparent=%d, other=%d", redCount, blueCount, transparentCount, otherCount)
+}
+
+// TestIntegration_DrawWithDither_IndexedMode tests issue #2 in indexed color mode:
+// draw_with_dither may create transparent pixels in indexed mode like issue #1.
+func TestIntegration_DrawWithDither_IndexedMode(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create sprite in indexed color mode
+	spritePath := testutil.TempSpritePath(t, "test-dither-indexed.aseprite")
+	createScript := gen.CreateCanvas(64, 64, aseprite.ColorModeIndexed, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Set a palette with our test colors
+	setPaletteScript := gen.SetPalette([]string{"#000000", "#FF0000", "#0000FF", "#FFFFFF"})
+	_, err = client.ExecuteLua(ctx, setPaletteScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to set palette: %v", err)
+	}
+
+	// Call draw_with_dither with two valid colors from the palette
+	color1 := "#FF0000" // Red
+	color2 := "#0000FF" // Blue
+	drawScript := gen.DrawWithDither("Layer 1", 1, 10, 10, 20, 20, color1, color2, "bayer_4x4", 0.5)
+	output, err := client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(DrawWithDither) error = %v", err)
+	}
+
+	if !strings.Contains(output, "Dithering applied successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	// Check pixels with get_pixels to verify they are NOT transparent
+	getScript := gen.GetPixels("Layer 1", 1, 10, 10, 20, 20)
+	output, err = client.ExecuteLua(ctx, getScript, spritePath)
+	if err != nil {
+		t.Fatalf("ExecuteLua(GetPixels) error = %v", err)
+	}
+
+	var pixelData []PixelData
+	if err := json.Unmarshal([]byte(output), &pixelData); err != nil {
+		t.Fatalf("Failed to parse pixel data: %v, output: %s", err, output)
+	}
+
+	// Count transparent pixels (the bug)
+	transparentCount := 0
+	redCount := 0
+	blueCount := 0
+	otherCount := 0
+
+	for _, p := range pixelData {
+		colorUpper := strings.ToUpper(p.Color)
+		if colorUpper == "#00000000" || colorUpper == "#01000000" {
+			transparentCount++
+			t.Logf("BUG: Found transparent pixel at (%d,%d): %s", p.X, p.Y, p.Color)
+		} else if colorUpper == "#FF0000FF" {
+			redCount++
+		} else if colorUpper == "#0000FFFF" {
+			blueCount++
+		} else {
+			otherCount++
+			t.Logf("Unexpected color at (%d,%d): %s (expected red or blue)", p.X, p.Y, p.Color)
+		}
+	}
+
+	// Expected: Dithering pattern mixing color1 and color2
+	// Actual (bug): Transparent pixels appear in the dithered region (issue #2)
+	if transparentCount > 0 {
+		t.Errorf("BUG: draw_with_dither created %d transparent pixels in indexed mode (issue #2)", transparentCount)
+	}
+
+	// Verify we have a dithering pattern (mix of both colors)
+	if redCount == 0 && blueCount == 0 {
+		t.Errorf("No dither pattern found: red=%d, blue=%d, transparent=%d, other=%d", redCount, blueCount, transparentCount, otherCount)
+	}
+
+	t.Logf("✓ draw_with_dither in indexed mode: red=%d, blue=%d, transparent=%d, other=%d", redCount, blueCount, transparentCount, otherCount)
+}
