@@ -2,6 +2,9 @@
 
 A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and animation capabilities to AI assistants, enabling you to create and edit sprites using natural language.
 
+![Showcase Pixel Art](docs/images/showcase-pixel-art.png)
+*Example scene created using aseprite-mcp: 64x64 indexed sprite with custom 16-color palette, demonstrating drawing primitives (rectangles, circles) and palette management.*
+
 ## Features
 
 - **Canvas & Layer Management:** RGB, Grayscale, and Indexed color modes with multi-layer support and layer deletion
