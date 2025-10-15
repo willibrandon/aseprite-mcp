@@ -45,6 +45,15 @@ end
 -- Create a new sprite with the same dimensions and color mode
 local tempSpr = Sprite(spr.width, spr.height, spr.colorMode)
 
+-- Copy the palette from the original sprite for indexed mode
+if spr.colorMode == ColorMode.INDEXED then
+	for i = 0, #spr.palettes[1]-1 do
+		tempSpr.palettes[1]:setColor(i, spr.palettes[1]:getColor(i))
+	end
+	-- Set transparent color to 255 to allow palette index 0 for actual colors
+	tempSpr.transparentColor = 255
+end
+
 -- Delete the default layer that comes with new sprites
 if #tempSpr.layers > 0 then
 	tempSpr:deleteLayer(tempSpr.layers[1])
