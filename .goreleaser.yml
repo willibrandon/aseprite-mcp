@@ -1,0 +1,118 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: aseprite-mcp
+    binary: aseprite-mcp
+    main: ./cmd/aseprite-mcp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Ignore arm64 on Windows for now
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+      - docs/**/*
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Performance Improvements
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Documentation
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: willibrandon
+    name: aseprite-mcp-go
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Aseprite MCP Server {{ .Tag }} ({{ .Date }})
+
+    Official release of the Aseprite Model Context Protocol (MCP) server.
+
+    ### Installation
+
+    Download the appropriate binary for your platform below, extract it, and add it to your PATH.
+
+    Alternatively, install with Go:
+    ```bash
+    go install github.com/willibrandon/aseprite-mcp-go/cmd/aseprite-mcp@{{ .Tag }}
+    ```
+
+    ### Configuration Required
+
+    Before using the server, create a configuration file at `~/.config/aseprite-mcp/config.json`:
+    ```json
+    {
+      "aseprite_path": "/absolute/path/to/aseprite",
+      "temp_dir": "/tmp/aseprite-mcp",
+      "timeout": 30,
+      "log_level": "info"
+    }
+    ```
+
+    See [README.md](https://github.com/willibrandon/aseprite-mcp-go/blob/main/README.md) for full documentation.
+  footer: |
+    **Full Changelog**: https://github.com/willibrandon/aseprite-mcp-go/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ---
+
+    For issues and support, visit: https://github.com/willibrandon/aseprite-mcp-go/issues
