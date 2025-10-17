@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
-	"github.com/willibrandon/aseprite-mcp-go/pkg/config"
+	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
+	"github.com/willibrandon/pixel-mcp/pkg/config"
 	"github.com/willibrandon/mtlog/core"
 )
 

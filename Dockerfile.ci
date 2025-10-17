@@ -2,7 +2,7 @@
 ARG PLATFORM=linux/amd64
 FROM --platform=$PLATFORM ubuntu:22.04
 
-LABEL org.opencontainers.image.source=https://github.com/willibrandon/aseprite-mcp-go
+LABEL org.opencontainers.image.source=https://github.com/willibrandon/pixel-mcp
 LABEL org.opencontainers.image.description="CI container with Aseprite pre-built for integration testing"
 LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.version="1.0"

@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
+	"github.com/willibrandon/pixel-mcp/internal/testutil"
 	"github.com/willibrandon/mtlog"
 	"github.com/willibrandon/mtlog/sinks"
 )

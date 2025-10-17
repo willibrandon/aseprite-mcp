@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
-	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
+	"github.com/willibrandon/pixel-mcp/internal/testutil"
+	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 )
 
 // TestIntegration_DrawPixels_CelPosition_Bug tests the bug where DrawPixels

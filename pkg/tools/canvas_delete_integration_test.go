@@ -7,8 +7,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
-	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
+	"github.com/willibrandon/pixel-mcp/internal/testutil"
+	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 )
 
 func TestIntegration_DeleteLayer(t *testing.T) {

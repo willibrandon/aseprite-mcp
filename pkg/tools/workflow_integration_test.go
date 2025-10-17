@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
-	"github.com/willibrandon/aseprite-mcp-go/pkg/aseprite"
+	"github.com/willibrandon/pixel-mcp/internal/testutil"
+	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 )
 
 // End-to-end workflow tests that combine multiple tools to validate complete sprite creation workflows.

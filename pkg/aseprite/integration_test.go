@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/willibrandon/aseprite-mcp-go/internal/testutil"
+	"github.com/willibrandon/pixel-mcp/internal/testutil"
 )
 
 // Integration tests require real Aseprite installation.
