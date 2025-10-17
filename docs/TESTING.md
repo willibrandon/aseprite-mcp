@@ -4,13 +4,13 @@
 
 ALL tests require a real Aseprite installation with configuration file.
 
-Create `~/.config/aseprite-mcp/config.json`:
+Create `~/.config/pixel-mcp/config.json`:
 
 **macOS:**
 ```json
 {
   "aseprite_path": "/Applications/Aseprite.app/Contents/MacOS/aseprite",
-  "temp_dir": "/tmp/aseprite-mcp",
+  "temp_dir": "/tmp/pixel-mcp",
   "timeout": 30,
   "log_level": "info",
   "log_file": "",
@@ -22,7 +22,7 @@ Create `~/.config/aseprite-mcp/config.json`:
 ```json
 {
   "aseprite_path": "/usr/bin/aseprite",
-  "temp_dir": "/tmp/aseprite-mcp",
+  "temp_dir": "/tmp/pixel-mcp",
   "timeout": 30,
   "log_level": "info",
   "log_file": "",
@@ -34,7 +34,7 @@ Create `~/.config/aseprite-mcp/config.json`:
 ```json
 {
   "aseprite_path": "C:\\Program Files\\Aseprite\\aseprite.exe",
-  "temp_dir": "C:\\Temp\\aseprite-mcp",
+  "temp_dir": "C:\\Temp\\pixel-mcp",
   "timeout": 30,
   "log_level": "info",
   "log_file": "",
@@ -98,7 +98,7 @@ This runs both unit and integration tests in the CI container with Aseprite pre-
 
 Test server manually:
 ```bash
-go run ./cmd/aseprite-mcp
+go run ./cmd/pixel-mcp
 ```
 
 Test server via Docker:
@@ -117,7 +117,7 @@ All tests use a real Aseprite executable to ensure:
 ## Troubleshooting
 
 **Error: "config file not found"**
-- Create `~/.config/aseprite-mcp/config.json` with valid `aseprite_path`
+- Create `~/.config/pixel-mcp/config.json` with valid `aseprite_path`
 
 **Error: "aseprite executable not found"**
 - Verify the path in config.json points to a real Aseprite binary

@@ -1,4 +1,4 @@
-module github.com/willibrandon/aseprite-mcp-go
+module github.com/willibrandon/pixel-mcp
 
 go 1.24.1
 

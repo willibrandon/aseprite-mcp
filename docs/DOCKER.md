@@ -1,6 +1,6 @@
 # Docker Deployment Guide
 
-This guide explains how to build and run the aseprite-mcp server using Docker.
+This guide explains how to build and run the pixel-mcp server using Docker.
 
 ## Available Docker Images
 
@@ -25,12 +25,12 @@ make docker-build
 # Run with your local Aseprite (macOS example)
 docker run --rm -i \
   -v /Applications/Aseprite.app/Contents/MacOS/aseprite:/usr/local/bin/aseprite:ro \
-  aseprite-mcp:latest
+  pixel-mcp:latest
 
 # Linux example
 docker run --rm -i \
   -v /usr/bin/aseprite:/usr/local/bin/aseprite:ro \
-  aseprite-mcp:latest
+  pixel-mcp:latest
 ```
 
 ### Option 2: Complete Image (Self-Contained)
@@ -49,10 +49,10 @@ The `docker-compose.yml` file provides convenient service definitions:
 
 ```bash
 # Run lightweight version (edit docker-compose.yml to match your Aseprite path)
-docker-compose run aseprite-mcp
+docker-compose run pixel-mcp
 
 # Run complete version with Aseprite included
-docker-compose run aseprite-mcp-full
+docker-compose run pixel-mcp-full
 ```
 
 ## Configuration
@@ -62,7 +62,7 @@ docker-compose run aseprite-mcp-full
 All Docker images support these environment variables:
 
 - `ASEPRITE_PATH`: Path to Aseprite executable (default: `/usr/local/bin/aseprite`)
-- `TEMP_DIR`: Temporary directory for sprite files (default: `/tmp/aseprite-mcp`)
+- `TEMP_DIR`: Temporary directory for sprite files (default: `/tmp/pixel-mcp`)
 - `TIMEOUT`: Command timeout in seconds (default: `30`)
 - `LOG_LEVEL`: Logging verbosity (`debug`, `info`, `warn`, `error`)
 
@@ -72,7 +72,7 @@ Example:
 docker run --rm -i \
   -e ASEPRITE_PATH=/custom/path/aseprite \
   -e LOG_LEVEL=debug \
-  aseprite-mcp:latest
+  pixel-mcp:latest
 ```
 
 ### Custom Configuration File
@@ -81,8 +81,8 @@ Mount a custom configuration file:
 
 ```bash
 docker run --rm -i \
-  -v $(PWD)/config.json:/root/.config/aseprite-mcp/config.json:ro \
-  aseprite-mcp:latest
+  -v $(PWD)/config.json:/root/.config/pixel-mcp/config.json:ro \
+  pixel-mcp:latest
 ```
 
 ## Building Images
@@ -94,7 +94,7 @@ docker run --rm -i \
 make docker-build
 
 # Using Docker directly
-docker build -t aseprite-mcp:latest -f Dockerfile .
+docker build -t pixel-mcp:latest -f Dockerfile .
 ```
 
 ### Build Complete Image
@@ -104,7 +104,7 @@ docker build -t aseprite-mcp:latest -f Dockerfile .
 make docker-build-full
 
 # Using Docker directly
-docker build -t aseprite-mcp:full -f Dockerfile.with-aseprite .
+docker build -t pixel-mcp:full -f Dockerfile.with-aseprite .
 ```
 
 ## Integrating with MCP Clients
@@ -124,7 +124,7 @@ Add to your Claude configuration file (`~/Library/Application Support/Claude/cla
         "-i",
         "-v",
         "/Applications/Aseprite.app/Contents/MacOS/aseprite:/usr/local/bin/aseprite:ro",
-        "aseprite-mcp:latest"
+        "pixel-mcp:latest"
       ]
     }
   }
@@ -142,7 +142,7 @@ Add to your Claude configuration file (`~/Library/Application Support/Claude/cla
         "run",
         "--rm",
         "-i",
-        "aseprite-mcp:full"
+        "pixel-mcp:full"
       ]
     }
   }
@@ -153,15 +153,15 @@ Add to your Claude configuration file (`~/Library/Application Support/Claude/cla
 
 ```bash
 # Tag the image
-docker tag aseprite-mcp:latest ghcr.io/willibrandon/aseprite-mcp:latest
-docker tag aseprite-mcp:latest ghcr.io/willibrandon/aseprite-mcp:v0.1.0
+docker tag pixel-mcp:latest ghcr.io/willibrandon/pixel-mcp:latest
+docker tag pixel-mcp:latest ghcr.io/willibrandon/pixel-mcp:v0.1.0
 
 # Login to GHCR
 echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 
 # Push
-docker push ghcr.io/willibrandon/aseprite-mcp:latest
-docker push ghcr.io/willibrandon/aseprite-mcp:v0.1.0
+docker push ghcr.io/willibrandon/pixel-mcp:latest
+docker push ghcr.io/willibrandon/pixel-mcp:v0.1.0
 ```
 
 ## Troubleshooting
@@ -176,7 +176,7 @@ If you see "aseprite: not found" errors:
 Test Aseprite availability:
 
 ```bash
-docker run --rm -i aseprite-mcp:latest /usr/local/bin/aseprite --version
+docker run --rm -i pixel-mcp:latest /usr/local/bin/aseprite --version
 ```
 
 ### Permission Errors
@@ -185,8 +185,8 @@ Ensure temp directory is writable:
 
 ```bash
 docker run --rm -i \
-  -v $(PWD)/tmp:/tmp/aseprite-mcp \
-  aseprite-mcp:latest
+  -v $(PWD)/tmp:/tmp/pixel-mcp \
+  pixel-mcp:latest
 ```
 
 ### Platform Issues
@@ -194,14 +194,14 @@ docker run --rm -i \
 Force specific platform for compatibility:
 
 ```bash
-docker build --platform linux/amd64 -t aseprite-mcp:latest -f Dockerfile .
+docker build --platform linux/amd64 -t pixel-mcp:latest -f Dockerfile .
 ```
 
 ## Image Sizes
 
-- **Lightweight** (`aseprite-mcp:latest`): ~300MB
-- **Complete** (`aseprite-mcp:full`): ~2GB
-- **CI Image** (`aseprite-mcp-ci:latest`): ~3GB (includes build tools)
+- **Lightweight** (`pixel-mcp:latest`): ~300MB
+- **Complete** (`pixel-mcp:full`): ~2GB
+- **CI Image** (`pixel-mcp-ci:latest`): ~3GB (includes build tools)
 
 ## Security Considerations
 

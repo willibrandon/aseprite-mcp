@@ -16,7 +16,7 @@ First official release of the Aseprite MCP Server.
 #### Core Infrastructure
 - Initial project structure and Go module initialization
 - MCP server with stdio transport
-- Configuration management (file-based at ~/.config/aseprite-mcp/config.json)
+- Configuration management (file-based at ~/.config/pixel-mcp/config.json)
 - Aseprite client with Lua script execution and timeout handling
 - Lua script generation utilities with proper escaping and security
 - Comprehensive GoDoc documentation for all packages (pkg/aseprite, pkg/config, pkg/server, pkg/tools)

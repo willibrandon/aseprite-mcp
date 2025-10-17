@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/willibrandon/aseprite-mcp-go/pkg/config"
-	"github.com/willibrandon/aseprite-mcp-go/pkg/server"
+	"github.com/willibrandon/pixel-mcp/pkg/config"
+	"github.com/willibrandon/pixel-mcp/pkg/server"
 	"github.com/willibrandon/mtlog"
 	"github.com/willibrandon/mtlog/core"
 	"github.com/willibrandon/mtlog/sinks"
@@ -33,7 +33,7 @@ func main() {
 
 	// Show version and exit
 	if *showVersion {
-		fmt.Printf("aseprite-mcp version %s (built %s)\n", Version, BuildTime)
+		fmt.Printf("pixel-mcp version %s (built %s)\n", Version, BuildTime)
 		os.Exit(0)
 	}
 
@@ -41,10 +41,10 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
-		fmt.Fprintf(os.Stderr, "\nPlease create a config file at ~/.config/aseprite-mcp/config.json:\n")
+		fmt.Fprintf(os.Stderr, "\nPlease create a config file at ~/.config/pixel-mcp/config.json:\n")
 		fmt.Fprintf(os.Stderr, "{\n")
 		fmt.Fprintf(os.Stderr, "  \"aseprite_path\": \"/path/to/aseprite\",\n")
-		fmt.Fprintf(os.Stderr, "  \"temp_dir\": \"/tmp/aseprite-mcp\",\n")
+		fmt.Fprintf(os.Stderr, "  \"temp_dir\": \"/tmp/pixel-mcp\",\n")
 		fmt.Fprintf(os.Stderr, "  \"timeout\": 30,\n")
 		fmt.Fprintf(os.Stderr, "  \"log_level\": \"info\"\n")
 		fmt.Fprintf(os.Stderr, "}\n")

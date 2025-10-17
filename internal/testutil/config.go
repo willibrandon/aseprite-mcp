@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/willibrandon/aseprite-mcp-go/pkg/config"
+	"github.com/willibrandon/pixel-mcp/pkg/config"
 )
 
 // LoadTestConfig loads the test configuration from the standard config file.
