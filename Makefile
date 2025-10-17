@@ -1,7 +1,7 @@
 .PHONY: all build release test test-nocache test-integration test-integration-nocache test-coverage bench lint clean install docker-build-ci docker-test docker-test-integration docker-test-all docker-build docker-build-full docker-run docker-run-full
 
 # Binary name
-BINARY_NAME=aseprite-mcp
+BINARY_NAME=pixel-mcp
 ifeq ($(OS),Windows_NT)
 	BINARY_NAME := $(BINARY_NAME).exe
 endif
@@ -18,10 +18,10 @@ LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 all: lint test build
 
 build:
-	go build -o bin/$(BINARY_NAME) ./cmd/aseprite-mcp
+	go build -o bin/$(BINARY_NAME) ./cmd/pixel-mcp
 
 release:
-	go build $(LDFLAGS) -o bin/$(BINARY_NAME) ./cmd/aseprite-mcp
+	go build $(LDFLAGS) -o bin/$(BINARY_NAME) ./cmd/pixel-mcp
 
 test:
 	go test -v -race -cover ./...
@@ -55,11 +55,11 @@ else
 endif
 
 install:
-	go install $(LDFLAGS) ./cmd/aseprite-mcp
+	go install $(LDFLAGS) ./cmd/pixel-mcp
 
 # Development helpers
 run:
-	go run ./cmd/aseprite-mcp
+	go run ./cmd/pixel-mcp
 
 deps:
 	go mod download
