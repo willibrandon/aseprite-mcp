@@ -79,7 +79,7 @@ changelog:
 release:
   github:
     owner: willibrandon
-    name: aseprite-mcp-go
+    name: aseprite-mcp
   draft: false
   prerelease: auto
   mode: replace
@@ -94,7 +94,7 @@ release:
 
     Alternatively, install with Go:
     ```bash
-    go install github.com/willibrandon/aseprite-mcp-go/cmd/aseprite-mcp@{{ .Tag }}
+    go install github.com/willibrandon/aseprite-mcp/cmd/aseprite-mcp@{{ .Tag }}
     ```
 
     ### Configuration Required
@@ -109,10 +109,10 @@ release:
     }
     ```
 
-    See [README.md](https://github.com/willibrandon/aseprite-mcp-go/blob/main/README.md) for full documentation.
+    See [README.md](https://github.com/willibrandon/aseprite-mcp/blob/main/README.md) for full documentation.
   footer: |
-    **Full Changelog**: https://github.com/willibrandon/aseprite-mcp-go/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/willibrandon/aseprite-mcp/compare/{{ .PreviousTag }}...{{ .Tag }}
 
     ---
 
-    For issues and support, visit: https://github.com/willibrandon/aseprite-mcp-go/issues
+    For issues and support, visit: https://github.com/willibrandon/aseprite-mcp/issues
