@@ -25,7 +25,7 @@ func createAntialiasingTestSession(t *testing.T) (*mcp.Server, *mcp.ClientSessio
 	logger := mtlog.New(mtlog.WithMinimumLevel(core.ErrorLevel))
 
 	server := mcp.NewServer(&mcp.Implementation{
-		Name:    "aseprite-mcp-test",
+		Name:    "pixel-mcp-test",
 		Version: "1.0.0",
 	}, nil)
 

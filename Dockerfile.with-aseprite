@@ -14,32 +14,32 @@ RUN go mod download
 COPY . .
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o aseprite-mcp ./cmd/aseprite-mcp
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o pixel-mcp ./cmd/pixel-mcp
 
 # Stage 2: Copy Aseprite from CI image and combine with MCP server
-FROM ghcr.io/willibrandon/aseprite-mcp-ci:latest
+FROM ghcr.io/willibrandon/pixel-mcp-ci:latest
 
-LABEL org.opencontainers.image.source=https://github.com/willibrandon/aseprite-mcp
+LABEL org.opencontainers.image.source=https://github.com/willibrandon/pixel-mcp
 LABEL org.opencontainers.image.description="MCP server for Aseprite with Aseprite binary included"
 LABEL org.opencontainers.image.licenses=MIT
-LABEL io.modelcontextprotocol.server.name="io.github.willibrandon/aseprite-mcp"
+LABEL io.modelcontextprotocol.server.name="io.github.willibrandon/pixel-mcp"
 
 # Copy the Go binary from builder
-COPY --from=builder /build/aseprite-mcp /usr/local/bin/aseprite-mcp
+COPY --from=builder /build/pixel-mcp /usr/local/bin/pixel-mcp
 
 # Aseprite is already available at /build/aseprite/build/bin/aseprite from CI image
 ENV ASEPRITE_PATH=/build/aseprite/build/bin/aseprite
-ENV TEMP_DIR=/tmp/aseprite-mcp
+ENV TEMP_DIR=/tmp/pixel-mcp
 ENV TIMEOUT=30
 ENV LOG_LEVEL=info
 
 # Create config directory and file
-RUN mkdir -p /root/.config/aseprite-mcp && \
+RUN mkdir -p /root/.config/pixel-mcp && \
     printf '{\n  "aseprite_path": "%s",\n  "temp_dir": "%s",\n  "timeout": %d,\n  "log_level": "%s"\n}\n' \
     "$ASEPRITE_PATH" "$TEMP_DIR" "$TIMEOUT" "$LOG_LEVEL" \
-    > /root/.config/aseprite-mcp/config.json
+    > /root/.config/pixel-mcp/config.json
 
 WORKDIR /workspace
 
 # MCP servers communicate over stdio
-ENTRYPOINT ["/usr/local/bin/aseprite-mcp"]
+ENTRYPOINT ["/usr/local/bin/pixel-mcp"]

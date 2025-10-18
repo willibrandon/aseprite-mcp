@@ -46,5 +46,5 @@ config.json
 .env
 
 # Aseprite-MCP binaries
-/aseprite-mcp
-cmd/aseprite-mcp/aseprite-mcp
+/pixel-mcp
+cmd/pixel-mcp/pixel-mcp

@@ -4,7 +4,7 @@ A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and anim
 
 ![Showcase Pixel Art](docs/images/showcase-pixel-art-4x.png)
 
-*Example scene created using aseprite-mcp: 64x64 indexed sprite with custom 16-color palette, demonstrating drawing primitives (rectangles, circles) and palette management.*
+*Example scene created using pixel-mcp: 64x64 indexed sprite with custom 16-color palette, demonstrating drawing primitives (rectangles, circles) and palette management.*
 
 ## Features
 
@@ -36,8 +36,8 @@ A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and anim
 
 ```bash
 # Clone the repository
-git clone https://github.com/willibrandon/aseprite-mcp.git
-cd aseprite-mcp
+git clone https://github.com/willibrandon/pixel-mcp.git
+cd pixel-mcp
 
 # Build the server
 make build
@@ -45,12 +45,12 @@ make build
 
 ### 2. Configure
 
-Create `~/.config/aseprite-mcp/config.json`:
+Create `~/.config/pixel-mcp/config.json`:
 
 ```json
 {
   "aseprite_path": "/path/to/aseprite",
-  "temp_dir": "/tmp/aseprite-mcp",
+  "temp_dir": "/tmp/pixel-mcp",
   "timeout": 30,
   "log_level": "info",
   "log_file": "",
@@ -60,7 +60,7 @@ Create `~/.config/aseprite-mcp/config.json`:
 
 **Configuration options:**
 - `aseprite_path` (required): Absolute path to Aseprite executable. No automatic discovery or environment variables.
-- `temp_dir` (optional): Directory for temporary files. Defaults to `/tmp/aseprite-mcp`.
+- `temp_dir` (optional): Directory for temporary files. Defaults to `/tmp/pixel-mcp`.
 - `timeout` (optional): Command timeout in seconds. Defaults to 30.
 - `log_level` (optional): Logging verbosity (`debug`, `info`, `warn`, `error`). Defaults to `info`.
 - `log_file` (optional): Path to log file for persistent logging. If empty, logs only to stderr.
@@ -70,13 +70,13 @@ Create `~/.config/aseprite-mcp/config.json`:
 
 ```bash
 # Run the server (stdio transport)
-./bin/aseprite-mcp
+./bin/pixel-mcp
 
 # Check health
-./bin/aseprite-mcp --health
+./bin/pixel-mcp --health
 
 # Enable debug logging
-./bin/aseprite-mcp --debug
+./bin/pixel-mcp --debug
 ```
 
 ## Usage with Claude Desktop
@@ -87,7 +87,7 @@ Add to your Claude Desktop config:
 {
   "mcpServers": {
     "aseprite": {
-      "command": "/absolute/path/to/aseprite-mcp"
+      "command": "/absolute/path/to/pixel-mcp"
     }
   }
 }
@@ -221,10 +221,10 @@ make clean
 
 ```bash
 # Build (development)
-go build -o bin/aseprite-mcp ./cmd/aseprite-mcp
+go build -o bin/pixel-mcp ./cmd/pixel-mcp
 
 # Build release (with version info)
-go build -ldflags "-X main.Version=$(git describe --tags --always --dirty) -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o bin/aseprite-mcp ./cmd/aseprite-mcp
+go build -ldflags "-X main.Version=$(git describe --tags --always --dirty) -X main.BuildTime=$(date -u '+%Y-%m-%d_%H:%M:%S')" -o bin/pixel-mcp ./cmd/pixel-mcp
 
 # Run unit tests
 go test -v -race -cover ./...

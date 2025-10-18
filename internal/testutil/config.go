@@ -15,7 +15,7 @@ func LoadTestConfig(t *testing.T) *config.Config {
 
 	cfg, err := config.Load()
 	if err != nil {
-		t.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/aseprite-mcp/config.json exists with aseprite_path configured.\nExample config:\n{\n  \"aseprite_path\": \"D:\\\\SRC\\\\aseprite\\\\build\\\\bin\\\\aseprite.exe\"\n}", err)
+		t.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/pixel-mcp/config.json exists with aseprite_path configured.\nExample config:\n{\n  \"aseprite_path\": \"D:\\\\SRC\\\\aseprite\\\\build\\\\bin\\\\aseprite.exe\"\n}", err)
 	}
 
 	return cfg
@@ -47,7 +47,7 @@ func LoadTestConfigTB(tb TB) *config.Config {
 
 	cfg, err := config.Load()
 	if err != nil {
-		tb.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/aseprite-mcp/config.json exists with aseprite_path configured.\nExample config:\n{\n  \"aseprite_path\": \"D:\\\\SRC\\\\aseprite\\\\build\\\\bin\\\\aseprite.exe\"\n}", err)
+		tb.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/pixel-mcp/config.json exists with aseprite_path configured.\nExample config:\n{\n  \"aseprite_path\": \"D:\\\\SRC\\\\aseprite\\\\build\\\\bin\\\\aseprite.exe\"\n}", err)
 	}
 
 	return cfg

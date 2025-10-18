@@ -38,7 +38,7 @@ func run(logger core.Logger) error {
 		// Try to find in common locations
 		serverPath = findServerBinary()
 		if serverPath == "" {
-			return fmt.Errorf("ASEPRITE_MCP_PATH not set and could not find aseprite-mcp binary")
+			return fmt.Errorf("ASEPRITE_MCP_PATH not set and could not find pixel-mcp binary")
 		}
 	}
 
@@ -1400,12 +1400,12 @@ func callTool(ctx context.Context, session *mcp.ClientSession, name string, args
 func findServerBinary() string {
 	// Check current directory
 	candidates := []string{
-		"./bin/aseprite-mcp",
-		"./bin/aseprite-mcp.exe",
-		"../../bin/aseprite-mcp",
-		"../../bin/aseprite-mcp.exe",
-		"aseprite-mcp",
-		"aseprite-mcp.exe",
+		"./bin/pixel-mcp",
+		"./bin/pixel-mcp.exe",
+		"../../bin/pixel-mcp",
+		"../../bin/pixel-mcp.exe",
+		"pixel-mcp",
+		"pixel-mcp.exe",
 	}
 
 	for _, path := range candidates {
@@ -1416,7 +1416,7 @@ func findServerBinary() string {
 	}
 
 	// Check PATH
-	if path, err := exec.LookPath("aseprite-mcp"); err == nil {
+	if path, err := exec.LookPath("pixel-mcp"); err == nil {
 		return path
 	}
 

@@ -66,36 +66,36 @@ deps:
 	go mod tidy
 
 # Docker CI targets
-DOCKER_IMAGE_CI=aseprite-mcp-ci:latest
+DOCKER_IMAGE_CI=pixel-mcp-ci:latest
 
 docker-build-ci:
 	docker build -f Dockerfile.ci -t $(DOCKER_IMAGE_CI) .
 
 docker-test:
 	@docker run --rm -v $(PWD):/workspace $(DOCKER_IMAGE_CI) bash -c '\
-		mkdir -p /root/.config/aseprite-mcp && \
-		printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/aseprite-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/aseprite-mcp/config.json && \
+		mkdir -p /root/.config/pixel-mcp && \
+		printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/pixel-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/pixel-mcp/config.json && \
 		cd /workspace && \
 		go test -v -race -cover ./...'
 
 docker-test-integration:
 	@docker run --rm -v $(PWD):/workspace $(DOCKER_IMAGE_CI) bash -c '\
-		mkdir -p /root/.config/aseprite-mcp && \
-		printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/aseprite-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/aseprite-mcp/config.json && \
+		mkdir -p /root/.config/pixel-mcp && \
+		printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/pixel-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/pixel-mcp/config.json && \
 		cd /workspace && \
 		go test -tags=integration -v ./...'
 
 docker-test-all:
 	@docker run --rm -v $(PWD):/workspace $(DOCKER_IMAGE_CI) bash -c '\
-		mkdir -p /root/.config/aseprite-mcp && \
-		printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/aseprite-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/aseprite-mcp/config.json && \
+		mkdir -p /root/.config/pixel-mcp && \
+		printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/pixel-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/pixel-mcp/config.json && \
 		cd /workspace && \
 		go test -v -race -cover ./... && \
 		go test -tags=integration -v ./...'
 
 # Docker MCP Server targets
-DOCKER_IMAGE=aseprite-mcp:latest
-DOCKER_IMAGE_FULL=aseprite-mcp:full
+DOCKER_IMAGE=pixel-mcp:latest
+DOCKER_IMAGE_FULL=pixel-mcp:full
 
 docker-build:
 	docker build -t $(DOCKER_IMAGE) -f Dockerfile .

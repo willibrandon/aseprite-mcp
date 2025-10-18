@@ -1,6 +1,6 @@
 // Package config provides configuration management for the Aseprite MCP server.
 //
-// Configuration is loaded exclusively from a JSON file at ~/.config/aseprite-mcp/config.json.
+// Configuration is loaded exclusively from a JSON file at ~/.config/pixel-mcp/config.json.
 // No environment variables or auto-discovery mechanisms are used - all paths must be
 // explicitly configured.
 //
@@ -8,7 +8,7 @@
 //
 //	{
 //	  "aseprite_path": "/absolute/path/to/aseprite",
-//	  "temp_dir": "/tmp/aseprite-mcp",
+//	  "temp_dir": "/tmp/pixel-mcp",
 //	  "timeout": 30,
 //	  "log_level": "info",
 //	  "log_file": "",
@@ -29,7 +29,7 @@ import (
 // Config holds the Aseprite MCP server configuration.
 //
 // All fields must be explicitly set in the config file, except:
-//   - TempDir defaults to /tmp/aseprite-mcp if not specified
+//   - TempDir defaults to /tmp/pixel-mcp if not specified
 //   - Timeout defaults to 30 seconds if not specified
 //   - LogLevel defaults to "info" if not specified
 //   - LogFile defaults to empty (stderr only) if not specified
@@ -42,7 +42,7 @@ type Config struct {
 	AsepritePath string `json:"aseprite_path"`
 
 	// TempDir is the directory for temporary Lua script files.
-	// Defaults to /tmp/aseprite-mcp if not specified.
+	// Defaults to /tmp/pixel-mcp if not specified.
 	TempDir string `json:"temp_dir"`
 
 	// Timeout is the maximum duration for Aseprite command execution.
@@ -74,7 +74,7 @@ const (
 	DefaultLogLevel = "info"
 )
 
-// Load loads configuration from the default config file at ~/.config/aseprite-mcp/config.json.
+// Load loads configuration from the default config file at ~/.config/pixel-mcp/config.json.
 //
 // The config file MUST exist and MUST contain an explicit aseprite_path field.
 // No environment variables or auto-discovery mechanisms are used.
@@ -154,7 +154,7 @@ func (c *Config) loadFromFile() error {
 // The aseprite_path field MUST be explicitly set and cannot be defaulted.
 //
 // Defaults applied:
-//   - TempDir: /tmp/aseprite-mcp (or OS temp dir + "aseprite-mcp")
+//   - TempDir: /tmp/pixel-mcp (or OS temp dir + "pixel-mcp")
 //   - Timeout: 30 seconds
 //   - LogLevel: "info"
 //
@@ -167,7 +167,7 @@ func (c *Config) setDefaults() error {
 
 	// Set default temp directory if not configured
 	if c.TempDir == "" {
-		c.TempDir = filepath.Join(os.TempDir(), "aseprite-mcp")
+		c.TempDir = filepath.Join(os.TempDir(), "pixel-mcp")
 	}
 
 	// Ensure temp directory exists
@@ -234,5 +234,5 @@ func (c *Config) Validate() error {
 // Can be overridden in tests.
 var getConfigFilePath = func() string {
 	homeDir, _ := os.UserHomeDir()
-	return filepath.Join(homeDir, ".config", "aseprite-mcp", "config.json")
+	return filepath.Join(homeDir, ".config", "pixel-mcp", "config.json")
 }

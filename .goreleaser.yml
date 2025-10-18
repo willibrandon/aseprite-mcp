@@ -6,9 +6,9 @@ before:
     - go mod download
 
 builds:
-  - id: aseprite-mcp
-    binary: aseprite-mcp
-    main: ./cmd/aseprite-mcp
+  - id: pixel-mcp
+    binary: pixel-mcp
+    main: ./cmd/pixel-mcp
     env:
       - CGO_ENABLED=0
     goos:
@@ -78,7 +78,7 @@ changelog:
 release:
   github:
     owner: willibrandon
-    name: aseprite-mcp
+    name: pixel-mcp
   draft: false
   prerelease: auto
   mode: replace
@@ -93,25 +93,25 @@ release:
 
     Alternatively, install with Go:
     ```bash
-    go install github.com/willibrandon/aseprite-mcp/cmd/aseprite-mcp@{{ .Tag }}
+    go install github.com/willibrandon/pixel-mcp/cmd/pixel-mcp@{{ .Tag }}
     ```
 
     ### Configuration Required
 
-    Before using the server, create a configuration file at `~/.config/aseprite-mcp/config.json`:
+    Before using the server, create a configuration file at `~/.config/pixel-mcp/config.json`:
     ```json
     {
       "aseprite_path": "/absolute/path/to/aseprite",
-      "temp_dir": "/tmp/aseprite-mcp",
+      "temp_dir": "/tmp/pixel-mcp",
       "timeout": 30,
       "log_level": "info"
     }
     ```
 
-    See [README.md](https://github.com/willibrandon/aseprite-mcp/blob/main/README.md) for full documentation.
+    See [README.md](https://github.com/willibrandon/pixel-mcp/blob/main/README.md) for full documentation.
   footer: |
-    **Full Changelog**: https://github.com/willibrandon/aseprite-mcp/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/willibrandon/pixel-mcp/compare/{{ .PreviousTag }}...{{ .Tag }}
 
     ---
 
-    For issues and support, visit: https://github.com/willibrandon/aseprite-mcp/issues
+    For issues and support, visit: https://github.com/willibrandon/pixel-mcp/issues

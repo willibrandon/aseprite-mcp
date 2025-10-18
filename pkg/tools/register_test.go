@@ -20,7 +20,7 @@ func createTestServer(t *testing.T) (*mcp.Server, *aseprite.Client, *aseprite.Lu
 	gen := &aseprite.LuaGenerator{}
 
 	server := mcp.NewServer(&mcp.Implementation{
-		Name:    "aseprite-mcp-test",
+		Name:    "pixel-mcp-test",
 		Version: "1.0.0",
 	}, nil)
 

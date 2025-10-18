@@ -64,7 +64,7 @@ func New(cfg *config.Config, logger core.Logger) (*Server, error) {
 
 	// Create MCP server
 	mcpServer := mcp.NewServer(&mcp.Implementation{
-		Name:    "aseprite-mcp",
+		Name:    "pixel-mcp",
 		Version: "0.1.0",
 	}, nil)
 

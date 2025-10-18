@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: willibrandon/aseprite-mcp-ci
+  IMAGE_NAME: willibrandon/pixel-mcp-ci
 
 jobs:
   build-or-pull-image:
@@ -93,8 +93,8 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-or-pull-image.outputs.image-tag }} \
-            bash -c 'mkdir -p /root/.config/aseprite-mcp && \
-              printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/aseprite-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/aseprite-mcp/config.json && \
+            bash -c 'mkdir -p /root/.config/pixel-mcp && \
+              printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/pixel-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/pixel-mcp/config.json && \
               cd /workspace && \
               go test -v -race -cover ./...'
 
@@ -102,7 +102,7 @@ jobs:
         run: |
           docker run --rm -v ${{ github.workspace }}:/workspace \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-or-pull-image.outputs.image-tag }} \
-            bash -c 'mkdir -p /root/.config/aseprite-mcp && \
-              printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/aseprite-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/aseprite-mcp/config.json && \
+            bash -c 'mkdir -p /root/.config/pixel-mcp && \
+              printf "{\"aseprite_path\":\"/build/aseprite/build/bin/aseprite\",\"temp_dir\":\"/tmp/pixel-mcp\",\"timeout\":30,\"log_level\":\"info\"}" > /root/.config/pixel-mcp/config.json && \
               cd /workspace && \
               go test -tags=integration -v ./...'

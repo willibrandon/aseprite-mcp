@@ -12,7 +12,7 @@ func TestConfig_Validate(t *testing.T) {
 	// Load Aseprite path from test config (works both locally and in CI)
 	testCfg, err := Load()
 	if err != nil {
-		t.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/aseprite-mcp/config.json exists with aseprite_path configured.", err)
+		t.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/pixel-mcp/config.json exists with aseprite_path configured.", err)
 	}
 	realAseprite := testCfg.AsepritePath
 	tempDir := t.TempDir()
@@ -77,7 +77,7 @@ func TestConfig_Validate(t *testing.T) {
 func TestConfig_SetDefaults(t *testing.T) {
 	testCfg, err := Load()
 	if err != nil {
-		t.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/aseprite-mcp/config.json exists with aseprite_path configured.", err)
+		t.Fatalf("Failed to load test config: %v\n\nPlease ensure ~/.config/pixel-mcp/config.json exists with aseprite_path configured.", err)
 	}
 	realAseprite := testCfg.AsepritePath
 

@@ -37,7 +37,7 @@ The `client/` directory contains a complete example MCP client that demonstrates
    make build
    ```
 
-2. Ensure you have Aseprite configured at `~/.config/aseprite-mcp/config.json`
+2. Ensure you have Aseprite configured at `~/.config/pixel-mcp/config.json`
 
 ### Run the Example
 
@@ -49,7 +49,7 @@ cd examples/client
 go run main.go
 
 # Or set custom server path
-ASEPRITE_MCP_PATH=/path/to/aseprite-mcp go run main.go
+ASEPRITE_MCP_PATH=/path/to/pixel-mcp go run main.go
 ```
 
 ### Output
@@ -75,7 +75,7 @@ The example creates:
 Aseprite MCP Client Example
 ===========================
 
-Starting server: ../../bin/aseprite-mcp
+Starting server: ../../bin/pixel-mcp
 Connecting to server...
 Connected!
 
@@ -124,7 +124,7 @@ Available tools:
   - export_sprite: Export sprite to image file
 
 Step 1: Creating 64x64 RGB canvas...
-  Created: /tmp/aseprite-mcp/sprite-123456.aseprite
+  Created: /tmp/pixel-mcp/sprite-123456.aseprite
 
 Step 2: Adding 'Background' layer...
   Layer added
@@ -155,7 +155,7 @@ Step 9: Exporting frame 2 as PNG...
   Exported: ../sprites/frame2-example.png
 
 Step 10: Creating sprite with dithered gradient...
-  Created: /tmp/aseprite-mcp/sprite-789012.aseprite
+  Created: /tmp/pixel-mcp/sprite-789012.aseprite
 
 Step 11: Applying Bayer 4x4 dithering pattern...
   Dithering applied successfully
@@ -168,7 +168,7 @@ Step 13: Analyzing palette harmonies from our colors...
   Found 2 complementary pairs
 
 Step 14: Creating sprite with limited palette...
-  Created: /tmp/aseprite-mcp/sprite-456789.aseprite
+  Created: /tmp/pixel-mcp/sprite-456789.aseprite
   Palette set successfully (8 colors)
 
 Step 15: Drawing shape with palette-constrained shading...
@@ -176,12 +176,12 @@ Step 15: Drawing shape with palette-constrained shading...
   Exported: ../sprites/shaded-sphere.png
 
 Step 16: Demonstrating palette-aware drawing...
-  Created: /tmp/aseprite-mcp/sprite-...
+  Created: /tmp/pixel-mcp/sprite-...
   Palette-aware drawing completed (left: pastel colors, right: snapped to pure colors)
   Exported: ../sprites/palette-drawing-comparison.png
 
 Step 17: Demonstrating antialiasing suggestions...
-  Created: /tmp/aseprite-mcp/sprite-...
+  Created: /tmp/pixel-mcp/sprite-...
   Found 4 jagged edge positions
     - Suggestion 1: pos=(24,11) direction=diagonal_nw
     - Suggestion 2: pos=(25,12) direction=diagonal_nw
@@ -191,7 +191,7 @@ Step 17: Demonstrating antialiasing suggestions...
   Exported after: ../sprites/antialiasing-after.png
 
 Step 17: Demonstrating layer and frame deletion...
-  Created: /tmp/aseprite-mcp/sprite-...
+  Created: /tmp/pixel-mcp/sprite-...
   Added 2 extra layers (3 total)
   Added 2 extra frames (3 total)
   Deleted Layer 2 (2 layers remaining)
@@ -269,7 +269,7 @@ To create your own MCP client for Aseprite:
 
 2. Start the server as a subprocess:
    ```go
-   cmd := exec.Command("/path/to/aseprite-mcp")
+   cmd := exec.Command("/path/to/pixel-mcp")
    clientTransport, serverTransport := mcp.NewStdioServerTransport(cmd)
    ```
 

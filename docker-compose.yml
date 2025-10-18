@@ -1,33 +1,33 @@
 services:
   # Lightweight MCP server (requires Aseprite volume mount)
-  aseprite-mcp:
+  pixel-mcp:
     build:
       context: .
       dockerfile: Dockerfile
-    image: aseprite-mcp:latest
+    image: pixel-mcp:latest
     volumes:
       # Mount your local Aseprite binary
       - /Applications/Aseprite.app/Contents/MacOS/aseprite:/usr/local/bin/aseprite:ro
       # Optional: mount custom config
-      # - ./config.json:/root/.config/aseprite-mcp/config.json:ro
+      # - ./config.json:/root/.config/pixel-mcp/config.json:ro
       # Optional: mount temp directory for persistence
-      # - ./tmp:/tmp/aseprite-mcp
+      # - ./tmp:/tmp/pixel-mcp
     stdin_open: true
     tty: true
     environment:
       - ASEPRITE_PATH=/usr/local/bin/aseprite
-      - TEMP_DIR=/tmp/aseprite-mcp
+      - TEMP_DIR=/tmp/pixel-mcp
       - LOG_LEVEL=info
 
   # Complete MCP server with Aseprite included (larger image)
-  aseprite-mcp-full:
+  pixel-mcp-full:
     build:
       context: .
       dockerfile: Dockerfile.with-aseprite
-    image: aseprite-mcp:full
+    image: pixel-mcp:full
     stdin_open: true
     tty: true
     environment:
       - ASEPRITE_PATH=/build/aseprite/build/bin/aseprite
-      - TEMP_DIR=/tmp/aseprite-mcp
+      - TEMP_DIR=/tmp/pixel-mcp
       - LOG_LEVEL=info

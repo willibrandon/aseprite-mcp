@@ -11,7 +11,7 @@ An MCP (Model Context Protocol) server implementation in Go that exposes Aseprit
 ```bash
 # Build the server binary
 make build
-# or: go build -o bin/aseprite-mcp ./cmd/aseprite-mcp
+# or: go build -o bin/pixel-mcp ./cmd/pixel-mcp
 
 # Run tests
 make test
@@ -37,11 +37,11 @@ make install
 
 **CRITICAL**: This project requires explicit configuration - no automatic discovery or environment variables.
 
-All operations require a configuration file at `~/.config/aseprite-mcp/config.json`:
+All operations require a configuration file at `~/.config/pixel-mcp/config.json`:
 ```json
 {
   "aseprite_path": "/absolute/path/to/aseprite",
-  "temp_dir": "/tmp/aseprite-mcp",
+  "temp_dir": "/tmp/pixel-mcp",
   "timeout": 30,
   "log_level": "info",
   "log_file": "",
@@ -51,7 +51,7 @@ All operations require a configuration file at `~/.config/aseprite-mcp/config.js
 
 Configuration fields:
 - `aseprite_path` (required): Absolute path to Aseprite executable
-- `temp_dir` (optional): Temporary directory, defaults to `/tmp/aseprite-mcp`
+- `temp_dir` (optional): Temporary directory, defaults to `/tmp/pixel-mcp`
 - `timeout` (optional): Command timeout in seconds, defaults to 30
 - `log_level` (optional): Verbosity level (`debug`, `info`, `warn`, `error`), defaults to `info`
 - `log_file` (optional): Path to persistent log file, empty means stderr only
@@ -84,7 +84,7 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
 
 ### Package Organization
 
-- `cmd/aseprite-mcp/` - Server entry point and initialization
+- `cmd/pixel-mcp/` - Server entry point and initialization
 - `pkg/aseprite/` - Core Aseprite integration
   - `client.go` - Command execution and Lua script execution
   - `lua.go` - Lua script generation utilities (includes palette and dithering generators)

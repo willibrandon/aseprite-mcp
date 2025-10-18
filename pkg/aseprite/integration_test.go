@@ -14,7 +14,7 @@ import (
 )
 
 // Integration tests require real Aseprite installation.
-// Config file must be present at ~/.config/aseprite-mcp/config.json
+// Config file must be present at ~/.config/pixel-mcp/config.json
 // with aseprite_path pointing to real Aseprite executable.
 //
 // Run with: go test -tags=integration ./pkg/aseprite
