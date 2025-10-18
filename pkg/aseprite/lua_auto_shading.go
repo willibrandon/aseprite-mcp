@@ -126,13 +126,13 @@ spr:saveAs(spr.filename)
 
 -- Print JSON result
 print(json)`,
-		EscapeString(layerName),   // layer name for finding
-		EscapeString(layerName),   // layer name for error
-		tempImagePath,             // shaded image path
-		frameNumber,               // frame number for cel lookup
-		frameNumber,               // frame number for error message
-		frameNumber,               // frame number for newCel
-		colorList,                 // generated colors
-		len(generatedColors),      // colors_added
-		regionsShadedCount)        // regions_shaded
+		EscapeString(layerName), // layer name for finding
+		EscapeString(layerName), // layer name for error
+		tempImagePath,           // shaded image path
+		frameNumber,             // frame number for cel lookup
+		frameNumber,             // frame number for error message
+		frameNumber,             // frame number for newCel
+		colorList,               // generated colors
+		len(generatedColors),    // colors_added
+		regionsShadedCount)      // regions_shaded
 }

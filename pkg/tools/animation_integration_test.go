@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/willibrandon/pixel-mcp/internal/testutil"
-	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 	"github.com/willibrandon/mtlog"
 	"github.com/willibrandon/mtlog/sinks"
+	"github.com/willibrandon/pixel-mcp/internal/testutil"
+	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 )
 
 // Integration tests for animation tools with real Aseprite.

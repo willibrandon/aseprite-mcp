@@ -121,11 +121,11 @@ spr:saveAs(spr.filename)
 
 -- Print JSON result
 print(json)`,
-		len(palette),           // palette resize
-		colorList,              // color list
-		conversionCode,         // conversion code
-		originalColors,         // original_colors
-		len(palette),           // quantized_colors
+		len(palette),            // palette resize
+		colorList,               // color list
+		conversionCode,          // conversion code
+		originalColors,          // original_colors
+		len(palette),            // quantized_colors
 		EscapeString(algorithm)) // algorithm_used
 }
 

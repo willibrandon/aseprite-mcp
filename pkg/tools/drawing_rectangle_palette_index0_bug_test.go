@@ -50,11 +50,11 @@ func TestIntegration_DrawRectangle_GetPixels_PaletteIndex0Bug(t *testing.T) {
 	drawRedScript := gen.DrawRectangle(
 		"Layer 1",
 		1,
-		0, 0,  // x, y
-		4, 4,  // width, height
+		0, 0, // x, y
+		4, 4, // width, height
 		aseprite.Color{R: 255, G: 0, B: 0, A: 255}, // RED
-		true,  // filled
-		true,  // use_palette (snap to nearest palette color)
+		true, // filled
+		true, // use_palette (snap to nearest palette color)
 	)
 	_, err = client.ExecuteLua(ctx, drawRedScript, spritePath)
 	if err != nil {
@@ -65,11 +65,11 @@ func TestIntegration_DrawRectangle_GetPixels_PaletteIndex0Bug(t *testing.T) {
 	drawGreenScript := gen.DrawRectangle(
 		"Layer 1",
 		1,
-		4, 0,  // x, y
-		4, 4,  // width, height
+		4, 0, // x, y
+		4, 4, // width, height
 		aseprite.Color{R: 0, G: 255, B: 0, A: 255}, // GREEN
-		true,  // filled
-		true,  // use_palette
+		true, // filled
+		true, // use_palette
 	)
 	_, err = client.ExecuteLua(ctx, drawGreenScript, spritePath)
 	if err != nil {

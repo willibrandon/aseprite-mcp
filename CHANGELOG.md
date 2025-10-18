@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-10-18
+
+### Added
+- **Layer Flattening Tool** (`flatten_layers`)
+  - Flattens all layers in a sprite into a single layer
+  - Uses Aseprite's built-in flatten operation
+  - Integration test and example demonstration included
+
 ## [0.4.0] - 2025-10-18
 
 ### Added

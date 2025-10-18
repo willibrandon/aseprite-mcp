@@ -11,6 +11,7 @@ The `client/` directory contains a complete example MCP client that demonstrates
 - Connecting to the Aseprite MCP server via stdio transport
 - Creating a 64x64 RGB sprite
 - Adding and deleting layers and frames
+- Flattening multiple layers into a single layer
 - Drawing animated content (growing circles)
 - Drawing polylines and polygons (zigzag, triangle, star)
 - Filling areas with colors
@@ -137,6 +138,7 @@ Available tools:
   - create_canvas: Create a new Aseprite sprite
   - add_layer: Add a new layer to the sprite
   - delete_layer: Delete a layer from the sprite
+  - flatten_layers: Flatten all layers into a single layer
   - add_frame: Add a new frame to the sprite timeline
   - delete_frame: Delete a frame from the sprite
   - get_sprite_info: Get metadata about a sprite
@@ -251,6 +253,9 @@ Step 17: Demonstrating layer and frame deletion...
   Deleted Layer 2 (2 layers remaining)
   Deleted frame 2 (2 frames remaining)
   Final state: {"width":32,"height":32,"color_mode":"RGB","frame_count":2,"layer_count":2,"layers":["Layer 1","Layer 3"]}
+  Flattening remaining 2 layers into 1...
+  Layers flattened successfully
+  After flattening: {"width":32,"height":32,"color_mode":"RGB","frame_count":2,"layer_count":1,"layers":["Layer 1"]}
 
 Step 18: Demonstrating polylines and polygons...
   Drawing zigzag polyline on frame 1...

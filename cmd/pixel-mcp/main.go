@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/willibrandon/pixel-mcp/pkg/config"
-	"github.com/willibrandon/pixel-mcp/pkg/server"
 	"github.com/willibrandon/mtlog"
 	"github.com/willibrandon/mtlog/core"
 	"github.com/willibrandon/mtlog/sinks"
+	"github.com/willibrandon/pixel-mcp/pkg/config"
+	"github.com/willibrandon/pixel-mcp/pkg/server"
 )
 
 var (

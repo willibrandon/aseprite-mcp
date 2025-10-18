@@ -216,16 +216,16 @@ func TestIntegration_QuantizePalette_Octree(t *testing.T) {
 
 	// Draw circles with various colors
 	colors := []aseprite.Color{
-		{R: 255, G: 0, B: 0, A: 255},     // Red
-		{R: 0, G: 255, B: 0, A: 255},     // Green
-		{R: 0, G: 0, B: 255, A: 255},     // Blue
-		{R: 255, G: 255, B: 0, A: 255},   // Yellow
-		{R: 255, G: 0, B: 255, A: 255},   // Magenta
-		{R: 0, G: 255, B: 255, A: 255},   // Cyan
+		{R: 255, G: 0, B: 0, A: 255},   // Red
+		{R: 0, G: 255, B: 0, A: 255},   // Green
+		{R: 0, G: 0, B: 255, A: 255},   // Blue
+		{R: 255, G: 255, B: 0, A: 255}, // Yellow
+		{R: 255, G: 0, B: 255, A: 255}, // Magenta
+		{R: 0, G: 255, B: 255, A: 255}, // Cyan
 	}
 	for i, color := range colors {
-		x := (i % 3) * 21 + 10
-		y := (i / 3) * 32 + 16
+		x := (i%3)*21 + 10
+		y := (i/3)*32 + 16
 		drawScript := gen.DrawCircle("Layer 1", 1, x, y, 8, color, true, false)
 		_, err := client.ExecuteLua(ctx, drawScript, spritePath)
 		if err != nil {

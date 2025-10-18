@@ -13,10 +13,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/willibrandon/pixel-mcp/internal/testutil"
-	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 	"github.com/willibrandon/mtlog"
 	"github.com/willibrandon/mtlog/core"
+	"github.com/willibrandon/pixel-mcp/internal/testutil"
+	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 )
 
 // createAnalysisTestSession creates an MCP session with analysis tools registered

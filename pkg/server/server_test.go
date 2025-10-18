@@ -3,9 +3,9 @@ package server
 import (
 	"testing"
 
-	"github.com/willibrandon/pixel-mcp/internal/testutil"
 	"github.com/willibrandon/mtlog"
 	"github.com/willibrandon/mtlog/sinks"
+	"github.com/willibrandon/pixel-mcp/internal/testutil"
 )
 
 func TestNew(t *testing.T) {

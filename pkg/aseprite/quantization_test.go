@@ -278,10 +278,10 @@ func TestQuantizePalette(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
+		name         string
 		targetColors int
-		algorithm   string
-		wantErr     bool
+		algorithm    string
+		wantErr      bool
 	}{
 		{
 			name:         "median_cut to 4 colors",

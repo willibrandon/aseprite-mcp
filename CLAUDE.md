@@ -94,7 +94,7 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
 - `pkg/config/` - Configuration management (file-based only)
 - `pkg/server/` - MCP server implementation
 - `pkg/tools/` - MCP tool implementations organized by category:
-  - `canvas.go` - Sprite/layer/frame management (create_sprite, add_layer, add_frame, delete_layer with protection, delete_frame with protection)
+  - `canvas.go` - Sprite/layer/frame management (create_sprite, add_layer, add_frame, delete_layer with protection, delete_frame with protection, flatten_layers)
   - `drawing.go` - Drawing primitives (pixels, lines, rectangles, circles, fill, contours for polylines/polygons)
   - `selection.go` - Selection and clipboard operations (8 tools)
   - `animation.go` - Animation and timeline operations (frame duration, tags, tag deletion, duplication, linked cels)
@@ -130,7 +130,7 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
 
 Core functionality implemented and tested:
 - Canvas creation and management (RGB, Grayscale, Indexed)
-- Layer and frame operations (add, delete with last-layer/frame protection)
+- Layer and frame operations (add, delete with last-layer/frame protection, flatten)
 - Drawing primitives (pixels, lines, rectangles, circles, fill) with optional palette-aware color snapping
 - Advanced drawing: Contour tool for drawing polylines and closed polygons with points arrays
 - **Selection and Clipboard Tools (8 tools):**
