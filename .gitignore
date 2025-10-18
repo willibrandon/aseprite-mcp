@@ -45,6 +45,6 @@ Thumbs.db
 config.json
 .env
 
-# Aseprite-MCP binaries
+# Pixel-MCP binaries
 /pixel-mcp
 cmd/pixel-mcp/pixel-mcp
