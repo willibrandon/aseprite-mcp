@@ -167,7 +167,6 @@ print("Exported successfully")`,
 			if err := png.Encode(shadedFile, shadedImg); err != nil {
 				return nil, nil, fmt.Errorf("failed to encode shaded PNG: %w", err)
 			}
-			shadedFile.Close()
 
 			// Step 3: Generate and execute Lua script to apply shaded result
 			applyScript := gen.ApplyAutoShadingResult(

@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"os"
 	"path/filepath"
 
+	colorful "github.com/lucasb-eyer/go-colorful"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/willibrandon/mtlog/core"
 	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
@@ -16,12 +18,12 @@ import (
 
 // QuantizePaletteInput defines the input parameters for the quantize_palette tool.
 type QuantizePaletteInput struct {
-	SpritePath          string `json:"sprite_path" jsonschema:"Path to source .aseprite file"`
-	TargetColors        int    `json:"target_colors" jsonschema:"Target palette size (2-256)"`
-	Algorithm           string `json:"algorithm" jsonschema:"Quantization algorithm: median_cut (default), kmeans, or octree"`
-	Dither              bool   `json:"dither" jsonschema:"Apply Floyd-Steinberg dithering during quantization (default: false)"`
-	PreserveTransparency bool  `json:"preserve_transparency" jsonschema:"Keep transparent pixels transparent (default: true)"`
-	ConvertToIndexed    bool   `json:"convert_to_indexed" jsonschema:"Convert sprite to indexed color mode (default: true)"`
+	SpritePath           string `json:"sprite_path" jsonschema:"Path to source .aseprite file"`
+	TargetColors         int    `json:"target_colors" jsonschema:"Target palette size (2-256)"`
+	Algorithm            string `json:"algorithm" jsonschema:"Quantization algorithm: median_cut (default), kmeans, or octree"`
+	Dither               bool   `json:"dither" jsonschema:"Apply Floyd-Steinberg dithering during quantization (default: false)"`
+	PreserveTransparency *bool  `json:"preserve_transparency,omitempty" jsonschema:"Keep transparent pixels transparent (default: true)"`
+	ConvertToIndexed     *bool  `json:"convert_to_indexed,omitempty" jsonschema:"Convert sprite to indexed color mode (default: true)"`
 }
 
 // QuantizePaletteOutput defines the output for the quantize_palette tool.
@@ -53,6 +55,14 @@ func RegisterQuantizationTools(server *mcp.Server, client *aseprite.Client, gen 
 			if input.Algorithm == "" {
 				input.Algorithm = "median_cut"
 			}
+			if input.PreserveTransparency == nil {
+				defaultTrue := true
+				input.PreserveTransparency = &defaultTrue
+			}
+			if input.ConvertToIndexed == nil {
+				defaultTrue := true
+				input.ConvertToIndexed = &defaultTrue
+			}
 
 			// Validate inputs
 			if input.TargetColors < 2 || input.TargetColors > 256 {
@@ -82,19 +92,8 @@ func RegisterQuantizationTools(server *mcp.Server, client *aseprite.Client, gen 
 
 			tempPNG := filepath.Join(tempDir, "sprite.png")
 
-			// Export sprite to PNG using Aseprite CLI
-			exportScript := fmt.Sprintf(`local spr = app.activeSprite
-if not spr then
-	error("No active sprite")
-end
-
-app.command.ExportSpriteSheet{
-	type=SpriteSheetType.HORIZONTAL,
-	textureFilename=%q,
-	ignoreEmpty=false
-}
-
-print("Exported successfully")`, tempPNG)
+			// Export sprite to PNG using gen.ExportSprite for consistency
+			exportScript := gen.ExportSprite(tempPNG, 0)
 
 			_, err = client.ExecuteLua(ctx, exportScript, input.SpritePath)
 			if err != nil {
@@ -124,7 +123,7 @@ print("Exported successfully")`, tempPNG)
 				input.TargetColors,
 				input.Algorithm,
 				input.Dither,
-				input.PreserveTransparency,
+				*input.PreserveTransparency,
 			)
 			if err != nil {
 				return nil, nil, fmt.Errorf("quantization failed: %w", err)
@@ -135,12 +134,51 @@ print("Exported successfully")`, tempPNG)
 				"quantized_colors", len(palette),
 				"algorithm", input.Algorithm)
 
-			// Step 3: Generate and execute Lua script to apply quantized palette
+
+		// Step 3: If dithering is requested, remap pixels to quantized palette with dithering
+		if input.Dither {
+			// Convert hex palette to color.Color slice
+			paletteColors := make([]color.Color, len(palette))
+			for i, hexColor := range palette {
+				c, err := colorful.Hex(hexColor)
+				if err != nil {
+					return nil, nil, fmt.Errorf("invalid palette color %s: %w", hexColor, err)
+				}
+				r, g, b := c.RGB255()
+				paletteColors[i] = color.RGBA{R: r, G: g, B: b, A: 255}
+			}
+
+			// Remap image with dithering
+			ditheredImg := aseprite.RemapPixelsWithDithering(img, paletteColors, true)
+
+			// Save dithered image to temp file
+			ditheredPNG := filepath.Join(tempDir, "dithered.png")
+			ditheredFile, err := os.Create(ditheredPNG)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to create dithered PNG: %w", err)
+			}
+			defer ditheredFile.Close()
+
+			if err := png.Encode(ditheredFile, ditheredImg); err != nil {
+				return nil, nil, fmt.Errorf("failed to encode dithered PNG: %w", err)
+			}
+
+			// Replace sprite content with dithered image
+			replaceScript := gen.ReplaceWithImage(ditheredPNG)
+			_, err = client.ExecuteLua(ctx, replaceScript, input.SpritePath)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to replace sprite with dithered image: %w", err)
+			}
+
+			opLogger.Information("Dithering applied successfully",
+				"sprite", input.SpritePath)
+		}
+			// Step 4: Generate and execute Lua script to apply quantized palette
 			applyScript := gen.ApplyQuantizedPalette(
 				palette,
 				originalColors,
 				input.Algorithm,
-				input.ConvertToIndexed,
+				*input.ConvertToIndexed,
 				input.Dither,
 			)
 

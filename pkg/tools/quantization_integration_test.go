@@ -289,3 +289,174 @@ func TestIntegration_QuantizePalette_WithDithering(t *testing.T) {
 
 	t.Logf("✓ Quantized from %d colors with dithering to %d colors", originalColors, len(palette))
 }
+
+func TestIntegration_QuantizePalette_WithDitheringAndReplacement(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a canvas with gradient
+	spritePath := testutil.TempSpritePath(t, "test-quantize-dither-replace.aseprite")
+	createScript := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Draw gradient (should produce many colors)
+	for y := 0; y < 64; y++ {
+		for x := 0; x < 64; x++ {
+			gray := uint8((x + y) * 2)
+			color := aseprite.Color{R: gray, G: gray, B: gray, A: 255}
+			pixels := []aseprite.Pixel{{Point: aseprite.Point{X: x, Y: y}, Color: color}}
+			drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
+			_, err := client.ExecuteLua(ctx, drawScript, spritePath)
+			if err != nil {
+				t.Fatalf("Failed to draw pixel: %v", err)
+			}
+		}
+	}
+
+	// Export sprite to PNG
+	tempPNG := testutil.TempSpritePath(t, "gradient.png")
+	defer os.Remove(tempPNG)
+
+	exportScript := gen.ExportSprite(tempPNG, 0)
+	_, err = client.ExecuteLua(ctx, exportScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to export sprite: %v", err)
+	}
+
+	// Load PNG
+	imgFile, err := os.Open(tempPNG)
+	if err != nil {
+		t.Fatalf("Failed to open PNG: %v", err)
+	}
+	defer imgFile.Close()
+
+	img, err := png.Decode(imgFile)
+	if err != nil {
+		t.Fatalf("Failed to decode PNG: %v", err)
+	}
+
+	// Quantize with dithering enabled
+	palette, originalColors, err := aseprite.QuantizePalette(img, 8, "median_cut", true, true)
+	if err != nil {
+		t.Fatalf("Quantization failed: %v", err)
+	}
+
+	if len(palette) == 0 {
+		t.Fatal("Palette should not be empty")
+	}
+
+	t.Logf("✓ Quantized from %d to %d colors with dithering", originalColors, len(palette))
+
+	// Convert palette to color.Color slice (testing the color parsing)
+	paletteColors := make([]color.Color, len(palette))
+	for i, hexColor := range palette {
+		// Parse hex color
+		var r, g, b uint8
+		if _, err := parseHexColorValues(hexColor, &r, &g, &b); err != nil {
+			t.Fatalf("Failed to parse palette color %s: %v", hexColor, err)
+		}
+		paletteColors[i] = color.RGBA{R: r, G: g, B: b, A: 255}
+	}
+
+	// Apply dithering
+	ditheredImg := aseprite.RemapPixelsWithDithering(img, paletteColors, true)
+	if ditheredImg == nil {
+		t.Fatal("Dithered image should not be nil")
+	}
+
+	// Save dithered image
+	ditheredPNG := testutil.TempSpritePath(t, "dithered.png")
+	defer os.Remove(ditheredPNG)
+
+	ditheredFile, err := os.Create(ditheredPNG)
+	if err != nil {
+		t.Fatalf("Failed to create dithered PNG: %v", err)
+	}
+	defer ditheredFile.Close()
+
+	if err := png.Encode(ditheredFile, ditheredImg); err != nil {
+		t.Fatalf("Failed to encode dithered PNG: %v", err)
+	}
+
+	// Replace sprite content with dithered image
+	replaceScript := gen.ReplaceWithImage(ditheredPNG)
+	_, err = client.ExecuteLua(ctx, replaceScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to replace sprite with dithered image: %v", err)
+	}
+
+	t.Logf("✓ Successfully replaced sprite content with dithered image")
+
+	// Verify sprite was modified
+	infoScript := gen.GetSpriteInfo()
+	output, err := client.ExecuteLua(ctx, infoScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to get sprite info: %v", err)
+	}
+
+	if !strings.Contains(output, "\"width\": 64") {
+		t.Error("Sprite dimensions should be preserved after replacement")
+	}
+
+	t.Logf("✓ Verified sprite was successfully updated with dithered content")
+}
+
+// Helper function to parse hex color values
+func parseHexColorValues(hexColor string, r, g, b *uint8) (int, error) {
+	hexColor = strings.TrimPrefix(hexColor, "#")
+
+	var rVal, gVal, bVal int
+	if len(hexColor) == 6 {
+		n, err := parseColor(hexColor, &rVal, &gVal, &bVal)
+		if err != nil {
+			return 0, err
+		}
+		*r = uint8(rVal)
+		*g = uint8(gVal)
+		*b = uint8(bVal)
+		return n, nil
+	}
+	return 0, nil
+}
+
+func parseColor(hex string, r, g, b *int) (int, error) {
+	n, err := parseHex(hex[:2], r)
+	if err != nil {
+		return 0, err
+	}
+	n2, err := parseHex(hex[2:4], g)
+	if err != nil {
+		return 0, err
+	}
+	n3, err := parseHex(hex[4:6], b)
+	if err != nil {
+		return 0, err
+	}
+	return n + n2 + n3, nil
+}
+
+func parseHex(s string, val *int) (int, error) {
+	n := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		var v int
+		if '0' <= c && c <= '9' {
+			v = int(c - '0')
+		} else if 'a' <= c && c <= 'f' {
+			v = int(c - 'a' + 10)
+		} else if 'A' <= c && c <= 'F' {
+			v = int(c - 'A' + 10)
+		} else {
+			return 0, nil
+		}
+		n = n*16 + v
+	}
+	*val = n
+	return 1, nil
+}

@@ -128,3 +128,54 @@ print(json)`,
 		len(palette),           // quantized_colors
 		EscapeString(algorithm)) // algorithm_used
 }
+
+// ReplaceWithImage generates a Lua script to replace sprite content with an external image.
+// This flattens all layers and replaces the content with the provided image.
+func (g *LuaGenerator) ReplaceWithImage(imagePath string) string {
+	escapedPath := EscapeString(imagePath)
+
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Load external image
+local newImg = Image{ fromFile = "%s" }
+if not newImg then
+	error("Failed to load image: %s")
+end
+
+app.transaction(function()
+	-- Flatten all layers to a single layer
+	spr:flatten()
+
+	-- Get the flattened layer (should be only layer now)
+	local layer = spr.layers[1]
+	if not layer then
+		error("No layer found after flattening")
+	end
+
+	-- Get the cel at frame 1
+	local cel = layer:cel(1)
+	if not cel then
+		-- Create cel if it doesn't exist
+		cel = spr:newCel(layer, 1)
+	end
+
+	-- Convert color mode if needed
+	local finalImg = newImg
+	if newImg.colorMode ~= spr.colorMode then
+		finalImg = Image(newImg.width, newImg.height, spr.colorMode)
+		finalImg:drawImage(newImg, Point(0, 0), 255, BlendMode.SRC)
+	end
+
+	-- Replace cel image
+	local celX = cel.position.x
+	local celY = cel.position.y
+	spr:deleteCel(cel)
+	spr:newCel(layer, 1, finalImg, celX, celY)
+end)
+
+spr:saveAs(spr.filename)
+print("Sprite content replaced successfully")`, escapedPath, escapedPath)
+}
