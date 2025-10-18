@@ -238,14 +238,17 @@ if not frame then
 end
 
 app.transaction(function()
-	-- Create cel in the layer at specified frame
-	local cel = spr:newCel(layer, frame)
+	local finalImg = img
 
-	-- Set cel image
-	cel.image = img
+	-- Convert color mode if needed
+	if img.colorMode ~= spr.colorMode then
+		finalImg = Image(img.width, img.height, spr.colorMode)
+		-- Use SRC blend mode to properly convert indexed colors to RGB
+		finalImg:drawImage(img, Point(0, 0), 255, BlendMode.SRC)
+	end
 
-	-- Set position if specified
-	cel.position = Point(%d, %d)
+	-- Create cel with the image at the specified position
+	spr:newCel(layer, frame, finalImg, %d, %d)
 end)
 
 spr:saveAs(spr.filename)

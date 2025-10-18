@@ -34,6 +34,27 @@ spr:saveAs("%s")
 print("%s")`, width, height, colorMode.ToLua(), escapedFilename, escapedFilename)
 }
 
+// FlattenLayers generates a Lua script to flatten all visible layers into a single layer.
+//
+// This merges all visible layers into one layer, compositing them according to their
+// blend modes and opacity settings. The result is a single layer containing the
+// flattened image.
+//
+// This is useful before exporting when you want a single composite image.
+func (g *LuaGenerator) FlattenLayers() string {
+	return `local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+app.transaction(function()
+	spr:flatten()
+end)
+
+spr:saveAs(spr.filename)
+print("Layers flattened successfully")`
+}
+
 // GetSpriteInfo generates a Lua script to retrieve sprite metadata.
 //
 // Extracts complete metadata from the active sprite including:

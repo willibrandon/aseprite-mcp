@@ -13,7 +13,9 @@ A Model Context Protocol (MCP) server that exposes Aseprite's pixel art and anim
 - **Selection Tools:** Rectangle, ellipse, select all, copy, cut, paste, move selections with multiple blend modes (replace/add/subtract/intersect)
 - **Professional Pixel Art Tools:**
   - **Reference Analysis:** Extract palettes, brightness maps, edge detection, and composition guides from images
-  - **Dithering:** 15 patterns including Bayer matrices (2x2, 4x4, 8x8), checkerboard, and textures (grass, water, stone, cloud, brick, dots, diagonal, cross, noise, lines)
+  - **Color Quantization:** Reduce images to 2-256 colors using median_cut, k-means, or octree algorithms with optional Floyd-Steinberg dithering
+  - **Automatic Shading:** Apply geometry-based shading with 3 styles (cell/smooth/soft), 8 light directions, and adjustable intensity
+  - **Dithering:** 16 patterns including Bayer matrices (2x2, 4x4, 8x8), Floyd-Steinberg, checkerboard, and textures (grass, water, stone, cloud, brick, dots, diagonal, cross, noise, lines)
   - **Palette Management:** Set custom palettes (1-256 colors), sort by hue/luminance, analyze color harmonies (complementary/triadic/analogous), and extract from reference images
   - **Shading Tools:** Apply palette-constrained shading with smooth, hard, or pillow styles and 8 light directions
   - **Antialiasing:** Detect jagged diagonal edges and suggest intermediate colors for smoother curves (manual or auto-apply)
