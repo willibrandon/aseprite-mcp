@@ -32,6 +32,8 @@ func createDitheringTestSession(t *testing.T) (*mcp.Server, *mcp.ClientSession, 
 	RegisterDitheringTools(server, client, gen, cfg, logger)
 	// Also register canvas tools for setup
 	RegisterCanvasTools(server, client, gen, cfg, logger)
+	// Register inspection tools for pixel verification
+	RegisterInspectionTools(server, client, gen, cfg, logger)
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 	_, err := server.Connect(context.Background(), serverTransport, nil)
@@ -90,6 +92,7 @@ func TestDrawWithDither_ViaMCP(t *testing.T) {
 		{"Noise texture", "noise", 0.5},
 		{"Horizontal lines", "horizontal_lines", 0.5},
 		{"Vertical lines", "vertical_lines", 0.5},
+		{"Floyd-Steinberg", "floyd_steinberg", 0.5},
 	}
 
 	for _, tt := range tests {
@@ -172,6 +175,137 @@ func TestDrawWithDitherDensity_ViaMCP(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, result.IsError, "Density %f should succeed", density)
 	}
+}
+
+func TestFloydSteinbergGradient_ViaMCP(t *testing.T) {
+	_, session, _ := createDitheringTestSession(t)
+	defer session.Close()
+
+	// Create a 64x64 sprite
+	createResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "create_canvas",
+		Arguments: map[string]any{
+			"width":      64,
+			"height":     64,
+			"color_mode": "rgb",
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, createResult.IsError)
+
+	var createOutput struct {
+		FilePath string `json:"file_path"`
+	}
+	json.Unmarshal([]byte(createResult.Content[0].(*mcp.TextContent).Text), &createOutput)
+	defer os.Remove(createOutput.FilePath)
+
+	// Apply Floyd-Steinberg dithering across full width to create gradient
+	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "draw_with_dither",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"region": map[string]any{
+				"x":      0,
+				"y":      0,
+				"width":  64,
+				"height": 64,
+			},
+			"color1":  "#001F3FFF", // Dark blue
+			"color2":  "#7FDBFFFF", // Light blue
+			"pattern": "floyd_steinberg",
+			"density": 0.5,
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, result.IsError)
+
+	// Read back pixels to verify gradient was created
+	readResult, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get_pixels",
+		Arguments: map[string]any{
+			"sprite_path":  createOutput.FilePath,
+			"layer_name":   "Layer 1",
+			"frame_number": 1,
+			"x":            0,
+			"y":            0,
+			"width":        64,
+			"height":       64,
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, readResult.IsError)
+
+	var readOutput struct {
+		Pixels []struct {
+			X     int    `json:"x"`
+			Y     int    `json:"y"`
+			Color string `json:"color"`
+		} `json:"pixels"`
+	}
+	json.Unmarshal([]byte(readResult.Content[0].(*mcp.TextContent).Text), &readOutput)
+
+	// Verify we got pixels back
+	require.NotEmpty(t, readOutput.Pixels, "Should have pixels")
+
+	// Count occurrences of each color
+	color1Count := 0
+	color2Count := 0
+	color1 := "#001F3FFF"
+	color2 := "#7FDBFFFF"
+
+	for _, pixel := range readOutput.Pixels {
+		if pixel.Color == color1 {
+			color1Count++
+		} else if pixel.Color == color2 {
+			color2Count++
+		}
+	}
+
+	// Verify we have a mix of both colors (not solid blue)
+	assert.Greater(t, color1Count, 0, "Should have some dark blue pixels")
+	assert.Greater(t, color2Count, 0, "Should have some light blue pixels")
+
+	// Verify ratio is reasonable (gradient should use both colors significantly)
+	totalPixels := len(readOutput.Pixels)
+	color1Ratio := float64(color1Count) / float64(totalPixels)
+	color2Ratio := float64(color2Count) / float64(totalPixels)
+
+	// Each color should be at least 20% of pixels (gradient uses both colors)
+	assert.Greater(t, color1Ratio, 0.2, "Dark blue should be at least 20%% of pixels")
+	assert.Greater(t, color2Ratio, 0.2, "Light blue should be at least 20%% of pixels")
+
+	// Verify pixels vary across the width (error diffusion creates variation)
+	// Check first column vs last column - should have different color distributions
+	firstColColor1 := 0
+	firstColColor2 := 0
+	lastColColor1 := 0
+	lastColColor2 := 0
+
+	for _, pixel := range readOutput.Pixels {
+		if pixel.X == 0 {
+			if pixel.Color == color1 {
+				firstColColor1++
+			} else if pixel.Color == color2 {
+				firstColColor2++
+			}
+		}
+		if pixel.X == 63 {
+			if pixel.Color == color1 {
+				lastColColor1++
+			} else if pixel.Color == color2 {
+				lastColColor2++
+			}
+		}
+	}
+
+	// First and last columns should have different dominant colors (gradient works)
+	firstColDominant := firstColColor1 > firstColColor2
+	lastColDominant := lastColColor1 > lastColColor2
+
+	assert.NotEqual(t, firstColDominant, lastColDominant,
+		"First and last columns should have different dominant colors (gradient effect)")
 }
 
 // Unit tests for isValidHexColor helper function

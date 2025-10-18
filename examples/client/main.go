@@ -246,9 +246,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 
 	// Step 9: Demonstrate dithering (create a new sprite with gradient)
 	logger.Information("")
-	logger.Information("Step 9: Creating sprite with dithered gradient...")
+	logger.Information("Step 9: Creating sprite for dithering comparison (Bayer vs Floyd-Steinberg)...")
 	ditherResp, err := callTool(ctx, session, "create_canvas", map[string]any{
-		"width":      64,
+		"width":      128,
 		"height":     64,
 		"color_mode": "rgb",
 	})
@@ -264,9 +264,9 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	ditherSprite := ditherResult.FilePath
 	logger.Information("  Created: {DitherSprite}", ditherSprite)
 
-	// Apply dithering with Bayer 4x4 pattern
+	// Apply Bayer 4x4 dithering to left half
 	logger.Information("")
-	logger.Information("Step 10: Applying Bayer 4x4 dithering pattern...")
+	logger.Information("Step 10: Applying Bayer 4x4 pattern (left half)...")
 	if _, err := callTool(ctx, session, "draw_with_dither", map[string]any{
 		"sprite_path":  ditherSprite,
 		"layer_name":   "Layer 1",
@@ -282,14 +282,35 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 		"pattern": "bayer_4x4",
 		"density": 0.5,
 	}); err != nil {
-		return fmt.Errorf("draw_with_dither failed: %w", err)
+		return fmt.Errorf("draw_with_dither (bayer) failed: %w", err)
 	}
-	logger.Information("  Dithering applied successfully")
+	logger.Information("  Bayer 4x4 pattern applied (ordered dithering)")
+
+	// Apply Floyd-Steinberg dithering to right half
+	logger.Information("  Applying Floyd-Steinberg pattern (right half)...")
+	if _, err := callTool(ctx, session, "draw_with_dither", map[string]any{
+		"sprite_path":  ditherSprite,
+		"layer_name":   "Layer 1",
+		"frame_number": 1,
+		"region": map[string]any{
+			"x":      64,
+			"y":      0,
+			"width":  64,
+			"height": 64,
+		},
+		"color1":  "#001F3F",
+		"color2":  "#7FDBFF",
+		"pattern": "floyd_steinberg",
+		"density": 0.5,
+	}); err != nil {
+		return fmt.Errorf("draw_with_dither (floyd-steinberg) failed: %w", err)
+	}
+	logger.Information("  Floyd-Steinberg pattern applied (error diffusion)")
 
 	// Export dithered sprite
 	logger.Information("")
-	logger.Information("Step 11: Exporting dithered gradient...")
-	ditherPngPath := filepath.Join(outputDir, "dithered-gradient.png")
+	logger.Information("Step 11: Exporting dithering comparison...")
+	ditherPngPath := filepath.Join(outputDir, "dithering-comparison.png")
 	if _, err := callTool(ctx, session, "export_sprite", map[string]any{
 		"sprite_path":  ditherSprite,
 		"output_path":  ditherPngPath,
@@ -299,6 +320,7 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 		return fmt.Errorf("export_sprite dither failed: %w", err)
 	}
 	logger.Information("  Exported: {DitherPng}", ditherPngPath)
+	logger.Information("  Left: Bayer 4x4 (ordered pattern) | Right: Floyd-Steinberg (error diffusion)")
 
 	// Step 12: Analyze palette harmonies
 	logger.Information("")
