@@ -694,6 +694,9 @@ local matrixSize = 4`
 	{1, 0, 1, 0}
 }
 local matrixSize = 4`
+	case "floyd_steinberg":
+		// Floyd-Steinberg uses error diffusion instead of matrix patterns
+		return generateFloydSteinbergLua(escapedLayerName, frameNumber, x, y, width, height, c1, c2, density)
 	default:
 		return fmt.Sprintf(`error("Unknown dithering pattern: %s")`, pattern)
 	}
@@ -808,4 +811,246 @@ print("Dithering applied successfully")`,
 		density,
 		height, width,
 		x, y)
+}
+
+// generateFloydSteinbergLua generates Lua script for Floyd-Steinberg error diffusion dithering.
+//
+// Floyd-Steinberg is an error diffusion algorithm that produces high-quality dithering
+// by propagating quantization error to neighboring pixels. The error distribution pattern is:
+//
+//	        X   7/16
+//	3/16  5/16  1/16
+//
+// where X is the current pixel being processed.
+//
+// The implementation creates a horizontal gradient from color1 to color2 and applies error
+// diffusion to produce smooth transitions. The density parameter is currently unused as the
+// gradient quality is controlled by the error diffusion algorithm itself.
+func generateFloydSteinbergLua(layerName string, frameNumber int, x, y, width, height int, c1, c2 Color, density float64) string {
+	return fmt.Sprintf(`local spr = app.activeSprite
+if not spr then
+	error("No active sprite")
+end
+
+-- Find layer
+local layer = nil
+for _, l in ipairs(spr.layers) do
+	if l.name == "%s" then
+		layer = l
+		break
+	end
+end
+
+if not layer then
+	error("Layer not found: %s")
+end
+
+-- Get frame
+local frame = spr.frames[%d]
+if not frame then
+	error("Frame not found: %d")
+end
+
+-- Get or create cel
+local cel = layer:cel(frame)
+if not cel then
+	cel = spr:newCel(layer, frame)
+end
+
+-- Create or get image
+local img = cel.image
+if not img then
+	img = Image(spr.width, spr.height, spr.colorMode)
+	cel.image = img
+end
+
+-- Helper: Find nearest palette index for given RGBA color
+local function findNearestPaletteIndex(r, g, b, a)
+	local palette = spr.palettes[1]
+	if not palette or #palette == 0 then
+		return 0
+	end
+
+	local minDist = math.huge
+	local nearestIndex = 0
+
+	for i = 0, #palette - 1 do
+		local palColor = palette:getColor(i)
+		local dr = r - palColor.red
+		local dg = g - palColor.green
+		local db = b - palColor.blue
+		local da = a - palColor.alpha
+		local dist = dr*dr + dg*dg + db*db + da*da
+
+		if dist < minDist then
+			minDist = dist
+			nearestIndex = i
+		end
+	end
+
+	return nearestIndex
+end
+
+-- Define colors based on color mode
+local color1, color2
+local color1_r, color1_g, color1_b, color1_a = %d, %d, %d, %d
+local color2_r, color2_g, color2_b, color2_a = %d, %d, %d, %d
+
+if spr.colorMode == ColorMode.INDEXED then
+	-- In indexed mode, img:drawPixel expects palette indices
+	color1 = findNearestPaletteIndex(color1_r, color1_g, color1_b, color1_a)
+	color2 = findNearestPaletteIndex(color2_r, color2_g, color2_b, color2_a)
+else
+	-- In RGB/Grayscale mode, use pixel color values
+	color1 = app.pixelColor.rgba(color1_r, color1_g, color1_b, color1_a)
+	color2 = app.pixelColor.rgba(color2_r, color2_g, color2_b, color2_a)
+end
+
+-- Floyd-Steinberg error diffusion
+app.transaction(function()
+	-- Create error buffer (width+2 to handle edges, 2 rows for current and next)
+	local errors = {}
+	for row = 0, 1 do
+		errors[row] = {}
+		for col = 0, %d + 1 do
+			errors[row][col] = {r=0, g=0, b=0}
+		end
+	end
+
+	for py = 0, %d - 1 do
+		-- Swap error buffers for next row
+		if py > 0 then
+			errors[0], errors[1] = errors[1], errors[0]
+			-- Clear the new "next row" buffer
+			for col = 0, %d + 1 do
+				errors[1][col] = {r=0, g=0, b=0}
+			end
+		end
+
+		for px = 0, %d - 1 do
+			-- Calculate gradient position (0.0 to 1.0 across width)
+			local gradient_pos
+			if %d == 1 then
+				gradient_pos = 0
+			else
+				gradient_pos = px / (%d - 1)
+			end
+
+			-- Calculate ideal gradient color at this position
+			local ideal_r = color1_r + (color2_r - color1_r) * gradient_pos
+			local ideal_g = color1_g + (color2_g - color1_g) * gradient_pos
+			local ideal_b = color1_b + (color2_b - color1_b) * gradient_pos
+
+			-- Add accumulated error
+			local err = errors[0][px + 1]
+			local new_r = math.max(0, math.min(255, ideal_r + err.r))
+			local new_g = math.max(0, math.min(255, ideal_g + err.g))
+			local new_b = math.max(0, math.min(255, ideal_b + err.b))
+
+			-- Calculate color with accumulated error
+			local targetColor
+			if spr.colorMode == ColorMode.INDEXED then
+				-- Choose nearest color by Euclidean distance
+				local dist1 = (new_r - color1_r)^2 + (new_g - color1_g)^2 + (new_b - color1_b)^2
+				local dist2 = (new_r - color2_r)^2 + (new_g - color2_g)^2 + (new_b - color2_b)^2
+
+				targetColor = (dist1 < dist2) and color1 or color2
+
+				-- Calculate error in RGB space
+				local actual_r, actual_g, actual_b
+				if targetColor == color1 then
+					actual_r, actual_g, actual_b = color1_r, color1_g, color1_b
+				else
+					actual_r, actual_g, actual_b = color2_r, color2_g, color2_b
+				end
+
+				local err_r = new_r - actual_r
+				local err_g = new_g - actual_g
+				local err_b = new_b - actual_b
+
+				-- Distribute error to neighbors (Floyd-Steinberg weights)
+				if px < %d - 1 then
+					errors[0][px + 2].r = errors[0][px + 2].r + err_r * 7/16
+					errors[0][px + 2].g = errors[0][px + 2].g + err_g * 7/16
+					errors[0][px + 2].b = errors[0][px + 2].b + err_b * 7/16
+				end
+				if py < %d - 1 then
+					if px > 0 then
+						errors[1][px].r = errors[1][px].r + err_r * 3/16
+						errors[1][px].g = errors[1][px].g + err_g * 3/16
+						errors[1][px].b = errors[1][px].b + err_b * 3/16
+					end
+					errors[1][px + 1].r = errors[1][px + 1].r + err_r * 5/16
+					errors[1][px + 1].g = errors[1][px + 1].g + err_g * 5/16
+					errors[1][px + 1].b = errors[1][px + 1].b + err_b * 5/16
+					if px < %d - 1 then
+						errors[1][px + 2].r = errors[1][px + 2].r + err_r * 1/16
+						errors[1][px + 2].g = errors[1][px + 2].g + err_g * 1/16
+						errors[1][px + 2].b = errors[1][px + 2].b + err_b * 1/16
+					end
+				end
+			else
+				-- RGB mode - choose nearest color by Euclidean distance
+				local dist1 = (new_r - color1_r)^2 + (new_g - color1_g)^2 + (new_b - color1_b)^2
+				local dist2 = (new_r - color2_r)^2 + (new_g - color2_g)^2 + (new_b - color2_b)^2
+
+				targetColor = (dist1 < dist2) and color1 or color2
+
+				-- Calculate error (difference between gradient+error and quantized color)
+				local actual_r = app.pixelColor.rgbaR(targetColor)
+				local actual_g = app.pixelColor.rgbaG(targetColor)
+				local actual_b = app.pixelColor.rgbaB(targetColor)
+
+				local err_r = new_r - actual_r
+				local err_g = new_g - actual_g
+				local err_b = new_b - actual_b
+
+				-- Distribute error to neighbors
+				if px < %d - 1 then
+					errors[0][px + 2].r = errors[0][px + 2].r + err_r * 7/16
+					errors[0][px + 2].g = errors[0][px + 2].g + err_g * 7/16
+					errors[0][px + 2].b = errors[0][px + 2].b + err_b * 7/16
+				end
+				if py < %d - 1 then
+					if px > 0 then
+						errors[1][px].r = errors[1][px].r + err_r * 3/16
+						errors[1][px].g = errors[1][px].g + err_g * 3/16
+						errors[1][px].b = errors[1][px].b + err_b * 3/16
+					end
+					errors[1][px + 1].r = errors[1][px + 1].r + err_r * 5/16
+					errors[1][px + 1].g = errors[1][px + 1].g + err_g * 5/16
+					errors[1][px + 1].b = errors[1][px + 1].b + err_b * 5/16
+					if px < %d - 1 then
+						errors[1][px + 2].r = errors[1][px + 2].r + err_r * 1/16
+						errors[1][px + 2].g = errors[1][px + 2].g + err_g * 1/16
+						errors[1][px + 2].b = errors[1][px + 2].b + err_b * 1/16
+					end
+				end
+			end
+
+			img:drawPixel(%d + px, %d + py, targetColor)
+		end
+	end
+end)
+
+spr:saveAs(spr.filename)
+print("Dithering applied successfully")`,
+		layerName, layerName,
+		frameNumber, frameNumber,
+		c1.R, c1.G, c1.B, c1.A,
+		c2.R, c2.G, c2.B, c2.A,
+		width,    // line 915: error buffer width
+		height,   // line 920: py loop
+		width,    // line 925: clear buffer width
+		width,    // line 930: px loop
+		width,    // line 933: width check for division by zero
+		width,    // line 936: gradient calculation
+		width,    // line 967: right neighbor check
+		height,   // line 972: bottom neighbor check
+		width,    // line 981: bottom-right check
+		width,    // line 1007: right neighbor check (RGB)
+		height,   // line 1012: bottom neighbor check (RGB)
+		width,    // line 1021: bottom-right check (RGB)
+		x,        // line 1031: x coordinate
+		y)        // line 1031: y coordinate
 }
