@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/willibrandon/mtlog/core"
 	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 	"github.com/willibrandon/pixel-mcp/pkg/config"
-	"github.com/willibrandon/mtlog/core"
 )
 
 // GetPixelsInput defines the input parameters for the get_pixels tool.

@@ -1039,18 +1039,18 @@ print("Dithering applied successfully")`,
 		frameNumber, frameNumber,
 		c1.R, c1.G, c1.B, c1.A,
 		c2.R, c2.G, c2.B, c2.A,
-		width,    // line 915: error buffer width
-		height,   // line 920: py loop
-		width,    // line 925: clear buffer width
-		width,    // line 930: px loop
-		width,    // line 933: width check for division by zero
-		width,    // line 936: gradient calculation
-		width,    // line 967: right neighbor check
-		height,   // line 972: bottom neighbor check
-		width,    // line 981: bottom-right check
-		width,    // line 1007: right neighbor check (RGB)
-		height,   // line 1012: bottom neighbor check (RGB)
-		width,    // line 1021: bottom-right check (RGB)
-		x,        // line 1031: x coordinate
-		y)        // line 1031: y coordinate
+		width,  // line 915: error buffer width
+		height, // line 920: py loop
+		width,  // line 925: clear buffer width
+		width,  // line 930: px loop
+		width,  // line 933: width check for division by zero
+		width,  // line 936: gradient calculation
+		width,  // line 967: right neighbor check
+		height, // line 972: bottom neighbor check
+		width,  // line 981: bottom-right check
+		width,  // line 1007: right neighbor check (RGB)
+		height, // line 1012: bottom neighbor check (RGB)
+		width,  // line 1021: bottom-right check (RGB)
+		x,      // line 1031: x coordinate
+		y)      // line 1031: y coordinate
 }

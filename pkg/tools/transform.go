@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/willibrandon/mtlog/core"
 	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 	"github.com/willibrandon/pixel-mcp/pkg/config"
-	"github.com/willibrandon/mtlog/core"
 )
 
 // DownsampleImageInput defines the input parameters for the downsample_image tool.

@@ -108,6 +108,7 @@ Then use natural language to create sprites:
 | `create_canvas` | Create new sprite with specified dimensions and color mode |
 | `add_layer` | Add a new layer to the sprite |
 | `delete_layer` | Delete a layer from the sprite (cannot delete last layer) |
+| `flatten_layers` | Flatten all layers in a sprite into a single layer |
 | `get_sprite_info` | Get sprite metadata (size, layers, frames) |
 
 ### Drawing & Painting

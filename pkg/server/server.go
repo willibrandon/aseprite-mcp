@@ -20,10 +20,10 @@ import (
 	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/willibrandon/mtlog/core"
 	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 	"github.com/willibrandon/pixel-mcp/pkg/config"
 	"github.com/willibrandon/pixel-mcp/pkg/tools"
-	"github.com/willibrandon/mtlog/core"
 )
 
 // Server wraps the MCP server and provides Aseprite tool implementations.

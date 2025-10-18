@@ -814,6 +814,24 @@ func createAnimatedSprite(ctx context.Context, session *mcp.ClientSession, logge
 	}
 	logger.Information("  Final state: {Info}", finalInfoResp)
 
+	// Demonstrate flatten_layers
+	logger.Information("  Flattening remaining 2 layers into 1...")
+	if _, err := callTool(ctx, session, "flatten_layers", map[string]any{
+		"sprite_path": deleteSprite,
+	}); err != nil {
+		return fmt.Errorf("flatten_layers failed: %w", err)
+	}
+	logger.Information("  Layers flattened successfully")
+
+	// Verify flattened state
+	flattenedInfoResp, err := callTool(ctx, session, "get_sprite_info", map[string]any{
+		"sprite_path": deleteSprite,
+	})
+	if err != nil {
+		return fmt.Errorf("get_sprite_info after flattening failed: %w", err)
+	}
+	logger.Information("  After flattening: {Info}", flattenedInfoResp)
+
 	// Step 18: Demonstrate drawing polylines and polygons
 	logger.Information("")
 	logger.Information("Step 18: Demonstrating polylines and polygons...")

@@ -107,18 +107,18 @@ func run(logger core.Logger) error {
 	// Draw horizontal gradient bars (red to yellow to green to cyan to blue)
 	// We'll batch pixels to make this much faster
 	colors := []struct{ r, g, b int }{
-		{255, 0, 0},     // Red
-		{255, 128, 0},   // Orange
-		{255, 255, 0},   // Yellow
-		{128, 255, 0},   // Yellow-Green
-		{0, 255, 0},     // Green
-		{0, 255, 128},   // Green-Cyan
-		{0, 255, 255},   // Cyan
-		{0, 128, 255},   // Cyan-Blue
-		{0, 0, 255},     // Blue
-		{128, 0, 255},   // Blue-Magenta
-		{255, 0, 255},   // Magenta
-		{255, 0, 128},   // Magenta-Red
+		{255, 0, 0},   // Red
+		{255, 128, 0}, // Orange
+		{255, 255, 0}, // Yellow
+		{128, 255, 0}, // Yellow-Green
+		{0, 255, 0},   // Green
+		{0, 255, 128}, // Green-Cyan
+		{0, 255, 255}, // Cyan
+		{0, 128, 255}, // Cyan-Blue
+		{0, 0, 255},   // Blue
+		{128, 0, 255}, // Blue-Magenta
+		{255, 0, 255}, // Magenta
+		{255, 0, 128}, // Magenta-Red
 	}
 
 	barHeight := 128 / len(colors)
@@ -189,10 +189,10 @@ func run(logger core.Logger) error {
 
 	// Step 3: Test each quantization algorithm
 	algorithms := []struct {
-		name        string
+		name         string
 		targetColors int
-		dither      bool
-		description string
+		dither       bool
+		description  string
 	}{
 		{"median_cut", 16, false, "Median Cut (balanced, no dither)"},
 		{"median_cut", 16, true, "Median Cut with Floyd-Steinberg dithering"},
@@ -253,12 +253,12 @@ func run(logger core.Logger) error {
 
 		// Apply quantization
 		quantizeResp, err := callTool(ctx, session, "quantize_palette", map[string]any{
-			"sprite_path":            copyPath,
-			"target_colors":          algo.targetColors,
-			"algorithm":              algo.name,
-			"dither":                 algo.dither,
-			"preserve_transparency":  false,
-			"convert_to_indexed":     true,
+			"sprite_path":           copyPath,
+			"target_colors":         algo.targetColors,
+			"algorithm":             algo.name,
+			"dither":                algo.dither,
+			"preserve_transparency": false,
+			"convert_to_indexed":    true,
 		})
 		if err != nil {
 			return fmt.Errorf("quantize_palette failed: %w", err)

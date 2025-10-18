@@ -34,9 +34,9 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/willibrandon/mtlog/core"
 	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 	"github.com/willibrandon/pixel-mcp/pkg/config"
-	"github.com/willibrandon/mtlog/core"
 )
 
 // CreateCanvasInput defines the input parameters for the create_canvas tool.
@@ -322,6 +322,33 @@ func RegisterCanvasTools(server *mcp.Server, client *aseprite.Client, gen *asepr
 			return nil, &DeleteFrameOutput{Success: true}, nil
 		}),
 	)
+
+	// Register flatten_layers tool
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name:        "flatten_layers",
+			Description: "Flatten all layers in a sprite into a single layer.",
+		},
+		maybeWrapWithTiming("flatten_layers", logger, cfg.EnableTiming, func(ctx context.Context, req *mcp.CallToolRequest, input FlattenLayersInput) (*mcp.CallToolResult, *FlattenLayersOutput, error) {
+			opLogger := logger.WithContext(ctx)
+			opLogger.Debug("flatten_layers tool called", "sprite_path", input.SpritePath)
+
+			// Generate Lua script
+			script := gen.FlattenLayers()
+
+			// Execute Lua script with the sprite
+			_, err := client.ExecuteLua(ctx, script, input.SpritePath)
+			if err != nil {
+				opLogger.Error("Failed to flatten layers", "error", err)
+				return nil, nil, fmt.Errorf("failed to flatten layers: %w", err)
+			}
+
+			opLogger.Information("Layers flattened successfully", "sprite", input.SpritePath)
+
+			return nil, &FlattenLayersOutput{Success: true}, nil
+		}),
+	)
 }
 
 // DeleteLayerInput defines the input parameters for the delete_layer tool.
@@ -344,6 +371,20 @@ type DeleteFrameInput struct {
 // DeleteFrameOutput defines the output for the delete_frame tool.
 type DeleteFrameOutput struct {
 	Success bool `json:"success" jsonschema:"Whether the frame was deleted successfully"`
+}
+
+// FlattenLayersInput defines the input parameters for the flatten_layers tool.
+//
+// Flattens all layers in a sprite into a single layer.
+type FlattenLayersInput struct {
+	SpritePath string `json:"sprite_path" jsonschema:"Path to the Aseprite sprite file"` // Path to the sprite file to modify
+}
+
+// FlattenLayersOutput defines the output for the flatten_layers tool.
+//
+// Indicates whether the layers were successfully flattened.
+type FlattenLayersOutput struct {
+	Success bool `json:"success" jsonschema:"Whether the layers were flattened successfully"` // True if the layers were flattened successfully
 }
 
 // generateTimestamp returns a Unix timestamp in nanoseconds suitable for unique filenames.

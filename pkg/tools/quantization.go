@@ -133,45 +133,44 @@ func RegisterQuantizationTools(server *mcp.Server, client *aseprite.Client, gen 
 				"quantized_colors", len(palette),
 				"algorithm", input.Algorithm)
 
-
-		// Step 3: If dithering is requested, remap pixels to quantized palette with dithering
-		if input.Dither {
-			// Convert hex palette to color.Color slice
-			paletteColors := make([]color.Color, len(palette))
-			for i, hexColor := range palette {
-				c, err := colorful.Hex(hexColor)
-				if err != nil {
-					return nil, nil, fmt.Errorf("invalid palette color %s: %w", hexColor, err)
+			// Step 3: If dithering is requested, remap pixels to quantized palette with dithering
+			if input.Dither {
+				// Convert hex palette to color.Color slice
+				paletteColors := make([]color.Color, len(palette))
+				for i, hexColor := range palette {
+					c, err := colorful.Hex(hexColor)
+					if err != nil {
+						return nil, nil, fmt.Errorf("invalid palette color %s: %w", hexColor, err)
+					}
+					r, g, b := c.RGB255()
+					paletteColors[i] = color.RGBA{R: r, G: g, B: b, A: 255}
 				}
-				r, g, b := c.RGB255()
-				paletteColors[i] = color.RGBA{R: r, G: g, B: b, A: 255}
+
+				// Remap image with dithering
+				ditheredImg := aseprite.RemapPixelsWithDithering(img, paletteColors, true)
+
+				// Save dithered image to temp file
+				ditheredPNG := filepath.Join(tempDir, "dithered.png")
+				ditheredFile, err := os.Create(ditheredPNG)
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed to create dithered PNG: %w", err)
+				}
+				defer ditheredFile.Close()
+
+				if err := png.Encode(ditheredFile, ditheredImg); err != nil {
+					return nil, nil, fmt.Errorf("failed to encode dithered PNG: %w", err)
+				}
+
+				// Replace sprite content with dithered image
+				replaceScript := gen.ReplaceWithImage(ditheredPNG)
+				_, err = client.ExecuteLua(ctx, replaceScript, input.SpritePath)
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed to replace sprite with dithered image: %w", err)
+				}
+
+				opLogger.Information("Dithering applied successfully",
+					"sprite", input.SpritePath)
 			}
-
-			// Remap image with dithering
-			ditheredImg := aseprite.RemapPixelsWithDithering(img, paletteColors, true)
-
-			// Save dithered image to temp file
-			ditheredPNG := filepath.Join(tempDir, "dithered.png")
-			ditheredFile, err := os.Create(ditheredPNG)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to create dithered PNG: %w", err)
-			}
-			defer ditheredFile.Close()
-
-			if err := png.Encode(ditheredFile, ditheredImg); err != nil {
-				return nil, nil, fmt.Errorf("failed to encode dithered PNG: %w", err)
-			}
-
-			// Replace sprite content with dithered image
-			replaceScript := gen.ReplaceWithImage(ditheredPNG)
-			_, err = client.ExecuteLua(ctx, replaceScript, input.SpritePath)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to replace sprite with dithered image: %w", err)
-			}
-
-			opLogger.Information("Dithering applied successfully",
-				"sprite", input.SpritePath)
-		}
 			// Step 4: Generate and execute Lua script to apply quantized palette
 			applyScript := gen.ApplyQuantizedPalette(
 				palette,

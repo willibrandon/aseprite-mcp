@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/willibrandon/pixel-mcp/internal/testutil"
-	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 	"github.com/willibrandon/mtlog"
 	"github.com/willibrandon/mtlog/sinks"
+	"github.com/willibrandon/pixel-mcp/internal/testutil"
+	"github.com/willibrandon/pixel-mcp/pkg/aseprite"
 )
 
 // Integration tests for create_canvas tool with real Aseprite.
@@ -382,4 +382,62 @@ func TestIntegration_GetSpriteInfoWithLayersAndFrames(t *testing.T) {
 	}
 
 	t.Logf("✓ Retrieved complex sprite info (4 layers, 4 frames)")
+}
+
+func TestIntegration_FlattenLayers(t *testing.T) {
+	cfg := testutil.LoadTestConfig(t)
+	client := aseprite.NewClient(cfg.AsepritePath, cfg.TempDir, 30*time.Second)
+	gen := aseprite.NewLuaGenerator()
+	ctx := context.Background()
+
+	// Create a sprite
+	spritePath := testutil.TempSpritePath(t, "test-flatten.aseprite")
+	createScript := gen.CreateCanvas(64, 64, aseprite.ColorModeRGB, spritePath)
+	_, err := client.ExecuteLua(ctx, createScript, "")
+	if err != nil {
+		t.Fatalf("Failed to create canvas: %v", err)
+	}
+	defer os.Remove(spritePath)
+
+	// Add multiple layers
+	layers := []string{"Layer 2", "Layer 3", "Layer 4"}
+	for _, layerName := range layers {
+		addLayerScript := gen.AddLayer(layerName)
+		_, err := client.ExecuteLua(ctx, addLayerScript, spritePath)
+		if err != nil {
+			t.Fatalf("Failed to add layer %s: %v", layerName, err)
+		}
+	}
+
+	// Verify we have 4 layers (1 default + 3 added)
+	infoScript := gen.GetSpriteInfo()
+	output, err := client.ExecuteLua(ctx, infoScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to get sprite info: %v", err)
+	}
+	if !strings.Contains(output, "\"layer_count\": 4") {
+		t.Errorf("Expected 4 layers before flattening, got: %s", output)
+	}
+
+	// Flatten layers
+	flattenScript := gen.FlattenLayers()
+	output, err = client.ExecuteLua(ctx, flattenScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to flatten layers: %v", err)
+	}
+
+	if !strings.Contains(output, "Layers flattened successfully") {
+		t.Errorf("Expected success message, got: %s", output)
+	}
+
+	// Verify we now have 1 layer
+	output, err = client.ExecuteLua(ctx, infoScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to get sprite info after flattening: %v", err)
+	}
+	if !strings.Contains(output, "\"layer_count\": 1") {
+		t.Errorf("Expected 1 layer after flattening, got: %s", output)
+	}
+
+	t.Logf("✓ Flattened 4 layers into 1 layer")
 }
