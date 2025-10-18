@@ -1009,11 +1009,11 @@ func TestLuaGenerator_ImportImage(t *testing.T) {
 		}
 
 		if !strings.Contains(script, "Point(0, 0)") {
-			t.Error("script missing default position")
+			t.Error("script missing Point(0, 0) for color conversion")
 		}
 
-		if !strings.Contains(script, "spr:newCel(layer, frame)") {
-			t.Error("script missing cel creation")
+		if !strings.Contains(script, "spr:newCel(layer, frame, finalImg, 0, 0)") {
+			t.Error("script missing cel creation with default position")
 		}
 	})
 
@@ -1022,8 +1022,8 @@ func TestLuaGenerator_ImportImage(t *testing.T) {
 		y := 100
 		script := gen.ImportImage("/tmp/image.png", "Layer 1", 2, &x, &y)
 
-		if !strings.Contains(script, "Point(50, 100)") {
-			t.Error("script missing custom position")
+		if !strings.Contains(script, "spr:newCel(layer, frame, finalImg, 50, 100)") {
+			t.Error("script missing cel creation with custom position")
 		}
 
 		if !strings.Contains(script, "spr.frames[2]") {

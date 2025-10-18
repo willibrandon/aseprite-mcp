@@ -100,7 +100,9 @@ MCP Client → MCP Server (Go) → Lua Script Generation → Aseprite CLI (--bat
   - `animation.go` - Animation and timeline operations (frame duration, tags, tag deletion, duplication, linked cels)
   - `inspection.go` - Pixel data inspection and reading
   - `analysis.go` - Reference image analysis (palette extraction, edge detection, composition)
-  - `dithering.go` - Dithering patterns for gradients and textures (15 patterns)
+  - `dithering.go` - Dithering patterns for gradients and textures (16 patterns including Floyd-Steinberg)
+  - `quantization.go` - Color quantization (median_cut, k-means, octree algorithms)
+  - `auto_shading.go` - Automatic geometry-based shading with per-pixel normal calculations
   - `palette_tools.go` - Palette management (set_palette, apply_shading, analyze_palette_harmonies)
   - `transform.go` - Transform operations (flip, rotate, scale, crop, resize canvas, outline, downsampling)
   - `export.go` - Export and import operations (export_sprite, export_spritesheet, import_image, save_as)
@@ -141,7 +143,9 @@ Core functionality implemented and tested:
 - **Professional Pixel Art Tools:**
   - Reference image analysis (k-means palette extraction, brightness maps, Sobel edge detection)
   - Composition analysis (rule of thirds, focal points)
-  - Dithering with 15 patterns: Bayer matrices (2x2, 4x4, 8x8), checkerboard, and texture patterns (grass, water, stone, cloud, brick, dots, diagonal, cross, noise, horizontal_lines, vertical_lines)
+  - Dithering with 16 patterns: Bayer matrices (2x2, 4x4, 8x8), Floyd-Steinberg error diffusion, checkerboard, and texture patterns (grass, water, stone, cloud, brick, dots, diagonal, cross, noise, horizontal_lines, vertical_lines)
+  - **Color Quantization (`quantize_palette`):** Reduce images to 2-256 colors using median_cut, k-means, or octree algorithms with optional Floyd-Steinberg dithering
+  - **Automatic Shading (`apply_auto_shading`):** Geometry-based shading with per-pixel normal calculations, 3 styles (cell/smooth/soft), 8 light directions, and adjustable intensity
   - Image downsampling with box filter for pixel art conversion
   - **Palette Management Tools (5 tools):**
     - `get_palette`: Retrieve current palette as hex color array with size
@@ -166,7 +170,10 @@ Core functionality implemented and tested:
   - `import_image`: Import external images as layers with optional positioning
   - `save_as`: Save sprite to new .aseprite file path
 - Metadata retrieval
-- Example client implementation (examples/client/main.go)
+- **Example Implementations:**
+  - Basic client (examples/client/main.go): Comprehensive demo of all core features
+  - Palette quantization (examples/quantization/main.go): Color reduction with 3 algorithms and side-by-side comparison
+  - Automatic shading (examples/shading/main.go): Geometry-based shading with multiple styles, intensities, and light directions
 - Integration test suite with real Aseprite
 - Performance benchmarks (all targets exceeded)
 - Cross-platform CI with GitHub Actions
