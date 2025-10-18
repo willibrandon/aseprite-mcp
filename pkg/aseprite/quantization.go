@@ -132,6 +132,11 @@ func MedianCutQuantization(pixels []color.Color, targetColors int) []color.Color
 			}
 		}
 
+		// Stop if no bucket has any range (all colors are identical)
+		if maxRange == 0 {
+			break
+		}
+
 		// Split bucket
 		bucket := buckets[maxIdx]
 		left, right := bucket.split()

@@ -222,13 +222,13 @@ func TestCountUniqueColors(t *testing.T) {
 				img := image.NewRGBA(image.Rect(0, 0, 4, 4))
 				img.Set(0, 0, color.RGBA{R: 255, G: 0, B: 0, A: 255})
 				img.Set(1, 0, color.RGBA{R: 0, G: 255, B: 0, A: 255})
-				img.Set(2, 0, color.RGBA{R: 0, G: 0, B: 0, A: 0}) // Transparent
-				img.Set(3, 0, color.RGBA{R: 0, G: 0, B: 0, A: 0}) // Transparent
-				// Rest are black
+				img.Set(2, 0, color.RGBA{R: 0, G: 0, B: 255, A: 255}) // Blue
+				img.Set(3, 0, color.RGBA{R: 0, G: 0, B: 0, A: 0})     // Transparent
+				// Rest are transparent (NewRGBA initializes to transparent black)
 				return img
 			},
 			preserveTransparency: true,
-			want:                 3, // Red, green, black (transparent excluded)
+			want:                 3, // Red, green, blue (transparent excluded)
 		},
 		{
 			name: "all same color",
