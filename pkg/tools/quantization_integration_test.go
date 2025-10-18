@@ -55,7 +55,7 @@ func TestIntegration_QuantizePalette_MedianCut(t *testing.T) {
 	for i, color := range colors {
 		x := (i % 4) * 16
 		y := (i / 4) * 21
-		drawScript := gen.DrawRectangle("Layer 1", 1, x, y, 16, 21, color, false)
+		drawScript := gen.DrawRectangle("Layer 1", 1, x, y, 16, 21, color, true, false)
 		_, err := client.ExecuteLua(ctx, drawScript, spritePath)
 		if err != nil {
 			t.Fatalf("Failed to draw rectangle: %v", err)
@@ -101,7 +101,7 @@ func TestIntegration_QuantizePalette_MedianCut(t *testing.T) {
 	t.Logf("✓ Quantized from %d to %d colors using median_cut", originalColors, len(palette))
 
 	// Apply quantized palette to sprite
-	applyScript := gen.ApplyQuantizedPalette(palette, originalColors, "median_cut", false)
+	applyScript := gen.ApplyQuantizedPalette(palette, originalColors, "median_cut", true, false)
 	output, err := client.ExecuteLua(ctx, applyScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to apply quantized palette: %v", err)
@@ -226,7 +226,7 @@ func TestIntegration_QuantizePalette_Octree(t *testing.T) {
 	for i, color := range colors {
 		x := (i % 3) * 21 + 10
 		y := (i / 3) * 32 + 16
-		drawScript := gen.DrawCircle("Layer 1", 1, x, y, 8, color, false)
+		drawScript := gen.DrawCircle("Layer 1", 1, x, y, 8, color, true, false)
 		_, err := client.ExecuteLua(ctx, drawScript, spritePath)
 		if err != nil {
 			t.Fatalf("Failed to draw circle: %v", err)
@@ -305,18 +305,19 @@ func TestIntegration_QuantizePalette_WithDitheringAndReplacement(t *testing.T) {
 	}
 	defer os.Remove(spritePath)
 
-	// Draw gradient (should produce many colors)
+	// Draw gradient (should produce many colors) - batch pixels for efficiency
+	pixels := make([]aseprite.Pixel, 0, 64*64)
 	for y := 0; y < 64; y++ {
 		for x := 0; x < 64; x++ {
 			gray := uint8((x + y) * 2)
 			color := aseprite.Color{R: gray, G: gray, B: gray, A: 255}
-			pixels := []aseprite.Pixel{{Point: aseprite.Point{X: x, Y: y}, Color: color}}
-			drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
-			_, err := client.ExecuteLua(ctx, drawScript, spritePath)
-			if err != nil {
-				t.Fatalf("Failed to draw pixel: %v", err)
-			}
+			pixels = append(pixels, aseprite.Pixel{Point: aseprite.Point{X: x, Y: y}, Color: color})
 		}
+	}
+	drawScript := gen.DrawPixels("Layer 1", 1, pixels, false)
+	_, err = client.ExecuteLua(ctx, drawScript, spritePath)
+	if err != nil {
+		t.Fatalf("Failed to draw pixels: %v", err)
 	}
 
 	// Export sprite to PNG
