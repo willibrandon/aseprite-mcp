@@ -823,8 +823,9 @@ print("Dithering applied successfully")`,
 //
 // where X is the current pixel being processed.
 //
-// Parameters match DrawWithDither but the density parameter is interpreted as a threshold:
-// pixels with luminance < density*255 map to color2, otherwise color1.
+// The implementation creates a horizontal gradient from color1 to color2 and applies error
+// diffusion to produce smooth transitions. The density parameter is currently unused as the
+// gradient quality is controlled by the error diffusion algorithm itself.
 func generateFloydSteinbergLua(layerName string, frameNumber int, x, y, width, height int, c1, c2 Color, density float64) string {
 	return fmt.Sprintf(`local spr = app.activeSprite
 if not spr then
@@ -928,7 +929,12 @@ app.transaction(function()
 
 		for px = 0, %d - 1 do
 			-- Calculate gradient position (0.0 to 1.0 across width)
-			local gradient_pos = px / (%d - 1)
+			local gradient_pos
+			if %d == 1 then
+				gradient_pos = 0
+			else
+				gradient_pos = px / (%d - 1)
+			end
 
 			-- Calculate ideal gradient color at this position
 			local ideal_r = color1_r + (color2_r - color1_r) * gradient_pos
@@ -1033,17 +1039,18 @@ print("Dithering applied successfully")`,
 		frameNumber, frameNumber,
 		c1.R, c1.G, c1.B, c1.A,
 		c2.R, c2.G, c2.B, c2.A,
-		width,    // line 914: error buffer width
-		height,   // line 919: py loop
-		width,    // line 924: clear buffer width
-		width,    // line 929: px loop
-		width,    // line 931: gradient calculation
-		width,    // line 966: right neighbor check
-		height,   // line 971: bottom neighbor check
-		width,    // line 980: bottom-right check
-		width,    // line 1006: right neighbor check (RGB)
-		height,   // line 1011: bottom neighbor check (RGB)
-		width,    // line 1020: bottom-right check (RGB)
-		x,        // line 1028: x coordinate
-		y)        // line 1028: y coordinate
+		width,    // line 915: error buffer width
+		height,   // line 920: py loop
+		width,    // line 925: clear buffer width
+		width,    // line 930: px loop
+		width,    // line 933: width check for division by zero
+		width,    // line 936: gradient calculation
+		width,    // line 967: right neighbor check
+		height,   // line 972: bottom neighbor check
+		width,    // line 981: bottom-right check
+		width,    // line 1007: right neighbor check (RGB)
+		height,   // line 1012: bottom neighbor check (RGB)
+		width,    // line 1021: bottom-right check (RGB)
+		x,        // line 1031: x coordinate
+		y)        // line 1031: y coordinate
 }
