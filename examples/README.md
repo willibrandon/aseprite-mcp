@@ -2,7 +2,9 @@
 
 This directory contains example clients demonstrating how to use the Aseprite MCP server.
 
-## Example Client
+## Examples
+
+### Basic Client (`client/`)
 
 The `client/` directory contains a complete example MCP client that demonstrates:
 
@@ -27,7 +29,53 @@ The `client/` directory contains a complete example MCP client that demonstrates
 
 **Note**: Selection tools (`select_rectangle`, `select_ellipse`, etc.) are demonstrated in integration tests. Selections are transient and don't persist across tool calls, so copy/paste workflows require combining operations in single Lua scripts.
 
-## Running the Example
+### Palette Quantization Example (`quantization/`)
+
+The `quantization/` directory demonstrates color reduction and palette optimization:
+
+- Creating a high-color gradient with ~16,000 unique colors
+- Reducing to 16 colors using three algorithms: median_cut, k-means, and octree
+- Optional Floyd-Steinberg dithering for smoother gradients
+- Testing different color counts (16, 8, 4 colors)
+- Converting sprites to indexed color mode
+- Generating side-by-side comparison of all four algorithms
+- Exporting quantized sprites as PNG files
+
+**Output files:**
+- `sprites/quantization-original.png` - Full color gradient
+- `sprites/quantization-median_cut-16colors.png` - Median cut algorithm
+- `sprites/quantization-median_cut-16colors-dither.png` - With Floyd-Steinberg dithering
+- `sprites/quantization-kmeans-16colors.png` - K-means clustering
+- `sprites/quantization-octree-16colors.png` - Octree quantization
+- `sprites/quantization-median_cut-8colors.png` - 8 colors
+- `sprites/quantization-median_cut-4colors-dither.png` - 4 colors with dithering
+- `sprites/quantization-comparison.png` - Side-by-side comparison (Original | Median Cut | K-means | Octree)
+
+### Automatic Shading Example (`shading/`)
+
+The `shading/` directory demonstrates geometry-based automatic shading:
+
+- Three shading styles: cell (hard-edged bands), smooth (dithered gradients), soft (subtle blending)
+- Eight light directions: top_left, top, top_right, left, right, bottom_left, bottom, bottom_right
+- Adjustable intensity (0.0-1.0) for controlling shadow/highlight strength
+- Optional hue shifting (shadows→cool, highlights→warm)
+- Automatic per-pixel normal calculations for spherical surfaces
+- Multiple shape examples: sphere, cube, pill (capsule)
+- Comparison sprites showing all light directions and hue shift effects
+
+**Output files:**
+- `sprites/shading-cell-sphere.png` - Sphere with cell shading
+- `sprites/shading-cell-cube.png` - Cube with cell shading
+- `sprites/shading-cell-pill.png` - Capsule with cell shading
+- `sprites/shading-smooth-subtle.png` - Smooth shading (intensity 0.3)
+- `sprites/shading-smooth-medium.png` - Smooth shading (intensity 0.6)
+- `sprites/shading-smooth-strong.png` - Smooth shading (intensity 0.9)
+- `sprites/shading-soft-sphere.png` - Soft shading
+- `sprites/shading-directions.png` - Comparison of all 8 light directions
+- `sprites/shading-hueshift-with-hueshift.png` - With hue shifting
+- `sprites/shading-hueshift-no-hueshift.png` - Without hue shifting
+
+## Running the Examples
 
 ### Prerequisites
 
@@ -39,22 +87,28 @@ The `client/` directory contains a complete example MCP client that demonstrates
 
 2. Ensure you have Aseprite configured at `~/.config/pixel-mcp/config.json`
 
-### Run the Example
+### Run the Examples
 
 ```bash
-# From the examples/client directory
+# Basic client example
 cd examples/client
-
-# Run with server in ../../bin/
 go run main.go
 
-# Or set custom server path
+# Palette quantization example
+cd examples/quantization
+go run main.go
+
+# Automatic shading example
+cd examples/shading
+go run main.go
+
+# Or set custom server path for any example
 ASEPRITE_MCP_PATH=/path/to/pixel-mcp go run main.go
 ```
 
-### Output
+### Basic Client Output
 
-The example creates:
+The basic client example creates:
 - `../sprites/animated-example.gif` - 4-frame animation with growing colored circles on blue background
 - `../sprites/frame2-example.png` - Single frame export (frame 2, green circle)
 - `../sprites/dithered-gradient.png` - Demonstration of Bayer 4x4 dithering pattern

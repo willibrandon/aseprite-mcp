@@ -157,6 +157,12 @@ func (s *Server) registerTools() {
 	// Register palette tools
 	tools.RegisterPaletteTools(s.mcp, s.client, s.gen, s.config, s.logger)
 
+	// Register quantization tools
+	tools.RegisterQuantizationTools(s.mcp, s.client, s.gen, s.config, s.logger)
+
+	// Register auto-shading tools
+	tools.RegisterAutoShadingTools(s.mcp, s.client, s.gen, s.config, s.logger)
+
 	// Register antialiasing tools
 	tools.RegisterAntialiasingTools(s.mcp, s.client, s.gen, s.config, s.logger)
 }

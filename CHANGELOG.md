@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-10-18
+
+### Added
+- **Palette Quantization Tool** (`quantize_palette`)
+  - Reduces colors in images using three algorithms: median_cut, k-means, and octree
+  - Supports color counts from 2-256 colors
+  - Optional Floyd-Steinberg dithering for smoother gradients
+  - Converts sprites to indexed color mode with optimized palettes
+  - Example demonstrating all three algorithms with side-by-side comparison
+
+- **Automatic Shading Tool** (`apply_auto_shading`)
+  - Automatically adds shading to sprites based on light direction (8 directions)
+  - Geometry-based analysis identifies surfaces and calculates per-pixel normals
+  - Three shading styles: cell (hard-edged bands), smooth (dithered gradients), soft (subtle blending)
+  - Configurable intensity (0.0-1.0) and optional hue shifting (shadows→cool, highlights→warm)
+  - Generates shadow and highlight colors for each base color
+  - Example demonstrating all styles, intensities, light directions, and hue shifting
+
+### Fixed
+- `ImportImage` tool now correctly handles color mode conversion and cel creation
+  - Uses proper image buffer and BlendMode.SRC for accurate color conversion
+  - Fixes issue where imported images appeared as empty/transparent pixels
+- `ApplyAutoShadingResult` Lua script properly applies shaded pixels
+  - Creates new cel with shaded image instead of drawing onto existing cel
+  - Fixes issue where shading wasn't visible in exported sprites
+
 ## [0.3.0] - 2025-10-18
 
 ### Added
