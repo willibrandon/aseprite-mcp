@@ -64,8 +64,28 @@ jobs:
 
       - name: Pull existing image
         if: steps.dockerfile-changed.outputs.changed == 'false'
+        id: pull-image
+        continue-on-error: true
         run: |
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Build image if pull failed
+        if: steps.dockerfile-changed.outputs.changed == 'false' && steps.pull-image.outcome == 'failure'
+        run: |
+          docker build -f Dockerfile.ci -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest .
+
+      - name: Log in to push fallback image
+        if: steps.dockerfile-changed.outputs.changed == 'false' && steps.pull-image.outcome == 'failure'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push fallback image
+        if: steps.dockerfile-changed.outputs.changed == 'false' && steps.pull-image.outcome == 'failure'
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
   test:
     needs: build-or-pull-image
