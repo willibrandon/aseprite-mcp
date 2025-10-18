@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-10-18
+
+### Added
+- Floyd-Steinberg error diffusion dithering pattern
+  - Brings total dithering patterns to 16 (from 15)
+  - Creates smooth gradients using error propagation algorithm
+  - Uses standard 7/16, 5/16, 3/16, 1/16 weight distribution
+  - Color selection by Euclidean distance for accurate transitions
+  - Handles edge case where width=1 to prevent division by zero
+- Test for Floyd-Steinberg gradient verification using pixel inspection
+- Side-by-side example comparing Bayer 4x4 vs Floyd-Steinberg dithering
+
+### Changed
+- Updated `draw_with_dither` tool description to reflect 16 patterns
+
 ## [0.2.0] - 2025-10-17
 
 ### Changed
@@ -48,7 +63,7 @@ First official release of the Aseprite MCP Server.
 - `draw_circle` - Draw circles/ellipses (filled or outline)
 - `draw_contour` - Draw multi-point polylines and polygons
 - `fill_area` - Flood fill with color tolerance
-- `draw_with_dither` - Apply dithering patterns (15 patterns: Bayer matrices, textures, noise)
+- `draw_with_dither` - Apply dithering patterns (16 patterns: Bayer matrices, Floyd-Steinberg, textures, noise)
 
 #### Animation Tools (5 tools)
 - `set_frame_duration` - Control frame timing in milliseconds
@@ -101,6 +116,6 @@ First official release of the Aseprite MCP Server.
 - Brightness map generation for shading analysis
 - Sobel edge detection for composition and antialiasing
 - Composition analysis (rule of thirds, focal points)
-- 15 dithering patterns for gradients and textures
+- 16 dithering patterns for gradients and textures
 - LAB color space for perceptually accurate color matching
 - Color temperature analysis (warm/cool classification)
