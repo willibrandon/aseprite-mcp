@@ -122,7 +122,6 @@ func RegisterQuantizationTools(server *mcp.Server, client *aseprite.Client, gen 
 				img,
 				input.TargetColors,
 				input.Algorithm,
-				input.Dither,
 				*input.PreserveTransparency,
 			)
 			if err != nil {

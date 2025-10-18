@@ -12,7 +12,7 @@ import (
 
 // QuantizePalette reduces image colors using specified quantization algorithm.
 // Returns palette colors (hex strings), original color count, and error.
-func QuantizePalette(img image.Image, targetColors int, algorithm string, dither bool, preserveTransparency bool) ([]string, int, error) {
+func QuantizePalette(img image.Image, targetColors int, algorithm string, preserveTransparency bool) ([]string, int, error) {
 	if targetColors < 2 || targetColors > 256 {
 		return nil, 0, fmt.Errorf("targetColors must be between 2 and 256, got %d", targetColors)
 	}

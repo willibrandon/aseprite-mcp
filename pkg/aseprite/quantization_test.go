@@ -317,7 +317,7 @@ func TestQuantizePalette(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			palette, originalColors, err := QuantizePalette(img, tt.targetColors, tt.algorithm, false, false)
+			palette, originalColors, err := QuantizePalette(img, tt.targetColors, tt.algorithm, false)
 
 			if tt.wantErr {
 				if err == nil {
@@ -358,7 +358,7 @@ func TestQuantizePaletteWithTransparency(t *testing.T) {
 	img.Set(0, 1, color.RGBA{R: 255, G: 255, B: 0, A: 255}) // Yellow
 
 	t.Run("preserve transparency", func(t *testing.T) {
-		palette, _, err := QuantizePalette(img, 3, "median_cut", false, true)
+		palette, _, err := QuantizePalette(img, 3, "median_cut", true)
 		if err != nil {
 			t.Fatalf("QuantizePalette() error: %v", err)
 		}
@@ -378,7 +378,7 @@ func TestQuantizePaletteWithTransparency(t *testing.T) {
 	})
 
 	t.Run("do not preserve transparency", func(t *testing.T) {
-		palette, _, err := QuantizePalette(img, 3, "median_cut", false, false)
+		palette, _, err := QuantizePalette(img, 3, "median_cut", false)
 		if err != nil {
 			t.Fatalf("QuantizePalette() error: %v", err)
 		}
@@ -403,7 +403,7 @@ func TestQuantizePaletteWithDithering(t *testing.T) {
 	}
 
 	t.Run("without dithering", func(t *testing.T) {
-		palette, originalColors, err := QuantizePalette(img, 4, "median_cut", false, false)
+		palette, originalColors, err := QuantizePalette(img, 4, "median_cut", false)
 		if err != nil {
 			t.Fatalf("QuantizePalette() error: %v", err)
 		}
@@ -418,7 +418,7 @@ func TestQuantizePaletteWithDithering(t *testing.T) {
 	})
 
 	t.Run("with dithering", func(t *testing.T) {
-		palette, originalColors, err := QuantizePalette(img, 4, "median_cut", true, false)
+		palette, originalColors, err := QuantizePalette(img, 4, "median_cut", false)
 		if err != nil {
 			t.Fatalf("QuantizePalette() error: %v", err)
 		}

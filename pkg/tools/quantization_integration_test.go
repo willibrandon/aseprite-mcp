@@ -55,7 +55,7 @@ func TestIntegration_QuantizePalette_MedianCut(t *testing.T) {
 	for i, color := range colors {
 		x := (i % 4) * 16
 		y := (i / 4) * 21
-		drawScript := gen.DrawRectangle("Layer 1", 1, x, y, 16, 21, color, true, false)
+		drawScript := gen.DrawRectangle("Layer 1", 1, x, y, 16, 21, color, false)
 		_, err := client.ExecuteLua(ctx, drawScript, spritePath)
 		if err != nil {
 			t.Fatalf("Failed to draw rectangle: %v", err)
@@ -85,7 +85,7 @@ func TestIntegration_QuantizePalette_MedianCut(t *testing.T) {
 	}
 
 	// Quantize to 8 colors using median_cut
-	palette, originalColors, err := aseprite.QuantizePalette(img, 8, "median_cut", false, true)
+	palette, originalColors, err := aseprite.QuantizePalette(img, 8, "median_cut", true)
 	if err != nil {
 		t.Fatalf("Quantization failed: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestIntegration_QuantizePalette_MedianCut(t *testing.T) {
 	t.Logf("✓ Quantized from %d to %d colors using median_cut", originalColors, len(palette))
 
 	// Apply quantized palette to sprite
-	applyScript := gen.ApplyQuantizedPalette(palette, originalColors, "median_cut", true, false)
+	applyScript := gen.ApplyQuantizedPalette(palette, originalColors, "median_cut", false)
 	output, err := client.ExecuteLua(ctx, applyScript, spritePath)
 	if err != nil {
 		t.Fatalf("Failed to apply quantized palette: %v", err)
@@ -187,7 +187,7 @@ func TestIntegration_QuantizePalette_Kmeans(t *testing.T) {
 	}
 
 	// Quantize to 4 colors using kmeans
-	palette, originalColors, err := aseprite.QuantizePalette(img, 4, "kmeans", false, true)
+	palette, originalColors, err := aseprite.QuantizePalette(img, 4, "kmeans", true)
 	if err != nil {
 		t.Fatalf("Quantization failed: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestIntegration_QuantizePalette_Octree(t *testing.T) {
 	for i, color := range colors {
 		x := (i % 3) * 21 + 10
 		y := (i / 3) * 32 + 16
-		drawScript := gen.DrawCircle("Layer 1", 1, x, y, 8, color, true, false)
+		drawScript := gen.DrawCircle("Layer 1", 1, x, y, 8, color, false)
 		_, err := client.ExecuteLua(ctx, drawScript, spritePath)
 		if err != nil {
 			t.Fatalf("Failed to draw circle: %v", err)
@@ -255,7 +255,7 @@ func TestIntegration_QuantizePalette_Octree(t *testing.T) {
 	}
 
 	// Quantize to 8 colors using octree
-	palette, originalColors, err := aseprite.QuantizePalette(img, 8, "octree", false, true)
+	palette, originalColors, err := aseprite.QuantizePalette(img, 8, "octree", true)
 	if err != nil {
 		t.Fatalf("Quantization failed: %v", err)
 	}
@@ -278,7 +278,7 @@ func TestIntegration_QuantizePalette_WithDithering(t *testing.T) {
 	}
 
 	// Quantize with dithering
-	palette, originalColors, err := aseprite.QuantizePalette(img, 4, "median_cut", true, true)
+	palette, originalColors, err := aseprite.QuantizePalette(img, 4, "median_cut", true)
 	if err != nil {
 		t.Fatalf("Quantization with dithering failed: %v", err)
 	}
@@ -342,7 +342,7 @@ func TestIntegration_QuantizePalette_WithDitheringAndReplacement(t *testing.T) {
 	}
 
 	// Quantize with dithering enabled
-	palette, originalColors, err := aseprite.QuantizePalette(img, 8, "median_cut", true, true)
+	palette, originalColors, err := aseprite.QuantizePalette(img, 8, "median_cut", true)
 	if err != nil {
 		t.Fatalf("Quantization failed: %v", err)
 	}
